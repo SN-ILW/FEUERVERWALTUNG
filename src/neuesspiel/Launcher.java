@@ -10,7 +10,7 @@ public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
     // Passe dies an die Version an, die du als naechstes hochlädst (z.B. "v2" oder "v4")
-    public static final String CURRENT_VERSION = "v2"; 
+    public static final String CURRENT_VERSION = "v5"; 
     
     // Dein Repo
     public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
