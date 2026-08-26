@@ -1163,7 +1163,7 @@ SpeicherManager.speichern("savegame.properties");
         new Thread(() -> {
             try {
                 // Das "/" sorgt dafür, dass er im Hauptverzeichnis der eingebetteten Dateien sucht
-                java.net.URL soundUrl = LogistikSimulator.class.getResource("/" + dateiName);
+                java.net.URL soundUrl = LogistikSimulator.class.getResource(dateiName);
                 
                 if (soundUrl != null) {
                     javax.sound.sampled.AudioInputStream audioInput = javax.sound.sampled.AudioSystem.getAudioInputStream(soundUrl);
