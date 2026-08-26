@@ -1194,7 +1194,7 @@ public class FensterManager {
                     hauptlager.put(cm.name, hauptlager.get(cm.name) - 10);
                     target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10);
                     uiAktualisieren(getUhrzeit());
-                    JOptionPane.showMessageDialog(d, "Material umgelagert!");
+                   // JOptionPane.showMessageDialog(d, "Material umgelagert!");
                 } else {
                     JOptionPane.showMessageDialog(d, "Zu wenig Bestand im Hauptlager!");
                 }
@@ -1225,7 +1225,7 @@ public class FensterManager {
                     budget -= endPreis;
                     lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60));
                     uiAktualisieren(getUhrzeit());
-                    JOptionPane.showMessageDialog(d, "Bestellung aufgegeben!");
+                    //JOptionPane.showMessageDialog(d, "Bestellung aufgegeben!");
                 } else {
                     JOptionPane.showMessageDialog(d, "Nicht genug Budget!");
                 }

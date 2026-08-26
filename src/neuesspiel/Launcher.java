@@ -9,7 +9,7 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    public static final String CURRENT_VERSION = "v1"; // Für den Test eine ältere Version eintragen
+    public static final String CURRENT_VERSION = "v3"; // Für den Test eine ältere Version eintragen
     public static final String GITHUB_REPO = "SN-ILW/FEUERVERWALTUNG"; 
     public static final String EXE_NAME = "FeuerwehrVerwaltung.exe";
     // ----------------------------------
@@ -24,6 +24,7 @@ public class Launcher {
         } catch (Exception e) {}
 
         JFrame frame = new JFrame("FEUERWEHR-VERWALTUNGS-SPIEL");
+        frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLocationRelativeTo(null); 
@@ -33,7 +34,7 @@ public class Launcher {
         topPanel.setBackground(new Color(25, 25, 25));
         topPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         
-        JLabel lblTitle = new JLabel("BOS Leitstellen & Logistik Simulator", SwingConstants.CENTER);
+        JLabel lblTitle = new JLabel("FeuerwehrVerwaltung", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
         
         JLabel lblVersion = new JLabel("Aktuelle Version: " + CURRENT_VERSION, SwingConstants.CENTER);
