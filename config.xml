@@ -3,7 +3,7 @@
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
   <jar>C:\Users\ianwi\OneDrive\Dokumente\NetBeansProjects\NeuesSpiel\dist\NeuesSpiel.jar</jar>
-  <outfile>C:\Users\ianwi\OneDrive\Desktop\Emergency-Verwaltung\Feuerwehr-Verwaltung.exe</outfile>
+  <outfile>C:\Users\ianwi\OneDrive\Desktop\Feuerwehr-Verwaltung.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>

@@ -9,13 +9,8 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    // Passe dies an die Version an, die du als naechstes hochlaedst (z.B. "v5" fuer den Test)
     public static final String CURRENT_VERSION = "v5"; 
-    
-    // Dein Repo
-    public static final String GITHUB_REPO = "SN-ILW/Feuerwehr-Verwaltung"; 
-    
-    // So heisst die Datei, die deine GitHub-Action am Ende ausspuckt!
+    public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
     public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
     // ----------------------------------
 
@@ -90,7 +85,7 @@ public class Launcher {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setRequestProperty("User-Agent", "Java-AutoUpdater");
 
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -103,7 +98,6 @@ public class Launcher {
                         latestVersion = line.split(":")[1].replace("\"", "").replace(",", "").trim();
                     }
                     if (line.contains("\"browser_download_url\":") && line.contains(".exe")) {
-                        // MILLIMETERGENAUES AUSLESEN DER URL
                         int start = line.indexOf("https://");
                         if(start != -1) {
                             int end = line.indexOf("\"", start);
@@ -117,7 +111,7 @@ public class Launcher {
 
                 if (!latestVersion.isEmpty() && !latestVersion.equals(CURRENT_VERSION)) {
                     if (downloadUrl.isEmpty()) {
-                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber es wurde keine .exe im GitHub Release gefunden!", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -134,11 +128,11 @@ public class Launcher {
                     JOptionPane.showMessageDialog(parentFrame, "Du bist auf dem neuesten Stand!\nAktuelle Version: " + CURRENT_VERSION, "Kein Update", JOptionPane.INFORMATION_MESSAGE);
                 }
             } else {
-                JOptionPane.showMessageDialog(parentFrame, "Konnte nicht nach Updates suchen. HTTP Fehlercode: " + conn.getResponseCode(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(parentFrame, "Netzwerkfehler: " + conn.getResponseCode(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
             conn.disconnect();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parentFrame, "Fehler bei der Verbindung zu GitHub:\n" + ex.getMessage(), "Netzwerkfehler", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(parentFrame, "Fehler: " + ex.getMessage(), "Netzwerkfehler", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -164,24 +158,27 @@ public class Launcher {
             try {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                 conn.setInstanceFollowRedirects(false); 
                 int status = conn.getResponseCode();
 
-                // Umleitungen zu den AWS Servern folgen
+                // Sauberes Verfolgen der Amazon (AWS) Umleitungen
                 while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
-                    conn.disconnect(); // Alte Verbindung sauber trennen
-                    
+                    conn.disconnect();
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                     conn.setInstanceFollowRedirects(false);
                     status = conn.getResponseCode();
                 }
 
                 if (status != 200) {
                     throw new Exception("Datei nicht gefunden! HTTP Status: " + status);
+                }
+
+                // Sicherheits-Check: Hat AWS uns eine Fehler-Webseite statt der .exe geschickt?
+                String contentType = conn.getContentType();
+                if (contentType != null && (contentType.contains("text/") || contentType.contains("html"))) {
+                    throw new Exception("Download blockiert: Der Server hat eine Webseite statt des Programms geschickt.");
                 }
 
                 int fileSize = conn.getContentLength();
@@ -243,8 +240,6 @@ public class Launcher {
 
                 Runtime.getRuntime().exec("cmd /c start update.bat");
                 System.exit(0);
-            } else {
-                JOptionPane.showMessageDialog(null, "Update heruntergeladen als 'update.exe'.", "Info", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Konnte Neustart-Skript nicht erstellen: " + e.getMessage());
