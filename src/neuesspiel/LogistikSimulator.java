@@ -792,8 +792,12 @@ public class LogistikSimulator {
                             Personal leih = new Personal("Leihkraft (" + missingRole + ")", missingRole);
                             leih.zugewiesenesFahrzeug = f.funkrufname; leih.geplantesFahrzeug = "Keines";
                             w.personalPool.add(leih); helped = true;
-                            SpeicherManager.speichern("savegame.properties");
-                            if(hatGenugPersonal(f)) { f.status = 2; f.ausfallGrund = ""; }
+SpeicherManager.speichern("savegame.properties");
+                            if(hatGenugPersonal(f)) { 
+                                f.status = 6; 
+                                f.ausfallGrund = "Personalwechsel"; 
+                                f.reparaturDauer = 30; // Leihkraft muss sich einkleiden (30s)
+                            }
                             break;
                         }
                     }

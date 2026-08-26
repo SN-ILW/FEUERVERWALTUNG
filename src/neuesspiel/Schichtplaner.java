@@ -256,8 +256,64 @@ public class Schichtplaner {
         });
 
         btnClose.addActionListener(e -> d.dispose());
-        btnSave.addActionListener(e -> {
+btnSave.addActionListener(e -> {
             saveTableData();
+            
+            if (zeigeAktuellenMonat) {
+                int heuteIndex = LogistikSimulator.getCurrentDate().getDayOfMonth() - 1;
+                java.util.HashSet<String> fzMitFreiemPersonal = new java.util.HashSet<>();
+                
+                for (Wache w : wachen) {
+                    for (Personal p : w.personalPool) {
+                        String neuerPlan = p.planAktuellerMonat[heuteIndex];
+                        if (neuerPlan == null) neuerPlan = "Frei";
+                        
+                        // Krankheit, Urlaub und Lehrgang ignorieren (die bleiben auf ihrem Status)
+                        if (p.krankBis != -1 && tag <= p.krankBis) continue;
+                        if (p.urlaubStart != -1 && tag >= p.urlaubStart && tag <= p.urlaubEnd) continue;
+                        if (p.status.equals("Lehrgang")) continue;
+
+                        String alterStatus = p.status;
+                        String altesFz = p.zugewiesenesFahrzeug;
+                        
+                        if (!neuerPlan.equals("Frei") && !neuerPlan.equals(altesFz)) {
+                            if (alterStatus.equals("Frei")) {
+                                fzMitFreiemPersonal.add(neuerPlan);
+                            }
+                        }
+                        
+                        // Live-Status überschreiben
+                        if (neuerPlan.equals("Frei")) {
+                            p.status = "Frei";
+                            p.zugewiesenesFahrzeug = "Keines";
+                        } else {
+                            p.status = "Bereit";
+                            p.zugewiesenesFahrzeug = neuerPlan;
+                        }
+                    }
+                    
+                    // STRENGE FAHRZEUG-PRUEFUNG
+                    for (Fahrzeug f : w.fuhrpark) {
+                        boolean hatGenug = hatGenugPersonal(f);
+                        
+                        if (!hatGenug) {
+                            // Wenn Leute fehlen, fange das Fahrzeug gnadenlos ab!
+                            if (f.status == 1 || f.status == 2 || (f.status == 6 && f.ausfallGrund.equals("Personalwechsel"))) {
+                                f.status = 6;
+                                f.ausfallGrund = "Personal fehlt";
+                                f.reparaturDauer = 0; // Laufende Umzieh-Timer abbrechen
+                            }
+                        } else {
+                            // Wenn genug Leute da sind und das Fahrzeug vorher stand:
+                            if (f.status == 6 && f.ausfallGrund.equals("Personal fehlt")) {
+                                f.ausfallGrund = "Personalwechsel";
+                                f.reparaturDauer = fzMitFreiemPersonal.contains(f.funkrufname) ? 60 : 30;
+                            }
+                        }
+                    }
+                }
+            }
+            
             SpeicherManager.speichern("savegame.properties");
             d.dispose();
             uiAktualisieren(getUhrzeit());
