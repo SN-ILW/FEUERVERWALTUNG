@@ -9,11 +9,11 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    // Passe dies an die Version an, die du als naechstes hochlaedst
-    public static final String CURRENT_VERSION = "v6"; 
+    // Passe dies an die Version an, die du als naechstes hochlaedst (z.B. "v5" fuer den Test)
+    public static final String CURRENT_VERSION = "v5"; 
     
     // Dein Repo
-    public static final String GITHUB_REPO = "SN-ILW/Feuerwehr-Verwaltung"; 
+    public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
     
     // So heisst die Datei, die deine GitHub-Action am Ende ausspuckt!
     public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
@@ -103,10 +103,13 @@ public class Launcher {
                         latestVersion = line.split(":")[1].replace("\"", "").replace(",", "").trim();
                     }
                     if (line.contains("\"browser_download_url\":") && line.contains(".exe")) {
-                        // Sichereres Auslesen der URL
-                        int idx = line.indexOf("https://");
-                        if(idx != -1) {
-                            downloadUrl = line.substring(idx).replace("\"", "").replace(",", "").trim();
+                        // MILLIMETERGENAUES AUSLESEN DER URL
+                        int start = line.indexOf("https://");
+                        if(start != -1) {
+                            int end = line.indexOf("\"", start);
+                            if(end != -1) {
+                                downloadUrl = line.substring(start, end);
+                            }
                         }
                     }
                 }
@@ -159,22 +162,24 @@ public class Launcher {
 
         Thread downloadThread = new Thread(() -> {
             try {
-                // Verbindung als Browser tarnen
-                HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
+                URL url = new URL(downloadUrl);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                 conn.setInstanceFollowRedirects(false); 
                 int status = conn.getResponseCode();
 
-                // Umleitungen zu den AWS Servern manuell folgen
+                // Umleitungen zu den AWS Servern folgen
                 while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
-                    conn = (HttpURLConnection) new URL(redirectUrl).openConnection();
+                    conn.disconnect(); // Alte Verbindung sauber trennen
+                    
+                    url = new URL(redirectUrl);
+                    conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
                     conn.setInstanceFollowRedirects(false);
                     status = conn.getResponseCode();
                 }
 
-                // WICHTIG: Wenn es nicht Status 200 (OK) ist, Download sofort abbrechen!
                 if (status != 200) {
                     throw new Exception("Datei nicht gefunden! HTTP Status: " + status);
                 }
@@ -233,7 +238,7 @@ public class Launcher {
                 fw.write("del /f /q \"" + EXE_NAME + "\"\n"); 
                 fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
                 fw.write("start \"\" \"" + EXE_NAME + "\"\n"); 
-                fw.write("(goto) 2>nul & del \"%~f0\"\n"); // Loescht sich am Ende komplett lautlos selbst
+                fw.write("(goto) 2>nul & del \"%~f0\"\n"); 
                 fw.close();
 
                 Runtime.getRuntime().exec("cmd /c start update.bat");
