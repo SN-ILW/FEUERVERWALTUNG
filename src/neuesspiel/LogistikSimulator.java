@@ -1160,9 +1160,9 @@ public static void playSound(String dateiName) {
                         if (dateiName.equals("notruf.wav")) {
                             gainControl.setValue(0.0f);  // Beispiel: 5 Dezibel leiser
                         } else if (dateiName.equals("status6.wav")) {
-                            gainControl.setValue(-2.5f);   // Original-Lautstaerke
+                            gainControl.setValue(-7f);   // Original-Lautstaerke
                         } else if (dateiName.equals("status7.wav")) {
-                            gainControl.setValue(-2.5f); // Beispiel: 12 Dezibel leiser (sehr leise)
+                            gainControl.setValue(-7f); // Beispiel: 12 Dezibel leiser (sehr leise)
                         }
                     }
                     // --------------------------------------------
