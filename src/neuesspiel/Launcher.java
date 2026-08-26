@@ -9,8 +9,8 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    // Passe dies an die Version an, die du als naechstes hochlädst (z.B. "v2" oder "v4")
-    public static final String CURRENT_VERSION = "v5"; 
+    // Passe dies an die Version an, die du als naechstes hochlaedst
+    public static final String CURRENT_VERSION = "v6"; 
     
     // Dein Repo
     public static final String GITHUB_REPO = "SN-ILW/Feuerwehr-Verwaltung"; 
@@ -90,8 +90,7 @@ public class Launcher {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            // GANZ WICHTIG: Das ist der Schluessel, damit GitHub die Anfrage nicht mehr blockiert!
-            conn.setRequestProperty("User-Agent", "AutoUpdater-BOS");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
 
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -103,9 +102,12 @@ public class Launcher {
                     if (line.contains("\"tag_name\":")) {
                         latestVersion = line.split(":")[1].replace("\"", "").replace(",", "").trim();
                     }
-                    // Wir suchen jetzt nach der .exe Datei statt nach der .jar!
                     if (line.contains("\"browser_download_url\":") && line.contains(".exe")) {
-                        downloadUrl = line.split("\"")[3];
+                        // Sichereres Auslesen der URL
+                        int idx = line.indexOf("https://");
+                        if(idx != -1) {
+                            downloadUrl = line.substring(idx).replace("\"", "").replace(",", "").trim();
+                        }
                     }
                 }
                 reader.close();
@@ -157,32 +159,45 @@ public class Launcher {
 
         Thread downloadThread = new Thread(() -> {
             try {
+                // Verbindung als Browser tarnen
                 HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
-                conn.setRequestProperty("User-Agent", "AutoUpdater-BOS"); // Auch hier den User-Agent setzen
-                conn.setInstanceFollowRedirects(true);
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                conn.setInstanceFollowRedirects(false); 
                 int status = conn.getResponseCode();
-                
-                // GitHub leitet Downloads oft auf externe Server um, das fangen wir hier sauber ab
-                if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER) {
+
+                // Umleitungen zu den AWS Servern manuell folgen
+                while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
                     conn = (HttpURLConnection) new URL(redirectUrl).openConnection();
-                    conn.setRequestProperty("User-Agent", "AutoUpdater-BOS");
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                    conn.setInstanceFollowRedirects(false);
+                    status = conn.getResponseCode();
+                }
+
+                // WICHTIG: Wenn es nicht Status 200 (OK) ist, Download sofort abbrechen!
+                if (status != 200) {
+                    throw new Exception("Datei nicht gefunden! HTTP Status: " + status);
                 }
 
                 int fileSize = conn.getContentLength();
+                if (fileSize == -1) {
+                    SwingUtilities.invokeLater(() -> progressBar.setIndeterminate(true));
+                }
+
                 InputStream in = conn.getInputStream();
-                // Wir speichern das Update als update.exe
                 FileOutputStream out = new FileOutputStream("update.exe");
 
-                byte[] buffer = new byte[4096];
+                byte[] buffer = new byte[8192];
                 int bytesRead;
                 int downloaded = 0;
 
                 while ((bytesRead = in.read(buffer)) != -1) {
                     out.write(buffer, 0, bytesRead);
                     downloaded += bytesRead;
-                    int percent = (int) ((downloaded * 100L) / fileSize);
-                    SwingUtilities.invokeLater(() -> progressBar.setValue(percent));
+                    if (fileSize != -1) {
+                        int percent = (int) ((downloaded * 100L) / fileSize);
+                        SwingUtilities.invokeLater(() -> progressBar.setValue(percent));
+                    }
                 }
 
                 out.close();
@@ -208,25 +223,23 @@ public class Launcher {
 
     private static void installAndRestart() {
         try {
-            // Prueft, ob wir auf Windows sind
             String os = System.getProperty("os.name").toLowerCase();
 
             if (os.contains("win")) {
-                // Erstellt das Batch-Skript fuer Windows
                 File batFile = new File("update.bat");
                 FileWriter fw = new FileWriter(batFile);
                 fw.write("@echo off\n");
-                fw.write("timeout /t 2 /nobreak > NUL\n"); // Wartet 2 Sekunden, bis das aktuelle Spiel zu ist
-                fw.write("del \"" + EXE_NAME + "\"\n"); // Loescht die alte Feuerwehr-Verwaltung.exe
-                fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); // Macht die update.exe zur neuen Feuerwehr-Verwaltung.exe
-                fw.write("start \"\" \"" + EXE_NAME + "\"\n"); // Startet das Spiel neu
-                fw.write("del update.bat\n"); // Das Skript loescht sich abschliessend selbst
+                fw.write("timeout /t 3 /nobreak > NUL\n"); 
+                fw.write("del /f /q \"" + EXE_NAME + "\"\n"); 
+                fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
+                fw.write("start \"\" \"" + EXE_NAME + "\"\n"); 
+                fw.write("(goto) 2>nul & del \"%~f0\"\n"); // Loescht sich am Ende komplett lautlos selbst
                 fw.close();
 
                 Runtime.getRuntime().exec("cmd /c start update.bat");
-                System.exit(0); // Beendet das aktuelle Spiel
+                System.exit(0);
             } else {
-                JOptionPane.showMessageDialog(null, "Update erfolgreich als 'update.exe' heruntergeladen.\nAutomatischer Neustart wird nur unter Windows unterstuetzt.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Update heruntergeladen als 'update.exe'.", "Info", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Konnte Neustart-Skript nicht erstellen: " + e.getMessage());
