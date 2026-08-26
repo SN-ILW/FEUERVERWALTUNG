@@ -104,6 +104,7 @@ public class LogistikSimulator {
         
         /* STREAMING_CHUNK:Building the main application frame... */
         frame = new JFrame("FeuerwehrVerwaltung");
+        frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
