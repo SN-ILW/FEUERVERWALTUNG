@@ -37,7 +37,6 @@ public class LogistikSimulator {
     public static boolean techGrossabnehmer = false;
     public static int lehrerStufe = 0; 
     
-    // Calltaker (0 = Aus, 1 = Level 1-2, 2 = Level 1-4 + Auto-Klinik)
     public static int calltakerStufe = 0;
     
     public static double notrufRate = 1.0; 
@@ -64,7 +63,6 @@ public class LogistikSimulator {
     public static ArrayList<EinsatzVorlage> vorlagenPool = new ArrayList<>();
     public static ArrayList<CustomMaterial> customMaterials = new ArrayList<>();
     
-    // Event-System
     public static Event aktuellesEvent = null;
 
     public static void main(String[] args) {
@@ -114,7 +112,6 @@ public class LogistikSimulator {
         Color bgDark = new Color(35, 35, 35);
         frame.getContentPane().setBackground(bgDark); 
 
-        // --- TOP PANEL (Uhrzeit & Geschwindigkeit) ---
         JPanel pnlTop = new JPanel(new BorderLayout());
         pnlTop.setBackground(new Color(25, 25, 25));
         
@@ -155,11 +152,9 @@ public class LogistikSimulator {
         pnlTime.add(btnPause); pnlTime.add(btnPlay); pnlTime.add(btnFastForward); pnlTime.add(btnExit);
         pnlTop.add(pnlTime, BorderLayout.EAST);
         
-        // --- CENTER PANEL (FMS & Einsaetze) ---
         JPanel pnlCenter = new JPanel(new GridLayout(1, 2, 0, 0));
         pnlCenter.setBackground(bgDark);
         
-        // Linke Seite: FMS Board
         JPanel pnlLeft = new JPanel(new BorderLayout());
         pnlLeft.setBorder(BorderFactory.createMatteBorder(0, 0, 0, 1, Color.GRAY)); 
         
@@ -193,7 +188,6 @@ public class LogistikSimulator {
         scrollFms.setBorder(BorderFactory.createEmptyBorder());
         pnlLeft.add(scrollFms, BorderLayout.CENTER);
         
-        // Rechte Seite: Alarm & Einsaetze
         JPanel pnlRight = new JPanel(new BorderLayout());
         pnlRight.setBorder(BorderFactory.createMatteBorder(0, 1, 0, 0, Color.GRAY));
         
@@ -227,7 +221,6 @@ public class LogistikSimulator {
         pnlCenter.add(pnlLeft); 
         pnlCenter.add(pnlRight);
         
-        // --- BOTTOM PANEL ---
         JPanel pnlBottom = new JPanel(new GridLayout(3, 4, 5, 5));
         pnlBottom.setBackground(bgDark);
         pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -280,7 +273,6 @@ public class LogistikSimulator {
         
         frame.setVisible(true);
 
-        // --- Ticker ---
         new Timer(1000, e -> {
             if (speed > 0) {
                 inGameSekunden += (speed * 10);
@@ -357,13 +349,13 @@ public class LogistikSimulator {
                                     if (f.aktuellerEinsatz == ein) { 
                                         f.aktuellerEinsatz = null;
                                         
-if(f.typ.equals("RTW")) {
+                                        if(f.typ.equals("RTW")) {
                                             if(calltakerStufe >= 2 && Math.random() > 0.5) {
                                                 f.status = 8;
                                                 f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
                                             } else {
                                                 f.status = 7; 
-                                                playSound("status7.wav"); // <-- NEU: RTW will Krankenhaus
+                                                playSound("status7.wav");
                                             }
                                         } else {
                                             f.status = 1; 
@@ -375,7 +367,7 @@ if(f.typ.equals("RTW")) {
                                             if (Math.random() < damageChance) {
                                                 f.status = 6; 
                                                 f.ausfallGrund = "Beschadigung"; 
-                                                playSound("status6.wav"); // <-- NEU: Fahrzeug defekt
+                                                playSound("status6.wav");
                                             }
                                         }
                                     }
@@ -392,11 +384,11 @@ if(f.typ.equals("RTW")) {
                 double eventGlobalMutiplier = aktuellesEvent != null ? aktuellesEvent.globalRateMultiplier : 1.0;
                 boolean leitstelleGeoeffnet = inGameSekunden < (19 * 3600);
                 
-if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / speed) == 0 && Math.random() < (0.6 * notrufRate * eventGlobalMutiplier)) {
+                if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / speed) == 0 && Math.random() < (0.6 * notrufRate * eventGlobalMutiplier)) {
                     generiereNotruf(uhrzeit);
                     
                     if (aktuellerNotruf != null) {
-                        playSound("notruf.wav"); // <-- NEU: Alarmton!
+                        playSound("notruf.wav");
                     }
                     
                     if (calltakerStufe > 0 && aktuellerNotruf != null) {
@@ -492,7 +484,6 @@ if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / s
         return (std >= 7 && std <= 9) || (std >= 16 && std <= 18);
     }
     
-    // NEU: Datums-Berechnung mit LocalDate ab 01.06.2026
     public static LocalDate getCurrentDate() {
         return LocalDate.of(2026, 6, 1).plusDays(tag - 1);
     }
@@ -650,11 +641,13 @@ if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / s
             return;
         }
 
+        boolean ueberlandHilfeAktiv = false;
         if (totalMissing > 0) {
             int wahl = JOptionPane.showConfirmDialog(frame, "Dir fehlen " + totalMissing + " Fahrzeuge!\nSoll der Landkreis aushelfen? (" + (totalMissing*500) + " EURO)", "Ueberlandhilfe", JOptionPane.YES_NO_OPTION);
             if (wahl == JOptionPane.YES_OPTION) {
                 if (budget >= (totalMissing*500)) {
                     budget -= (totalMissing*500);
+                    ueberlandHilfeAktiv = true;
                 } else {
                     JOptionPane.showMessageDialog(frame, "Zu wenig Geld!", "Fehler", JOptionPane.ERROR_MESSAGE);
                     return;
@@ -676,7 +669,7 @@ if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / s
         int xpBel = 0;
         int multiplier = isRushHour() ? 3 : 1;
         
-for (Fahrzeug f : fzListe) {
+        for (Fahrzeug f : fzListe) {
             int baseTime = 30; 
             for(Wache wCheck : wachen) {
                 for(Personal p : wCheck.personalPool) { 
@@ -691,16 +684,14 @@ for (Fahrzeug f : fzListe) {
             xpBel += 25;
         }
         
-        // NEU: Einsatz nur in die Liste aufnehmen, wenn wir eigene Fahrzeuge schicken
-        if (!fzListe.isEmpty()) {
+        // NEU: Einsatz nur in die Liste aufnehmen, wenn wir eigene Fahrzeuge schicken ODER externe Hilfe gekauft haben
+        if (!fzListe.isEmpty() || ueberlandHilfeAktiv) {
             aktuellerNotruf.xpBelohnung = xpBel * aktuellerNotruf.vorlage.minLevel;
             aktiveEinsaetze.add(aktuellerNotruf);
-                    aktuellerNotruf = null;
-        uiAktualisieren(getUhrzeit());
         }
         
-
-
+        aktuellerNotruf = null;
+        uiAktualisieren(getUhrzeit());
     }
 
     public static int sucheFahrzeuge(String typ, int anzahl, ArrayList<Fahrzeug> liste) {
@@ -804,7 +795,7 @@ for (Fahrzeug f : fzListe) {
                             Personal leih = new Personal("Leihkraft (" + missingRole + ")", missingRole);
                             leih.zugewiesenesFahrzeug = f.funkrufname; leih.geplantesFahrzeug = "Keines";
                             w.personalPool.add(leih); helped = true;
-SpeicherManager.speichern("savegame.properties");
+                            SpeicherManager.speichern("savegame.properties");
                             if(hatGenugPersonal(f)) { 
                                 f.status = 6; 
                                 f.ausfallGrund = "Personalwechsel"; 
@@ -895,12 +886,10 @@ SpeicherManager.speichern("savegame.properties");
         checkLevelUp();
         if (level > altesLevel) sb.append("\n*** GLUECKWUNSCH! Du bist auf LEVEL ").append(level).append(" aufgestiegen! ***\n");
         
-        // TAG UND MONAT WECHSELN
         tag++;
         LocalDate neuerTag = getCurrentDate();
-        int dayIndex = neuerTag.getDayOfMonth() - 1; // 0 für den 1. Tag, 1 für den 2. usw.
+        int dayIndex = neuerTag.getDayOfMonth() - 1; 
         
-        // Wenn der neue Tag der 1. des Monats ist -> Pläne verschieben!
         if (neuerTag.getDayOfMonth() == 1) {
             for (Wache w : wachen) {
                 for (Personal p : w.personalPool) {
@@ -926,7 +915,6 @@ SpeicherManager.speichern("savegame.properties");
                     postfach.add(new Email("Leitstelle", "Urlaub beendet", "Mitarbeiter " + p.name + " ist aus dem Urlaub zurueck.", "Info", p, -1, -1));
                 }
                 
-                // --- ÜBERNAHME AUS DEM NEUEN SCHICHTPLAN FÜR DEN NÄCHSTEN TAG ---
                 String planHeute = p.planAktuellerMonat[dayIndex];
                 if (planHeute == null) planHeute = "Frei";
                 
@@ -934,7 +922,7 @@ SpeicherManager.speichern("savegame.properties");
                 if (p.urlaubStart != -1 && tag >= p.urlaubStart && tag <= p.urlaubEnd) planHeute = "Urlaub";
                 if (p.status.equals("Lehrgang")) planHeute = "Lehrgang";
 
-   if (planHeute.equals("Frei") || planHeute.equals("Krank") || planHeute.equals("Urlaub") || planHeute.equals("Lehrgang")) {
+                if (planHeute.equals("Frei") || planHeute.equals("Krank") || planHeute.equals("Urlaub") || planHeute.equals("Lehrgang")) {
                     p.status = planHeute;
                     p.zugewiesenesFahrzeug = "Keines";
                 } else if (planHeute.equals("Bereitschaft")) {
@@ -976,7 +964,6 @@ SpeicherManager.speichern("savegame.properties");
                 }
             }
             
-            // Fahrzeuge auf Personal prüfen und Status 6 verhängen wenn nötig
             for(Fahrzeug f : w.fuhrpark) {
                 if (hatGenugPersonal(f)) {
                     if (f.status == 6 && (f.ausfallGrund.equals("Personal fehlt") || f.ausfallGrund.equals("Personalwechsel"))) {
@@ -1045,7 +1032,7 @@ SpeicherManager.speichern("savegame.properties");
                 if(personErfuellt(pool.get(j), r)) {
                     pool.remove(j);
                     missing.remove(i);
-                    i--; // Nach links rutschen ausgleichen!
+                    i--; 
                     found = true;
                     break;
                 }
@@ -1136,7 +1123,6 @@ SpeicherManager.speichern("savegame.properties");
         w.personalPool.add(new Personal("Max Bauer", "NFS"));
         w.personalPool.add(new Personal("Anna Koch", "RS"));
 
-        // Echte Zuweisung auch für den Plan an Tag 1 (Index 0)
         for(int i=0; i<6; i++) {
             w.personalPool.get(i).zugewiesenesFahrzeug = f1.funkrufname;
             w.personalPool.get(i).planAktuellerMonat[0] = f1.funkrufname;
@@ -1152,19 +1138,15 @@ SpeicherManager.speichern("savegame.properties");
                 f.status = 6; 
                 f.ausfallGrund = "Personal fehlt"; 
             } else {
-                f.status = 2; // Bereit auf Wache
+                f.status = 2; 
             }
         }
-        } // <-- 1. Diese Klammer beendet die for-Schleife
-    
-        // NEU: Sound-Engine
-// NEU: Sound-Engine (Eingebettet für EXE)
+    }
+
     public static void playSound(String dateiName) {
         new Thread(() -> {
             try {
-                // Das "/" sorgt dafür, dass er im Hauptverzeichnis der eingebetteten Dateien sucht
                 java.net.URL soundUrl = LogistikSimulator.class.getResource(dateiName);
-                
                 if (soundUrl != null) {
                     javax.sound.sampled.AudioInputStream audioInput = javax.sound.sampled.AudioSystem.getAudioInputStream(soundUrl);
                     javax.sound.sampled.Clip clip = javax.sound.sampled.AudioSystem.getClip();
@@ -1174,9 +1156,8 @@ SpeicherManager.speichern("savegame.properties");
                     System.out.println("Sounddatei nicht gefunden: " + dateiName);
                 }
             } catch (Exception ex) {
-                // Fehler beim Abspielen ignorieren, damit das Spiel nicht abstürzt
+                // Fehler beim Abspielen ignorieren
             }
         }).start();
     }
-
 }
