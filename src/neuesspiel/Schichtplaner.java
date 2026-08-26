@@ -187,6 +187,7 @@ public class Schichtplaner {
                 if (val.equals("Krank")) { c.setBackground(new Color(231, 76, 60)); c.setForeground(Color.WHITE); }
                 else if (val.equals("Urlaub")) { c.setBackground(new Color(243, 156, 18)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Lehrgang")) { c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); }
+                else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); } // <-- NEU
                 else if (val.equals("Frei")) { c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); }
                 else { c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); }
                 return c;
@@ -238,7 +239,7 @@ public class Schichtplaner {
             saveTableData();
             aktuelleWache = wachen.get(cbWachen.getSelectedIndex());
             stempelModel.clear();
-            stempelModel.addElement("Frei"); stempelModel.addElement("Urlaub"); stempelModel.addElement("Krank"); stempelModel.addElement("Lehrgang");
+            stempelModel.addElement("Frei");stempelModel.addElement("Bereitschaft"); stempelModel.addElement("Urlaub"); stempelModel.addElement("Krank"); stempelModel.addElement("Lehrgang");
             for (Fahrzeug f : aktuelleWache.fuhrpark) stempelModel.addElement(f.funkrufname);
             stempelListe.setSelectedIndex(0);
             loadTableData();
@@ -268,7 +269,6 @@ btnSave.addActionListener(e -> {
                         String neuerPlan = p.planAktuellerMonat[heuteIndex];
                         if (neuerPlan == null) neuerPlan = "Frei";
                         
-                        // Krankheit, Urlaub und Lehrgang ignorieren (die bleiben auf ihrem Status)
                         if (p.krankBis != -1 && tag <= p.krankBis) continue;
                         if (p.urlaubStart != -1 && tag >= p.urlaubStart && tag <= p.urlaubEnd) continue;
                         if (p.status.equals("Lehrgang")) continue;
@@ -276,15 +276,19 @@ btnSave.addActionListener(e -> {
                         String alterStatus = p.status;
                         String altesFz = p.zugewiesenesFahrzeug;
                         
-                        if (!neuerPlan.equals("Frei") && !neuerPlan.equals(altesFz)) {
+                        // Pruefen, woher die Person kommt
+                        if (!neuerPlan.equals("Frei") && !neuerPlan.equals("Bereitschaft") && !neuerPlan.equals(altesFz)) {
                             if (alterStatus.equals("Frei")) {
                                 fzMitFreiemPersonal.add(neuerPlan);
                             }
                         }
                         
-                        // Live-Status überschreiben
+                        // Live-Status ueberschreiben
                         if (neuerPlan.equals("Frei")) {
                             p.status = "Frei";
+                            p.zugewiesenesFahrzeug = "Keines";
+                        } else if (neuerPlan.equals("Bereitschaft")) {
+                            p.status = "Bereitschaft";
                             p.zugewiesenesFahrzeug = "Keines";
                         } else {
                             p.status = "Bereit";
@@ -292,21 +296,19 @@ btnSave.addActionListener(e -> {
                         }
                     }
                     
-                    // STRENGE FAHRZEUG-PRUEFUNG
                     for (Fahrzeug f : w.fuhrpark) {
                         boolean hatGenug = hatGenugPersonal(f);
                         
                         if (!hatGenug) {
-                            // Wenn Leute fehlen, fange das Fahrzeug gnadenlos ab!
                             if (f.status == 1 || f.status == 2 || (f.status == 6 && f.ausfallGrund.equals("Personalwechsel"))) {
                                 f.status = 6;
                                 f.ausfallGrund = "Personal fehlt";
-                                f.reparaturDauer = 0; // Laufende Umzieh-Timer abbrechen
+                                f.reparaturDauer = 0;
                             }
                         } else {
-                            // Wenn genug Leute da sind und das Fahrzeug vorher stand:
                             if (f.status == 6 && f.ausfallGrund.equals("Personal fehlt")) {
                                 f.ausfallGrund = "Personalwechsel";
+                                // Kam jemand aus dem "Frei"? Dann 60s, ansonsten (Bereitschaft/Umsetzen) 30s
                                 f.reparaturDauer = fzMitFreiemPersonal.contains(f.funkrufname) ? 60 : 30;
                             }
                         }

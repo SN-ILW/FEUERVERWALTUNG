@@ -922,8 +922,11 @@ SpeicherManager.speichern("savegame.properties");
                 if (p.urlaubStart != -1 && tag >= p.urlaubStart && tag <= p.urlaubEnd) planHeute = "Urlaub";
                 if (p.status.equals("Lehrgang")) planHeute = "Lehrgang";
 
-                if (planHeute.equals("Frei") || planHeute.equals("Krank") || planHeute.equals("Urlaub") || planHeute.equals("Lehrgang")) {
+   if (planHeute.equals("Frei") || planHeute.equals("Krank") || planHeute.equals("Urlaub") || planHeute.equals("Lehrgang")) {
                     p.status = planHeute;
+                    p.zugewiesenesFahrzeug = "Keines";
+                } else if (planHeute.equals("Bereitschaft")) {
+                    p.status = "Bereitschaft";
                     p.zugewiesenesFahrzeug = "Keines";
                 } else {
                     p.status = "Bereit";
