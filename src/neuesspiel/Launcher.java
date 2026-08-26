@@ -9,13 +9,17 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    // Trage hier deinen GitHub-Namen und den Repo-Namen ein (z.B. "DeinName/BOS-Simulator")
-    public static final String CURRENT_VERSION = "v2"; // Je nachdem, auf welcher Version dein lokales Spiel gerade ist
-public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
+    // Passe dies an die Version an, die du als naechstes hochlädst (z.B. "v2" oder "v4")
+    public static final String CURRENT_VERSION = "v2"; 
+    
+    // Dein Repo
+    public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
+    
+    // So heisst die Datei, die deine GitHub-Action am Ende ausspuckt!
+    public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
     // ----------------------------------
 
     public static void main(String[] args) {
-        // Look & Feel anpassen (Darkmode)
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
             UIManager.put("Panel.background", new Color(35, 35, 35));
@@ -30,7 +34,6 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
         frame.setLocationRelativeTo(null); 
         frame.setLayout(new BorderLayout());
         
-        // Titel Bereich
         JPanel topPanel = new JPanel(new GridLayout(2, 1));
         topPanel.setBackground(new Color(25, 25, 25));
         topPanel.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
@@ -46,7 +49,6 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
         topPanel.add(lblVersion);
         frame.add(topPanel, BorderLayout.NORTH);
 
-        // Buttons Bereich
         JPanel centerPanel = new JPanel(new GridLayout(3, 1, 10, 15));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
         centerPanel.setBackground(new Color(35, 35, 35));
@@ -88,6 +90,8 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+            // GANZ WICHTIG: Das ist der Schluessel, damit GitHub die Anfrage nicht mehr blockiert!
+            conn.setRequestProperty("User-Agent", "AutoUpdater-BOS");
 
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -99,7 +103,8 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
                     if (line.contains("\"tag_name\":")) {
                         latestVersion = line.split(":")[1].replace("\"", "").replace(",", "").trim();
                     }
-                    if (line.contains("\"browser_download_url\":") && line.contains(".jar")) {
+                    // Wir suchen jetzt nach der .exe Datei statt nach der .jar!
+                    if (line.contains("\"browser_download_url\":") && line.contains(".exe")) {
                         downloadUrl = line.split("\"")[3];
                     }
                 }
@@ -107,7 +112,7 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
 
                 if (!latestVersion.isEmpty() && !latestVersion.equals(CURRENT_VERSION)) {
                     if (downloadUrl.isEmpty()) {
-                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber keine .jar Datei im GitHub Release hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber es wurde keine .exe im GitHub Release gefunden!", "Fehler", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -124,7 +129,7 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
                     JOptionPane.showMessageDialog(parentFrame, "Du bist auf dem neuesten Stand!\nAktuelle Version: " + CURRENT_VERSION, "Kein Update", JOptionPane.INFORMATION_MESSAGE);
                 }
             } else {
-                JOptionPane.showMessageDialog(parentFrame, "Konnte nicht nach Updates suchen. Repo-Name korrekt?", "Fehler", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(parentFrame, "Konnte nicht nach Updates suchen. HTTP Fehlercode: " + conn.getResponseCode(), "Fehler", JOptionPane.ERROR_MESSAGE);
             }
             conn.disconnect();
         } catch (Exception ex) {
@@ -152,18 +157,22 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
 
         Thread downloadThread = new Thread(() -> {
             try {
-                // GitHub Download-Links leiten oft auf AWS Server um, dies fangen wir hier ab
                 HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
+                conn.setRequestProperty("User-Agent", "AutoUpdater-BOS"); // Auch hier den User-Agent setzen
                 conn.setInstanceFollowRedirects(true);
                 int status = conn.getResponseCode();
+                
+                // GitHub leitet Downloads oft auf externe Server um, das fangen wir hier sauber ab
                 if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == HttpURLConnection.HTTP_SEE_OTHER) {
                     String redirectUrl = conn.getHeaderField("Location");
                     conn = (HttpURLConnection) new URL(redirectUrl).openConnection();
+                    conn.setRequestProperty("User-Agent", "AutoUpdater-BOS");
                 }
 
                 int fileSize = conn.getContentLength();
                 InputStream in = conn.getInputStream();
-                FileOutputStream out = new FileOutputStream("update.jar");
+                // Wir speichern das Update als update.exe
+                FileOutputStream out = new FileOutputStream("update.exe");
 
                 byte[] buffer = new byte[4096];
                 int bytesRead;
@@ -199,16 +208,7 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
 
     private static void installAndRestart() {
         try {
-            // Ermittelt den Pfad und Namen der Datei, die wir gerade ausfuehren
-            File currentJar = new File(Launcher.class.getProtectionDomain().getCodeSource().getLocation().toURI());
-            
-            // Wenn wir das Spiel direkt aus NetBeans starten, können wir die .jar nicht überschreiben
-            if (!currentJar.getName().endsWith(".jar")) {
-                JOptionPane.showMessageDialog(null, "Update erfolgreich als 'update.jar' heruntergeladen.\nDa das Spiel ueber die Entwicklungsumgebung gestartet wurde, erfolgt kein Auto-Neustart.", "Info", JOptionPane.INFORMATION_MESSAGE);
-                return;
-            }
-
-            String currentJarName = currentJar.getName();
+            // Prueft, ob wir auf Windows sind
             String os = System.getProperty("os.name").toLowerCase();
 
             if (os.contains("win")) {
@@ -216,17 +216,17 @@ public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
                 File batFile = new File("update.bat");
                 FileWriter fw = new FileWriter(batFile);
                 fw.write("@echo off\n");
-                fw.write("timeout /t 2 /nobreak > NUL\n"); // Wartet 2 Sekunden, bis Java sich beendet hat
-                fw.write("del \"" + currentJarName + "\"\n"); // Loescht alte Version
-                fw.write("move /y \"update.jar\" \"" + currentJarName + "\"\n"); // Benennt neue Version um
-                fw.write("start javaw -jar \"" + currentJarName + "\"\n"); // Startet das Spiel neu
-                fw.write("del update.bat\n"); // Skript loescht sich selbst
+                fw.write("timeout /t 2 /nobreak > NUL\n"); // Wartet 2 Sekunden, bis das aktuelle Spiel zu ist
+                fw.write("del \"" + EXE_NAME + "\"\n"); // Loescht die alte Feuerwehr-Verwaltung.exe
+                fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); // Macht die update.exe zur neuen Feuerwehr-Verwaltung.exe
+                fw.write("start \"\" \"" + EXE_NAME + "\"\n"); // Startet das Spiel neu
+                fw.write("del update.bat\n"); // Das Skript loescht sich abschliessend selbst
                 fw.close();
 
                 Runtime.getRuntime().exec("cmd /c start update.bat");
-                System.exit(0);
+                System.exit(0); // Beendet das aktuelle Spiel
             } else {
-                JOptionPane.showMessageDialog(null, "Update als 'update.jar' heruntergeladen. Automatischer Neustart wird aktuell nur unter Windows unterstuetzt.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(null, "Update erfolgreich als 'update.exe' heruntergeladen.\nAutomatischer Neustart wird nur unter Windows unterstuetzt.", "Info", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Konnte Neustart-Skript nicht erstellen: " + e.getMessage());
