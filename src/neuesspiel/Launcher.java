@@ -13,7 +13,7 @@ public class Launcher {
     public static final String CURRENT_VERSION = "v5"; 
     
     // Dein Repo
-    public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
+    public static final String GITHUB_REPO = "SN-ILW/Feuerwehr-Verwaltung"; 
     
     // So heisst die Datei, die deine GitHub-Action am Ende ausspuckt!
     public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
