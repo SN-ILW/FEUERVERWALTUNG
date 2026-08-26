@@ -3,14 +3,13 @@ package neuesspiel;
 import javax.swing.*;
 import java.awt.*;
 import java.io.File;
-import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 
 public class LogistikSimulator {
     
-    /* STREAMING_CHUNK:Initializing global UI and game variables... */
     public static JFrame frame;
     public static JTextArea txtStatus, txtEinsatz;
     public static JButton btnPause, btnPlay, btnFastForward;
@@ -53,7 +52,6 @@ public class LogistikSimulator {
     public static boolean techKlinikLeezen = false;
     public static boolean techKlinikHagenow = false;
 
-    /* STREAMING_CHUNK:Initializing game lists and maps... */
     public static ArrayList<Wache> wachen = new ArrayList<>();
     public static ArrayList<Einsatz> aktiveEinsaetze = new ArrayList<>();
     public static ArrayList<Einsatz> tagesStatistik = new ArrayList<>();
@@ -69,7 +67,6 @@ public class LogistikSimulator {
     // Event-System
     public static Event aktuellesEvent = null;
 
-    /* STREAMING_CHUNK:Main method & UI Look-and-Feel Setup... */
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
@@ -102,7 +99,6 @@ public class LogistikSimulator {
         if (!new File("savegame.properties").exists()) initStandardDaten();
         else if (!SpeicherManager.laden("savegame.properties")) initStandardDaten();
         
-        /* STREAMING_CHUNK:Building the main application frame... */
         frame = new JFrame("FeuerwehrVerwaltung");
         frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
@@ -231,7 +227,7 @@ public class LogistikSimulator {
         pnlCenter.add(pnlLeft); 
         pnlCenter.add(pnlRight);
         
-        /* STREAMING_CHUNK:Adding the main bottom action buttons... */
+        // --- BOTTOM PANEL ---
         JPanel pnlBottom = new JPanel(new GridLayout(3, 4, 5, 5));
         pnlBottom.setBackground(bgDark);
         pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -284,7 +280,7 @@ public class LogistikSimulator {
         
         frame.setVisible(true);
 
-        /* STREAMING_CHUNK:Starting the core game timer loop... */
+        // --- Ticker ---
         new Timer(1000, e -> {
             if (speed > 0) {
                 inGameSekunden += (speed * 10);
@@ -334,7 +330,6 @@ public class LogistikSimulator {
                     }
                 }
 
-                /* STREAMING_CHUNK:Processing active missions and emergency generation... */
                 for (int i = aktiveEinsaetze.size() - 1; i >= 0; i--) {
                     Einsatz ein = aktiveEinsaetze.get(i);
                     ein.checkLagemeldung(speed, uhrzeit);
@@ -393,8 +388,6 @@ public class LogistikSimulator {
                 }
                 
                 double eventGlobalMutiplier = aktuellesEvent != null ? aktuellesEvent.globalRateMultiplier : 1.0;
-                
-                // NEU: Keine neuen Einsaetze mehr ab 19 Uhr generieren!
                 boolean leitstelleGeoeffnet = inGameSekunden < (19 * 3600);
                 
                 if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / speed) == 0 && Math.random() < (0.6 * notrufRate * eventGlobalMutiplier)) {
@@ -446,7 +439,6 @@ public class LogistikSimulator {
         uiAktualisieren(getUhrzeit());
     }
 
-    /* STREAMING_CHUNK:Utility methods for game state and UI logic... */
     public static void beendenMitSpeichern() {
         setSpeed(0);
         int wahl = JOptionPane.showOptionDialog(frame, 
@@ -494,26 +486,23 @@ public class LogistikSimulator {
         return (std >= 7 && std <= 9) || (std >= 16 && std <= 18);
     }
     
+    // NEU: Datums-Berechnung mit LocalDate ab 01.06.2026
+    public static LocalDate getCurrentDate() {
+        return LocalDate.of(2026, 6, 1).plusDays(tag - 1);
+    }
+    
     public static String getDatumUndUhrzeit() {
-        long baseTime = 1756000000000L; 
-        long extraTime = (long)(tag - 1) * 24 * 60 * 60 * 1000;
-        String dateStr = new SimpleDateFormat("EEEE, dd.MM.yyyy", java.util.Locale.GERMAN).format(new Date(baseTime + extraTime));
-        return dateStr;
+        return getCurrentDate().format(DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", java.util.Locale.GERMAN));
     }
     
     public static String getDatumString(int tagNum) {
-        long baseTime = 1756000000000L; 
-        long extraTime = (long)(tagNum - 1) * 24 * 60 * 60 * 1000;
-        return new SimpleDateFormat("EEEE, 'dem' dd.MM.yyyy", java.util.Locale.GERMAN).format(new Date(baseTime + extraTime));
+        return LocalDate.of(2026, 6, 1).plusDays(tagNum - 1).format(DateTimeFormatter.ofPattern("EEEE, 'dem' dd.MM.yyyy", java.util.Locale.GERMAN));
     }
     
     public static String getShortDatumString(int tagNum) {
-        long baseTime = 1756000000000L; 
-        long extraTime = (long)(tagNum - 1) * 24 * 60 * 60 * 1000;
-        return new SimpleDateFormat("dd.MM.yyyy").format(new Date(baseTime + extraTime));
+        return LocalDate.of(2026, 6, 1).plusDays(tagNum - 1).format(DateTimeFormatter.ofPattern("dd.MM.yyyy"));
     }
 
-    /* STREAMING_CHUNK:UI update logic (FMS Board, Info Panels)... */
     public static void uiAktualisieren(String zeit) {
         String rushHourText = isRushHour() ? " | RUSH-HOUR (Verkehr blockiert)" : "";
         String eventText = aktuellesEvent != null ? " | EVENT: " + aktuellesEvent.name : "";
@@ -599,7 +588,6 @@ public class LogistikSimulator {
         txtEinsatz.setText(lage.toString());
     }
 
-    /* STREAMING_CHUNK:Dispatching and Mission Generation... */
     public static void generiereNotruf(String uhrzeit) {
         ArrayList<EinsatzVorlage> moegliche = new ArrayList<>();
         for (EinsatzVorlage v : vorlagenPool) {
@@ -703,7 +691,6 @@ public class LogistikSimulator {
         uiAktualisieren(getUhrzeit());
     }
 
-    /* STREAMING_CHUNK:Vehicle Management and Purchasing... */
     public static int sucheFahrzeuge(String typ, int anzahl, ArrayList<Fahrzeug> liste) {
         if (anzahl <= 0) return 0;
         int fehlt = anzahl;
@@ -785,7 +772,6 @@ public class LogistikSimulator {
         }
     }
 
-    /* STREAMING_CHUNK:Personnel Management... */
     public static void leihkraftAnfordern() {
         if (budget >= 250) {
             boolean helped = false;
@@ -847,7 +833,6 @@ public class LogistikSimulator {
         } else { JOptionPane.showMessageDialog(frame, "Zu wenig Budget (500 EURO benoetigt)!", "Fehler", JOptionPane.ERROR_MESSAGE); }
     }
 
-    /* STREAMING_CHUNK:End of Day Routine... */
     public static void tagesWechsel() {
         setSpeed(0);
         int tagesXP = 0;
@@ -893,6 +878,21 @@ public class LogistikSimulator {
         int altesLevel = level;
         checkLevelUp();
         if (level > altesLevel) sb.append("\n*** GLUECKWUNSCH! Du bist auf LEVEL ").append(level).append(" aufgestiegen! ***\n");
+        
+        // TAG UND MONAT WECHSELN
+        tag++;
+        LocalDate neuerTag = getCurrentDate();
+        int dayIndex = neuerTag.getDayOfMonth() - 1; // 0 für den 1. Tag, 1 für den 2. usw.
+        
+        // Wenn der neue Tag der 1. des Monats ist -> Pläne verschieben!
+        if (neuerTag.getDayOfMonth() == 1) {
+            for (Wache w : wachen) {
+                for (Personal p : w.personalPool) {
+                    System.arraycopy(p.planNaechsterMonat, 0, p.planAktuellerMonat, 0, 31);
+                    for (int i = 0; i < 31; i++) p.planNaechsterMonat[i] = "Frei";
+                }
+            }
+        }
 
         for(Wache w : wachen) {
             for (int i = w.personalPool.size() - 1; i >= 0; i--) {
@@ -910,13 +910,20 @@ public class LogistikSimulator {
                     postfach.add(new Email("Leitstelle", "Urlaub beendet", "Mitarbeiter " + p.name + " ist aus dem Urlaub zurueck.", "Info", p, -1, -1));
                 }
                 
-                p.status = p.geplanterStatus; p.zugewiesenesFahrzeug = p.geplantesFahrzeug;
+                // --- ÜBERNAHME AUS DEM NEUEN SCHICHTPLAN FÜR DEN NÄCHSTEN TAG ---
+                String planHeute = p.planAktuellerMonat[dayIndex];
+                if (planHeute == null) planHeute = "Frei";
                 
-                p.geplantesFahrzeug = "Keines";
-                if (p.status.equals("Krank") || p.status.equals("Urlaub") || p.status.equals("Lehrgang")) {
-                    p.geplanterStatus = p.status;
+                if (p.krankBis != -1 && tag <= p.krankBis) planHeute = "Krank";
+                if (p.urlaubStart != -1 && tag >= p.urlaubStart && tag <= p.urlaubEnd) planHeute = "Urlaub";
+                if (p.status.equals("Lehrgang")) planHeute = "Lehrgang";
+
+                if (planHeute.equals("Frei") || planHeute.equals("Krank") || planHeute.equals("Urlaub") || planHeute.equals("Lehrgang")) {
+                    p.status = planHeute;
+                    p.zugewiesenesFahrzeug = "Keines";
                 } else {
-                    p.geplanterStatus = "Bereit";
+                    p.status = "Bereit";
+                    p.zugewiesenesFahrzeug = planHeute;
                 }
                 
                 if (p.schichtenMonat > 15 && cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
@@ -924,7 +931,6 @@ public class LogistikSimulator {
                     if (Math.random() < chance) {
                         int dauer = 2 + (int)(Math.random() * 5);
                         p.krankBis = tag + dauer; 
-                        p.geplanterStatus = "Krank"; p.geplantesFahrzeug = "Keines";
                         postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
                     }
                 }
@@ -951,20 +957,23 @@ public class LogistikSimulator {
                 }
             }
             
+            // Fahrzeuge auf Personal prüfen und Status 6 verhängen wenn nötig
             for(Fahrzeug f : w.fuhrpark) {
-                boolean hatPers = hatGenugPersonal(f);
-                if (hatPers && f.status == 6 && (f.ausfallGrund.equals("Personal fehlt") || f.ausfallGrund.equals("Personalwechsel"))) {
-                    f.status = 2; 
-                    f.ausfallGrund = "";
-                } else if (!hatPers && (f.status == 1 || f.status == 2)) {
-                    f.status = 6;
-                    f.ausfallGrund = "Personal fehlt";
+                if (hatGenugPersonal(f)) {
+                    if (f.status == 6 && (f.ausfallGrund.equals("Personal fehlt") || f.ausfallGrund.equals("Personalwechsel"))) {
+                        f.status = 2; 
+                        f.ausfallGrund = "";
+                    }
+                } else {
+                    if (f.status == 1 || f.status == 2) {
+                        f.status = 6;
+                        f.ausfallGrund = "Personal fehlt";
+                    }
                 }
             }
         }
 
         JOptionPane.showMessageDialog(frame, sb.toString(), "Feierabend!", JOptionPane.INFORMATION_MESSAGE);
-        tag++;
         inGameSekunden = 7 * 3600;
         tagesStatistik.clear();
         abgelehnteEinsaetzeHeute = 0;
@@ -972,15 +981,18 @@ public class LogistikSimulator {
         uiAktualisieren(getUhrzeit());
     }
     
-    /* STREAMING_CHUNK:Validation Helpers (Requirements & Roles)... */
     public static boolean hatGenugGeplantesPersonal() {
+        LocalDate tomorrow = getCurrentDate().plusDays(1);
+        int dayIndex = tomorrow.getDayOfMonth() - 1;
+        
         for(Wache w : wachen) {
             for(Fahrzeug f : w.fuhrpark) {
                 if(f.status == 1 || f.status == 2) {
                     ArrayList<String> reqs = getRequiredRoles(f);
                     ArrayList<Personal> avail = new ArrayList<>();
                     for(Personal p : w.personalPool) {
-                        if(p.geplantesFahrzeug.equals(f.funkrufname) && (p.geplanterStatus.equals("Bereit") || p.geplanterStatus.equals("Frei"))) {
+                        String planTomorrow = (tomorrow.getDayOfMonth() == 1) ? p.planNaechsterMonat[dayIndex] : p.planAktuellerMonat[dayIndex];
+                        if (planTomorrow != null && planTomorrow.equals(f.funkrufname)) {
                             avail.add(p);
                         }
                     }
@@ -1014,7 +1026,7 @@ public class LogistikSimulator {
                 if(personErfuellt(pool.get(j), r)) {
                     pool.remove(j);
                     missing.remove(i);
-                    i--; // Vorwaertsschleife Bugfix!
+                    i--; // Nach links rutschen ausgleichen!
                     found = true;
                     break;
                 }
@@ -1064,7 +1076,6 @@ public class LogistikSimulator {
         return 1 + (level / 5); 
     }
 
-    /* STREAMING_CHUNK:Base Data Initialization... */
     public static void initStandardDaten() {
         budget = 25000; xp = 0; level = 1; tag = 1; inGameSekunden = 7 * 3600; abgelehnteEinsaetzeHeute = 0;
         techWerkstatt = false; techRuheraum = false; techGrossabnehmer = false; lehrerStufe = 0; calltakerStufe = 0;
@@ -1085,36 +1096,45 @@ public class LogistikSimulator {
         vorlagenPool.add(new EinsatzVorlage("KTP", "KTP", "Krankentransport", 0, 0, 1, 0, 0, 0, false, 0, "", 1));
         vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
 
-        customMaterials.add(new CustomMaterial("Verband", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
+        customMaterials.add(new CustomMaterial("Verbandsmaterial", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
         customMaterials.add(new CustomMaterial("Medikamente", new ArrayList<>(java.util.Arrays.asList("RTW", "NEF")), 3, new ArrayList<>(), 1000, 20, 5));
-        customMaterials.add(new CustomMaterial("Sauerstoff", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "NEF", "HLF")), 1, new ArrayList<>(), 800, 10, 5));
-        customMaterials.add(new CustomMaterial("Filter", new ArrayList<>(java.util.Arrays.asList("HLF", "DLK")), 2, new ArrayList<>(), 1500, 10, 5));
-        customMaterials.add(new CustomMaterial("Schaum", new ArrayList<>(java.util.Arrays.asList("HLF")), 5, new ArrayList<>(), 2000, 5, 2));
-        customMaterials.add(new CustomMaterial("Binder", new ArrayList<>(java.util.Arrays.asList("HLF")), 2, new ArrayList<>(), 400, 20, 10));
+        customMaterials.add(new CustomMaterial("Sauerstoff O²", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "NEF", "HLF")), 1, new ArrayList<>(), 800, 10, 5));
+        customMaterials.add(new CustomMaterial("PA-Gerät", new ArrayList<>(java.util.Arrays.asList("HLF", "DLK")), 2, new ArrayList<>(), 1500, 10, 5));
+        customMaterials.add(new CustomMaterial("Schaummittel", new ArrayList<>(java.util.Arrays.asList("HLF")), 5, new ArrayList<>(), 2000, 5, 2));
+        customMaterials.add(new CustomMaterial("Ölbindemittel", new ArrayList<>(java.util.Arrays.asList("HLF")), 2, new ArrayList<>(), 400, 20, 10));
 
         for(CustomMaterial cm : customMaterials) {
             hauptlager.put(cm.name, 100);
             w.material.put(cm.name, 50);
         }
 
-        w.personalPool.add(new Personal("Adriano", "TM, TF, GF, EL, MA"));
-        w.personalPool.add(new Personal("Fabian", "TM, TF, GF, MA"));
-        w.personalPool.add(new Personal("Ian", "TM, TF"));
-        w.personalPool.add(new Personal("Tyra-Jo", "RS, NFS, NA"));
-        w.personalPool.add(new Personal("Stenzel", "RS, NFS"));
-        w.personalPool.add(new Personal("Adriano Quessel", "RS, NFS"));
-        w.personalPool.add(new Personal("Fabian Stenzel", "RS"));
-        w.personalPool.add(new Personal("Ian Wittka", "RS"));
-        w.personalPool.add(new Personal("Lukas Muller", "TM"));
+        w.personalPool.add(new Personal("Adriano Quessel", "MA"));
+        w.personalPool.add(new Personal("Fabian Stenzel", "GF"));
+        w.personalPool.add(new Personal("Ian Wittka", "TF"));
+        w.personalPool.add(new Personal("Lukas Muller", "TF"));
         w.personalPool.add(new Personal("Leon Schmidt", "TM"));
         w.personalPool.add(new Personal("Tyra-Jo Wittka", "TM"));
-        w.personalPool.add(new Personal("Max Bauer", "TM"));
+        w.personalPool.add(new Personal("Max Bauer", "NFS"));
         w.personalPool.add(new Personal("Anna Koch", "RS"));
 
-        for(int i=0; i<6; i++) w.personalPool.get(i).zugewiesenesFahrzeug = f1.funkrufname;
-        for(int i=6; i<8; i++) w.personalPool.get(i).zugewiesenesFahrzeug = f2.funkrufname;
+        // Echte Zuweisung auch für den Plan an Tag 1 (Index 0)
+        for(int i=0; i<6; i++) {
+            w.personalPool.get(i).zugewiesenesFahrzeug = f1.funkrufname;
+            w.personalPool.get(i).planAktuellerMonat[0] = f1.funkrufname;
+        }
+        for(int i=6; i<8; i++) {
+            w.personalPool.get(i).zugewiesenesFahrzeug = f2.funkrufname;
+            w.personalPool.get(i).planAktuellerMonat[0] = f2.funkrufname;
+        }
         for(Personal p : w.personalPool) p.geplantesFahrzeug = "Keines";
 
-        for(Fahrzeug f : w.fuhrpark) if(!hatGenugPersonal(f)) { f.status = 6; f.ausfallGrund = "Personal fehlt"; }
+        for(Fahrzeug f : w.fuhrpark) {
+            if(!hatGenugPersonal(f)) { 
+                f.status = 6; 
+                f.ausfallGrund = "Personal fehlt"; 
+            } else {
+                f.status = 2; // Bereit auf Wache
+            }
+        }
     }
 }

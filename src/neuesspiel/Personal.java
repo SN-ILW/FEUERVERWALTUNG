@@ -20,6 +20,10 @@ public class Personal {
     
     public boolean praeferenzGesendet = false;
 
+    // --- NEU: Der 31-Tage Schichtplan ---
+    public String[] planAktuellerMonat = new String[31];
+    public String[] planNaechsterMonat = new String[31];
+
     public Personal(String name, String qual) {
         this.name = name;
         if (!qual.isEmpty()) {
@@ -27,6 +31,12 @@ public class Personal {
             for (String part : parts) {
                 this.qualifikationen.add(part.trim());
             }
+        }
+        
+        // Arrays beim Erstellen standardmaessig mit "Frei" fuellen
+        for(int i = 0; i < 31; i++) {
+            planAktuellerMonat[i] = "Frei";
+            planNaechsterMonat[i] = "Frei";
         }
     }
     

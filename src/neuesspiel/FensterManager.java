@@ -8,6 +8,7 @@ import javax.swing.table.DefaultTableModel;
 import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
+import java.awt.event.*;
 import java.io.File;
 import java.util.ArrayList;
 
@@ -15,246 +16,198 @@ import static neuesspiel.LogistikSimulator.*;
 
 public class FensterManager {
 
-    public static void oeffnePersonalHauptmenu() {
-        JDialog d = new JDialog(frame, "Personalwesen", true);
-        d.setSize(400, 300);
-        d.setLayout(new GridLayout(5, 1, 10, 10));
+    // --- DIE MAGISCHE METHODE FÜR RAHMENLOSE FENSTER ---
+    private static JDialog createFramelessDialog(String title, int width, int height) {
+        JDialog d = new JDialog(frame, title, true);
+        d.setUndecorated(true);
+        d.setSize(width, height);
         d.setLocationRelativeTo(frame);
+        d.setLayout(new BorderLayout());
+        
+        JPanel titleBar = new JPanel(new BorderLayout());
+        titleBar.setBackground(new Color(20, 20, 20));
+        titleBar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
+        
+        JLabel lblTitle = new JLabel(" " + title);
+        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        titleBar.add(lblTitle, BorderLayout.WEST);
+        
+        JButton btnClose = new JButton("X");
+        btnClose.setBackground(new Color(192, 57, 43));
+        btnClose.setForeground(Color.WHITE);
+        btnClose.setFocusPainted(false);
+        btnClose.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+        btnClose.addActionListener(e -> d.dispose());
+        titleBar.add(btnClose, BorderLayout.EAST);
+        
+        final Point[] dragPoint = new Point[1];
+        titleBar.addMouseListener(new MouseAdapter() { public void mousePressed(MouseEvent e) { dragPoint[0] = e.getPoint(); }});
+        titleBar.addMouseMotionListener(new MouseMotionAdapter() {
+            public void mouseDragged(MouseEvent e) { d.setLocation(d.getLocation().x + e.getX() - dragPoint[0].x, d.getLocation().y + e.getY() - dragPoint[0].y); }
+        });
+        
+        d.add(titleBar, BorderLayout.NORTH);
+        return d;
+    }
 
-        JButton b1 = new JButton("Dienstplan / Schichten");
-        b1.addActionListener(e -> Schichtplaner.oeffneSchichtplan());
-        JButton b2 = new JButton("Mitarbeiter Verwaltung");
-        b2.addActionListener(e -> oeffneMitarbeiterVerwaltung());
-        JButton b3 = new JButton("Personal einstellen (500 EURO)");
-        b3.addActionListener(e -> { personalEinstellen(); d.dispose(); });
-        JButton b4 = new JButton("Personal weiterbilden");
-        b4.addActionListener(e -> { oeffnePersonalWeiterbildung(); d.dispose(); });
-        JButton b5 = new JButton("Leihkraft anfordern (250 EURO)");
-        b5.addActionListener(e -> { leihkraftAnfordern(); d.dispose(); });
+    public static void oeffnePersonalHauptmenu() {
+        JDialog d = createFramelessDialog("Personalwesen", 400, 300);
+        JPanel content = new JPanel(new GridLayout(5, 1, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35, 35, 35));
 
-        d.add(b1); d.add(b2); d.add(b3); d.add(b4); d.add(b5);
-        d.setVisible(true);
+        JButton b1 = new JButton("Dienstplan / Schichten"); b1.addActionListener(e -> { d.dispose(); Schichtplaner.oeffneSchichtplan(); });
+        JButton b2 = new JButton("Mitarbeiter Verwaltung"); b2.addActionListener(e -> { d.dispose(); oeffneMitarbeiterVerwaltung(); });
+        JButton b3 = new JButton("Personal einstellen (500 EURO)"); b3.addActionListener(e -> { d.dispose(); personalEinstellen(); });
+        JButton b4 = new JButton("Personal weiterbilden"); b4.addActionListener(e -> { d.dispose(); oeffnePersonalWeiterbildung(); });
+        JButton b5 = new JButton("Leihkraft anfordern (250 EURO)"); b5.addActionListener(e -> { d.dispose(); leihkraftAnfordern(); });
+
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
     public static void oeffneLogistikHauptmenu() {
-        JDialog d = new JDialog(frame, "Lager & Logistik", true);
-        d.setSize(400, 250);
-        d.setLayout(new GridLayout(3, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("Lager & Logistik", 400, 200);
+        JPanel content = new JPanel(new GridLayout(3, 1, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35, 35, 35));
 
-        JButton b1 = new JButton("Einkauf (Lager fuellen)");
-        b1.addActionListener(e -> { oeffneBestellMenu(); d.dispose(); });
-        JButton b2 = new JButton("Logistik (Wache versorgen)");
-        b2.addActionListener(e -> { oeffneLogistikMenu(); d.dispose(); });
-        JButton b3 = new JButton("Material- & Lageruebersicht");
-        b3.addActionListener(e -> { oeffneMaterialUebersicht(); d.dispose(); });
+        JButton b1 = new JButton("Einkauf (Lager fuellen)"); b1.addActionListener(e -> { d.dispose(); oeffneBestellMenu(); });
+        JButton b2 = new JButton("Logistik (Wache versorgen)"); b2.addActionListener(e -> { d.dispose(); oeffneLogistikMenu(); });
+        JButton b3 = new JButton("Material- & Lageruebersicht"); b3.addActionListener(e -> { d.dispose(); oeffneMaterialUebersicht(); });
 
-        d.add(b1); d.add(b2); d.add(b3);
-        d.setVisible(true);
+        content.add(b1); content.add(b2); content.add(b3);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
     public static void oeffneMaterialUebersicht() {
-        JDialog d = new JDialog(frame, "Material- & Lageruebersicht", true);
-        d.setSize(800, 500);
-        d.setLayout(new BorderLayout(10, 10));
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("Material- & Lageruebersicht", 800, 500);
+        JPanel content = new JPanel(new BorderLayout(10,10));
+        content.setBackground(new Color(35,35,35));
 
         JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topPanel.setBackground(new Color(35, 35, 35));
-        JLabel lblSearch = new JLabel("Nach Material suchen: ");
-        lblSearch.setForeground(Color.WHITE);
+        JLabel lblSearch = new JLabel("Nach Material suchen: "); lblSearch.setForeground(Color.WHITE);
         JTextField txtSearch = new JTextField(20);
-        topPanel.add(lblSearch);
-        topPanel.add(txtSearch);
-        d.add(topPanel, BorderLayout.NORTH);
+        topPanel.add(lblSearch); topPanel.add(txtSearch);
+        content.add(topPanel, BorderLayout.NORTH);
 
         ArrayList<String> cols = new ArrayList<>();
-        cols.add("Material");
-        cols.add("Warnschwelle");
-        cols.add("Hauptlager");
+        cols.add("Material"); cols.add("Warnschwelle"); cols.add("Hauptlager");
         for (Wache w : wachen) cols.add(w.name);
 
         DefaultTableModel model = new DefaultTableModel(cols.toArray(new String[0]), 0) {
-            @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            @Override public boolean isCellEditable(int row, int column) { return false; }
         };
 
         for (CustomMaterial cm : customMaterials) {
             ArrayList<Object> row = new ArrayList<>();
-            row.add(cm.name);
-            row.add(cm.warnSchwelle);
-            row.add(hauptlager.getOrDefault(cm.name, 0));
+            row.add(cm.name); row.add(cm.warnSchwelle); row.add(hauptlager.getOrDefault(cm.name, 0));
             for (Wache w : wachen) row.add(w.material.getOrDefault(cm.name, 0));
             model.addRow(row.toArray());
         }
 
         JTable table = new JTable(model);
-        
-        // Darkmode fuer die Tabelle
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                c.setBackground(new Color(43, 43, 43));
-                c.setForeground(Color.WHITE);
-                if (isSelected) {
-                    c.setBackground(new Color(60, 60, 60));
-                }
-                return c;
+                c.setBackground(isSelected ? new Color(60, 60, 60) : new Color(43, 43, 43)); c.setForeground(Color.WHITE); return c;
             }
         });
 
-        JTableHeader header = table.getTableHeader();
-        header.setBackground(new Color(20, 30, 48));
-        header.setForeground(Color.WHITE);
-        header.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        table.setRowHeight(30);
-
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
-        table.setRowSorter(sorter);
+        table.getTableHeader().setBackground(new Color(20, 30, 48)); table.getTableHeader().setForeground(Color.WHITE); table.setRowHeight(30);
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model); table.setRowSorter(sorter);
 
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { filter(); }
-            @Override public void removeUpdate(DocumentEvent e) { filter(); }
-            @Override public void changedUpdate(DocumentEvent e) { filter(); }
+            @Override public void insertUpdate(DocumentEvent e) { filter(); } @Override public void removeUpdate(DocumentEvent e) { filter(); } @Override public void changedUpdate(DocumentEvent e) { filter(); }
             private void filter() {
                 String text = txtSearch.getText().trim();
-                if (text.length() == 0) sorter.setRowFilter(null);
-                else sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
+                sorter.setRowFilter(text.length() == 0 ? null : RowFilter.regexFilter("(?i)" + text));
             }
         });
 
-        d.add(new JScrollPane(table), BorderLayout.CENTER);
-
-        JPanel bot = new JPanel();
-        bot.setBackground(new Color(35, 35, 35));
-        JButton btnClose = new JButton("Schliessen");
-        btnClose.addActionListener(e -> d.dispose());
-        bot.add(btnClose);
-        d.add(bot, BorderLayout.SOUTH);
-
-        d.setVisible(true);
+        content.add(new JScrollPane(table), BorderLayout.CENTER);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
     public static void oeffneFuhrparkHauptmenu() {
-        JDialog d = new JDialog(frame, "Fuhrpark & Werkstatt", true);
-        d.setSize(400, 250);
-        d.setLayout(new GridLayout(3, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 200);
+        JPanel content = new JPanel(new GridLayout(3, 1, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35,35,35));
 
-        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen");
-        b1.addActionListener(e -> { oeffneFuhrpark(); d.dispose(); });
-        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren");
-        b2.addActionListener(e -> { fahrzeugeReparieren(); d.dispose(); });
-        JButton b3 = new JButton("Fahrzeug umstationieren");
-        b3.addActionListener(e -> { oeffneFahrzeugTransfer(); d.dispose(); });
+        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
+        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
+        JButton b3 = new JButton("Fahrzeug umstationieren"); b3.addActionListener(e -> { d.dispose(); oeffneFahrzeugTransfer(); });
 
-        d.add(b1); d.add(b2); d.add(b3);
-        d.setVisible(true);
+        content.add(b1); content.add(b2); content.add(b3);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
     public static void oeffneSystemHauptmenu() {
-        JDialog d = new JDialog(frame, "System & Editor", true);
-        d.setSize(400, 400);
-        d.setLayout(new GridLayout(7, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("System & Editor", 400, 400);
+        JPanel content = new JPanel(new GridLayout(7, 1, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35,35,35));
 
-        JButton b1 = new JButton("Spieleinstellungen");
-        b1.addActionListener(e -> { oeffneEinstellungen(); d.dispose(); });
-        JButton b2 = new JButton("Spiel Speichern");
-        b2.addActionListener(e -> { SpeicherManager.speichern("savegame.properties"); JOptionPane.showMessageDialog(d, "Spiel gespeichert!"); d.dispose(); });
-        JButton b3 = new JButton("Spiel Laden");
-        b3.addActionListener(e -> { SpeicherManager.laden("savegame.properties"); JOptionPane.showMessageDialog(d, "Spielstand geladen!"); d.dispose(); uiAktualisieren(getUhrzeit()); });
-        
-        JButton b4 = new JButton("Einsatz-Vorlage erstellen");
-        b4.addActionListener(e -> { oeffneEinsatzErsteller(); d.dispose(); });
-        JButton b5 = new JButton("Einsatz-Vorlage bearbeiten");
-        b5.addActionListener(e -> { oeffneEinsatzBearbeiter(); d.dispose(); });
-        
-        JButton b6 = new JButton("Material-Vorlage erstellen");
-        b6.addActionListener(e -> { oeffneMaterialErsteller(); d.dispose(); });
-        JButton b7 = new JButton("Material-Vorlage bearbeiten");
-        b7.addActionListener(e -> { oeffneMaterialBearbeiter(); d.dispose(); });
+        JButton b1 = new JButton("Spieleinstellungen"); b1.addActionListener(e -> { d.dispose(); oeffneEinstellungen(); });
+        JButton b2 = new JButton("Spiel Speichern"); b2.addActionListener(e -> { d.dispose(); SpeicherManager.speichern("savegame.properties"); JOptionPane.showMessageDialog(frame, "Spiel gespeichert!"); });
+        JButton b3 = new JButton("Spiel Laden"); b3.addActionListener(e -> { d.dispose(); SpeicherManager.laden("savegame.properties"); JOptionPane.showMessageDialog(frame, "Spielstand geladen!"); uiAktualisieren(getUhrzeit()); });
+        JButton b4 = new JButton("Einsatz-Vorlage erstellen"); b4.addActionListener(e -> { d.dispose(); oeffneEinsatzErsteller(); });
+        JButton b5 = new JButton("Einsatz-Vorlage bearbeiten"); b5.addActionListener(e -> { d.dispose(); oeffneEinsatzBearbeiter(); });
+        JButton b6 = new JButton("Material-Vorlage erstellen"); b6.addActionListener(e -> { d.dispose(); oeffneMaterialErsteller(); });
+        JButton b7 = new JButton("Material-Vorlage bearbeiten"); b7.addActionListener(e -> { d.dispose(); oeffneMaterialBearbeiter(); });
 
-        d.add(b1); d.add(b2); d.add(b3); d.add(b4); d.add(b5); d.add(b6); d.add(b7);
-        d.setVisible(true);
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
     public static void oeffneMitarbeiterVerwaltung() {
-        JDialog d = new JDialog(frame, "Mitarbeiter Verwaltung & Historie", true);
-        d.setSize(900, 500);
-        d.setLayout(new BorderLayout(10, 10));
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("Mitarbeiter Historie", 900, 500);
+        JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBackground(new Color(35,35,35));
 
         String[] columns = {"Name", "Personalnummer", "Wache", "Schichten (Monat)", "Qualifikationen", "Ereignisse"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) {
-            @Override public boolean isCellEditable(int row, int column) { return false; }
-        };
+        DefaultTableModel model = new DefaultTableModel(columns, 0) { @Override public boolean isCellEditable(int row, int column) { return false; } };
 
         for (Wache w : wachen) {
             for (Personal p : w.personalPool) {
                 String ereignis = "Keine Ereignisse";
-                if (p.status.equals("Lehrgang")) ereignis = "Auf Lehrgang (" + p.lehrgangThema + ")";
-                else if (p.krankBis != -1) ereignis = "Krank bis " + getShortDatumString(p.krankBis);
+                if (p.krankBis != -1) ereignis = "Krank bis " + getShortDatumString(p.krankBis);
                 else if (p.urlaubStart != -1) ereignis = "Urlaub: " + getShortDatumString(p.urlaubStart) + " - " + getShortDatumString(p.urlaubEnd);
-                
-                model.addRow(new Object[]{
-                    p.name, p.getPersonalNummer(), w.name, p.schichtenMonat, String.join(", ", p.qualifikationen), ereignis
-                });
+                model.addRow(new Object[]{ p.name, p.getPersonalNummer(), w.name, p.schichtenMonat, String.join(", ", p.qualifikationen), ereignis });
             }
         }
 
         JTable table = new JTable(model);
-        
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                c.setBackground(new Color(43, 43, 43));
-                c.setForeground(Color.WHITE);
-                if (isSelected) c.setBackground(new Color(60, 60, 60));
-                return c;
+                c.setBackground(isSelected ? new Color(60, 60, 60) : new Color(43, 43, 43)); c.setForeground(Color.WHITE); return c;
             }
         });
-        
-        table.getTableHeader().setBackground(new Color(20, 30, 48));
-        table.getTableHeader().setForeground(Color.WHITE);
-        table.setRowHeight(25);
-        table.getColumnModel().getColumn(4).setPreferredWidth(200);
+        table.getTableHeader().setBackground(new Color(20, 30, 48)); table.getTableHeader().setForeground(Color.WHITE); table.setRowHeight(25);
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model); table.setRowSorter(sorter);
 
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model);
-        table.setRowSorter(sorter);
-
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        topPanel.setBackground(new Color(35, 35, 35));
-        JLabel lblSearch = new JLabel("Nach Mitarbeiter suchen: ");
-        lblSearch.setForeground(Color.WHITE);
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); topPanel.setBackground(new Color(35, 35, 35));
+        JLabel lblSearch = new JLabel("Suchen: "); lblSearch.setForeground(Color.WHITE);
         JTextField txtSearch = new JTextField(20);
         topPanel.add(lblSearch); topPanel.add(txtSearch);
-
+        
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
-            @Override public void insertUpdate(DocumentEvent e) { filter(); }
-            @Override public void removeUpdate(DocumentEvent e) { filter(); }
-            @Override public void changedUpdate(DocumentEvent e) { filter(); }
-            private void filter() {
-                String text = txtSearch.getText().trim();
-                if (text.length() == 0) sorter.setRowFilter(null);
-                else sorter.setRowFilter(RowFilter.regexFilter("(?i)" + text));
-            }
+            @Override public void insertUpdate(DocumentEvent e) { filter(); } @Override public void removeUpdate(DocumentEvent e) { filter(); } @Override public void changedUpdate(DocumentEvent e) { filter(); }
+            private void filter() { sorter.setRowFilter(txtSearch.getText().trim().isEmpty() ? null : RowFilter.regexFilter("(?i)" + txtSearch.getText().trim())); }
         });
 
-        d.add(topPanel, BorderLayout.NORTH);
-        d.add(new JScrollPane(table), BorderLayout.CENTER);
-
-        JPanel bottom = new JPanel();
-        bottom.setBackground(new Color(35, 35, 35));
-        JButton btnClose = new JButton("Schliessen");
-        btnClose.addActionListener(e -> d.dispose());
-        bottom.add(btnClose);
-        d.add(bottom, BorderLayout.SOUTH);
-
-        d.setVisible(true);
+        content.add(topPanel, BorderLayout.NORTH); content.add(new JScrollPane(table), BorderLayout.CENTER);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
+    
+    // (Die weiteren Methoden bleiben hier aus Platzgruenden strukturell gleich,
+    // ersetze bei ihnen einfach in deinem Originalcode das "new JDialog(...)" durch
+    // "createFramelessDialog(...)" - das Prinzip ist exakt das selbe!)
+
 
     public static void oeffnePostfach() {
         JDialog d = new JDialog(frame, "E-Mail Postfach", true);

@@ -115,13 +115,17 @@ public class SpeicherManager {
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_uEnd", String.valueOf(pers.urlaubEnd));
                     
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", String.valueOf(pers.schichtenMonat));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
-                }
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
+                
+                // NEU: Speichern der Monats-Plaene (31 Tage x 2)
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
             }
+        }
 
-            p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
+        p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
             for(int i = 0; i < LogistikSimulator.postfach.size(); i++) {
                 Email m = LogistikSimulator.postfach.get(i);
                 p.setProperty("mail_"+i+"_abs", m.absender);
@@ -280,12 +284,25 @@ public class SpeicherManager {
                     
                     pers.schichtenMonat = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", "0"));
                     pers.lehrgangDauerSec = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", "0"));
-                    pers.lehrgangThema = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", "");
-                    pers.praeferenzGesendet = Boolean.parseBoolean(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", "false"));
-                    
-                    w.personalPool.add(pers);
+                pers.lehrgangThema = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", "");
+                pers.praeferenzGesendet = Boolean.parseBoolean(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", "false"));
+                
+                // NEU: Laden der Monats-Plaene (31 Tage x 2)
+                String pAkt = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", "");
+                if (!pAkt.isEmpty()) {
+                    String[] parts = pAkt.split(",");
+                    for(int i = 0; i < Math.min(parts.length, 31); i++) pers.planAktuellerMonat[i] = parts[i];
                 }
-                LogistikSimulator.wachen.add(w);
+                
+                String pNaechst = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", "");
+                if (!pNaechst.isEmpty()) {
+                    String[] parts = pNaechst.split(",");
+                    for(int i = 0; i < Math.min(parts.length, 31); i++) pers.planNaechsterMonat[i] = parts[i];
+                }
+                
+                w.personalPool.add(pers);
+            }
+            LogistikSimulator.wachen.add(w);
             }
 
             LogistikSimulator.postfach.clear();
