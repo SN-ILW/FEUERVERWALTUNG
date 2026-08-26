@@ -159,27 +159,23 @@ public class Launcher {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 
-                // Wir senden den User-Agent NUR an GitHub
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0");
                 conn.setInstanceFollowRedirects(false);
                 
                 int status = conn.getResponseCode();
 
-                // Umleitungs-Schleife (z.B. zu AWS)
                 while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
                     conn.disconnect();
                     
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
-                    
-                    // WICHTIG: Hier bei Amazon (AWS) setzen wir GANZ BEWUSST KEINEN User-Agent mehr!
                     conn.setInstanceFollowRedirects(false);
                     status = conn.getResponseCode();
                 }
 
                 if (status != 200) {
-                    throw new Exception("Download fehlgeschlagen! HTTP Status: " + status);
+                    throw new Exception("HTTP Status: " + status);
                 }
 
                 int fileSize = conn.getContentLength();
@@ -207,11 +203,20 @@ public class Launcher {
                 in.close();
                 conn.disconnect();
                 
-                // Sicherheits-Check bleibt aktiv: Unter 100 KB ist es keine gueltige Launch4j .exe
+                // DER NEUE SPIONAGE-CHECK
                 File checkFile = new File("update.exe");
                 if (checkFile.exists() && checkFile.length() < 100000) { 
+                    StringBuilder errorContent = new StringBuilder();
+                    try (BufferedReader reader = new BufferedReader(new FileReader(checkFile))) {
+                        String line;
+                        int lines = 0;
+                        while ((line = reader.readLine()) != null && lines < 2) { 
+                            errorContent.append(line).append(" ");
+                            lines++;
+                        }
+                    }
                     checkFile.delete();
-                    throw new Exception("Sicherheitsabbruch: Die geladene Datei ist keine gueltige .exe!");
+                    throw new Exception("Server meldet:\n" + errorContent.toString());
                 }
 
                 SwingUtilities.invokeLater(() -> {

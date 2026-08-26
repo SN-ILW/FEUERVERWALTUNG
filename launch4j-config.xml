@@ -3,7 +3,7 @@
   <dontWrapJar>false</dontWrapJar>
   <headerType>gui</headerType>
   <jar>dist\NeuesSpiel.jar</jar>
-  <outfile>Feuerwehr-Verwaltung.exe</outfile>
+  <outfile>FeuerwehrVerwaltung.exe</outfile>
   <errTitle></errTitle>
   <cmdLine></cmdLine>
   <chdir>.</chdir>
