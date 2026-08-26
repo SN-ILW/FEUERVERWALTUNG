@@ -103,7 +103,7 @@ public class LogistikSimulator {
         else if (!SpeicherManager.laden("savegame.properties")) initStandardDaten();
         
         /* STREAMING_CHUNK:Building the main application frame... */
-        frame = new JFrame("BOS Leitstellen & Logistik Simulator");
+        frame = new JFrame("FeuerwehrVerwaltung");
         frame.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         frame.addWindowListener(new java.awt.event.WindowAdapter() {
             @Override
