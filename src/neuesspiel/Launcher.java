@@ -9,7 +9,7 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    public static final String CURRENT_VERSION = "v5"; 
+    public static final String CURRENT_VERSION = "v5"; // Für den Test eine ältere Version eintragen
     public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung"; 
     public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
     // ----------------------------------
@@ -85,7 +85,7 @@ public class Launcher {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            conn.setRequestProperty("User-Agent", "Java-AutoUpdater");
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
 
             if (conn.getResponseCode() == 200) {
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
@@ -111,7 +111,7 @@ public class Launcher {
 
                 if (!latestVersion.isEmpty() && !latestVersion.equals(CURRENT_VERSION)) {
                     if (downloadUrl.isEmpty()) {
-                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden, aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -158,27 +158,28 @@ public class Launcher {
             try {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setInstanceFollowRedirects(false); 
+                
+                // Wir senden den User-Agent NUR an GitHub
+                conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+                conn.setInstanceFollowRedirects(false);
+                
                 int status = conn.getResponseCode();
 
-                // Sauberes Verfolgen der Amazon (AWS) Umleitungen
+                // Umleitungs-Schleife (z.B. zu AWS)
                 while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
                     conn.disconnect();
+                    
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
+                    
+                    // WICHTIG: Hier bei Amazon (AWS) setzen wir GANZ BEWUSST KEINEN User-Agent mehr!
                     conn.setInstanceFollowRedirects(false);
                     status = conn.getResponseCode();
                 }
 
                 if (status != 200) {
-                    throw new Exception("Datei nicht gefunden! HTTP Status: " + status);
-                }
-
-                // Sicherheits-Check: Hat AWS uns eine Fehler-Webseite statt der .exe geschickt?
-                String contentType = conn.getContentType();
-                if (contentType != null && (contentType.contains("text/") || contentType.contains("html"))) {
-                    throw new Exception("Download blockiert: Der Server hat eine Webseite statt des Programms geschickt.");
+                    throw new Exception("Download fehlgeschlagen! HTTP Status: " + status);
                 }
 
                 int fileSize = conn.getContentLength();
@@ -205,6 +206,13 @@ public class Launcher {
                 out.close();
                 in.close();
                 conn.disconnect();
+                
+                // Sicherheits-Check bleibt aktiv: Unter 100 KB ist es keine gueltige Launch4j .exe
+                File checkFile = new File("update.exe");
+                if (checkFile.exists() && checkFile.length() < 100000) { 
+                    checkFile.delete();
+                    throw new Exception("Sicherheitsabbruch: Die geladene Datei ist keine gueltige .exe!");
+                }
 
                 SwingUtilities.invokeLater(() -> {
                     progressDialog.dispose();
@@ -231,6 +239,10 @@ public class Launcher {
                 File batFile = new File("update.bat");
                 FileWriter fw = new FileWriter(batFile);
                 fw.write("@echo off\n");
+                
+                // Zwingt Windows in den korrekten Ordner (wichtig bei Ausfuehrung als Administrator)
+                fw.write("cd /d \"%~dp0\"\n"); 
+                
                 fw.write("timeout /t 3 /nobreak > NUL\n"); 
                 fw.write("del /f /q \"" + EXE_NAME + "\"\n"); 
                 fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
