@@ -39,5 +39,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v${{ github.run_number }}"
-          name: "Feuerwehr-Verwaltung v#${{ github.run_number }}"
+          name: "Feuerwehr-Verwaltung v${{ github.run_number }}"
           files: Feuerwehr-Verwaltung.exe # MUSS exakt so heißen, wie du es in Schritt 1 bei "Output file" genannt hast!
