@@ -9,7 +9,7 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    public static final String CURRENT_VERSION = "v3"; // Für den Test eine ältere Version eintragen
+    public static final String CURRENT_VERSION = "v4"; // Für den Test eine ältere Version eintragen
     public static final String GITHUB_REPO = "SN-ILW/FEUERVERWALTUNG"; 
     public static final String EXE_NAME = "FeuerwehrVerwaltung.exe";
     // ----------------------------------
@@ -254,26 +254,35 @@ private static void checkForUpdates(JFrame parentFrame) {
         progressDialog.setVisible(true);
     }
 
-    private static void installAndRestart() {
+private static void installAndRestart() {
         try {
             String os = System.getProperty("os.name").toLowerCase();
 
             if (os.contains("win")) {
+                // 1. Die Batch-Datei erstellen (macht die eigentliche Arbeit)
                 File batFile = new File("update.bat");
-                FileWriter fw = new FileWriter(batFile);
-                fw.write("@echo off\n");
-                
-                // Zwingt Windows in den korrekten Ordner (wichtig bei Ausfuehrung als Administrator)
-                fw.write("cd /d \"%~dp0\"\n"); 
-                
-                fw.write("timeout /t 3 /nobreak > NUL\n"); 
-                fw.write("del /f /q \"" + EXE_NAME + "\"\n"); 
-                fw.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
-                fw.write("start \"\" \"" + EXE_NAME + "\"\n"); 
-                fw.write("(goto) 2>nul & del \"%~f0\"\n"); 
-                fw.close();
+                FileWriter fwBat = new FileWriter(batFile);
+                fwBat.write("@echo off\n");
+                fwBat.write("cd /d \"%~dp0\"\n"); 
+                fwBat.write("timeout /t 3 /nobreak > NUL\n"); 
+                fwBat.write("del /f /q \"" + EXE_NAME + "\"\n"); 
+                fwBat.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
+                fwBat.write("start \"\" \"" + EXE_NAME + "\"\n"); 
+                fwBat.write("del /f /q \"update.vbs\"\n"); // Löscht das Hilfs-Skript
+                fwBat.write("(goto) 2>nul & del \"%~f0\"\n"); // Löscht sich selbst
+                fwBat.close();
 
-                Runtime.getRuntime().exec("cmd /c start update.bat");
+                // 2. Das VBScript erstellen (versteckt das Konsolenfenster)
+                File vbsFile = new File("update.vbs");
+                FileWriter fwVbs = new FileWriter(vbsFile);
+                fwVbs.write("Set WshShell = CreateObject(\"WScript.Shell\")\n");
+                // Die '0' am Ende ist der magische Befehl für "komplett unsichtbar"
+                fwVbs.write("WshShell.Run chr(34) & \"update.bat\" & Chr(34), 0\n"); 
+                fwVbs.write("Set WshShell = Nothing\n");
+                fwVbs.close();
+
+                // 3. Das unsichtbare VBScript starten
+                Runtime.getRuntime().exec("wscript update.vbs");
                 System.exit(0);
             }
         } catch (Exception e) {
