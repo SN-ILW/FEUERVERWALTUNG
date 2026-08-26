@@ -355,11 +355,23 @@ public class FensterManager {
             uiAktualisieren(getUhrzeit()); d.dispose(); oeffnePostfach();
         });
 
-        btnLoeschen.addActionListener(e -> {
-            if (list.getSelectedIndex() != -1) {
-                int idx = postfach.size() - 1 - list.getSelectedIndex();
-                postfach.remove(idx);
-                uiAktualisieren(getUhrzeit()); d.dispose(); oeffnePostfach();
+btnLoeschen.addActionListener(e -> {
+            int selectedIndex = list.getSelectedIndex(); // Deine JList heißt 'list'
+            if (selectedIndex != -1) {
+                // Da deine Liste rueckwaerts ist, echten Index im postfach berechnen
+                int echterIndex = LogistikSimulator.postfach.size() - 1 - selectedIndex;
+                
+                // 1. Mail aus dem Hintergrund-System loeschen
+                LogistikSimulator.postfach.remove(echterIndex);
+                
+                // 2. Mail grafisch aus der Liste entfernen
+                ((DefaultListModel) list.getModel()).remove(selectedIndex); 
+                
+                // 3. Textfeld rechts leeren
+                txt.setText("Keine E-Mail ausgewaehlt."); // Dein Textfeld heißt 'txt'
+                
+                // 4. Den Button im Hauptmenue sofort aktualisieren (Zahlen-Counter)
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
             }
         });
 
