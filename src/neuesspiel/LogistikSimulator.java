@@ -357,12 +357,13 @@ public class LogistikSimulator {
                                     if (f.aktuellerEinsatz == ein) { 
                                         f.aktuellerEinsatz = null;
                                         
-                                        if(f.typ.equals("RTW")) {
+if(f.typ.equals("RTW")) {
                                             if(calltakerStufe >= 2 && Math.random() > 0.5) {
                                                 f.status = 8;
                                                 f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
                                             } else {
                                                 f.status = 7; 
+                                                playSound("status7.wav"); // <-- NEU: RTW will Krankenhaus
                                             }
                                         } else {
                                             f.status = 1; 
@@ -374,6 +375,7 @@ public class LogistikSimulator {
                                             if (Math.random() < damageChance) {
                                                 f.status = 6; 
                                                 f.ausfallGrund = "Beschadigung"; 
+                                                playSound("status6.wav"); // <-- NEU: Fahrzeug defekt
                                             }
                                         }
                                     }
@@ -390,8 +392,12 @@ public class LogistikSimulator {
                 double eventGlobalMutiplier = aktuellesEvent != null ? aktuellesEvent.globalRateMultiplier : 1.0;
                 boolean leitstelleGeoeffnet = inGameSekunden < (19 * 3600);
                 
-                if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / speed) == 0 && Math.random() < (0.6 * notrufRate * eventGlobalMutiplier)) {
+if (leitstelleGeoeffnet && aktuellerNotruf == null && inGameSekunden % (1200 / speed) == 0 && Math.random() < (0.6 * notrufRate * eventGlobalMutiplier)) {
                     generiereNotruf(uhrzeit);
+                    
+                    if (aktuellerNotruf != null) {
+                        playSound("notruf.wav"); // <-- NEU: Alarmton!
+                    }
                     
                     if (calltakerStufe > 0 && aktuellerNotruf != null) {
                         int maxCalltakerLvl = (calltakerStufe == 1) ? 2 : 4; 
@@ -670,7 +676,7 @@ public class LogistikSimulator {
         int xpBel = 0;
         int multiplier = isRushHour() ? 3 : 1;
         
-        for (Fahrzeug f : fzListe) {
+for (Fahrzeug f : fzListe) {
             int baseTime = 30; 
             for(Wache wCheck : wachen) {
                 for(Personal p : wCheck.personalPool) { 
@@ -685,10 +691,16 @@ public class LogistikSimulator {
             xpBel += 25;
         }
         
-        aktuellerNotruf.xpBelohnung = xpBel * aktuellerNotruf.vorlage.minLevel;
-        aktiveEinsaetze.add(aktuellerNotruf);
-        aktuellerNotruf = null;
+        // NEU: Einsatz nur in die Liste aufnehmen, wenn wir eigene Fahrzeuge schicken
+        if (!fzListe.isEmpty()) {
+            aktuellerNotruf.xpBelohnung = xpBel * aktuellerNotruf.vorlage.minLevel;
+            aktiveEinsaetze.add(aktuellerNotruf);
+                    aktuellerNotruf = null;
         uiAktualisieren(getUhrzeit());
+        }
+        
+
+
     }
 
     public static int sucheFahrzeuge(String typ, int anzahl, ArrayList<Fahrzeug> liste) {
@@ -1143,5 +1155,28 @@ SpeicherManager.speichern("savegame.properties");
                 f.status = 2; // Bereit auf Wache
             }
         }
+        } // <-- 1. Diese Klammer beendet die for-Schleife
+    
+        // NEU: Sound-Engine
+// NEU: Sound-Engine (Eingebettet für EXE)
+    public static void playSound(String dateiName) {
+        new Thread(() -> {
+            try {
+                // Das "/" sorgt dafür, dass er im Hauptverzeichnis der eingebetteten Dateien sucht
+                java.net.URL soundUrl = LogistikSimulator.class.getResource("/" + dateiName);
+                
+                if (soundUrl != null) {
+                    javax.sound.sampled.AudioInputStream audioInput = javax.sound.sampled.AudioSystem.getAudioInputStream(soundUrl);
+                    javax.sound.sampled.Clip clip = javax.sound.sampled.AudioSystem.getClip();
+                    clip.open(audioInput);
+                    clip.start();
+                } else {
+                    System.out.println("Sounddatei nicht gefunden: " + dateiName);
+                }
+            } catch (Exception ex) {
+                // Fehler beim Abspielen ignorieren, damit das Spiel nicht abstürzt
+            }
+        }).start();
     }
+
 }
