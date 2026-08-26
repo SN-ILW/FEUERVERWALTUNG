@@ -17,6 +17,14 @@ public class SpeicherManager {
             p.setProperty("sekunden", String.valueOf(LogistikSimulator.inGameSekunden));
             p.setProperty("abgelehnt_heute", String.valueOf(LogistikSimulator.abgelehnteEinsaetzeHeute)); 
             
+            p.setProperty("cfgSoundNotruf", String.valueOf(LogistikSimulator.cfgSoundNotruf));
+            p.setProperty("cfgSoundStatus6", String.valueOf(LogistikSimulator.cfgSoundStatus6));
+            p.setProperty("cfgSoundStatus7", String.valueOf(LogistikSimulator.cfgSoundStatus7));
+            
+            p.setProperty("volNotruf", String.valueOf(LogistikSimulator.volNotruf));
+            p.setProperty("volStatus6", String.valueOf(LogistikSimulator.volStatus6));
+            p.setProperty("volStatus7", String.valueOf(LogistikSimulator.volStatus7));
+            
             p.setProperty("cfg_ktp", String.valueOf(LogistikSimulator.cfgKrankentransport));
             p.setProperty("cfg_dmg", String.valueOf(LogistikSimulator.cfgBeschaedigung));
             p.setProperty("cfg_sick", String.valueOf(LogistikSimulator.cfgKrankheit));
@@ -163,6 +171,14 @@ public class SpeicherManager {
             LogistikSimulator.cfgBeschaedigung = Boolean.parseBoolean(p.getProperty("cfg_dmg", "true"));
             LogistikSimulator.cfgKrankheit = Boolean.parseBoolean(p.getProperty("cfg_sick", "true"));
             LogistikSimulator.cfgAutoTransfer = Boolean.parseBoolean(p.getProperty("cfg_auto", "false"));
+            
+            LogistikSimulator.cfgSoundNotruf = Boolean.parseBoolean(p.getProperty("cfgSoundNotruf", "true"));
+            LogistikSimulator.cfgSoundStatus6 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus6", "true"));
+            LogistikSimulator.cfgSoundStatus7 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus7", "true"));
+            
+            LogistikSimulator.volNotruf = Integer.parseInt(p.getProperty("volNotruf", "100"));
+            LogistikSimulator.volStatus6 = Integer.parseInt(p.getProperty("volStatus6", "100"));
+            LogistikSimulator.volStatus7 = Integer.parseInt(p.getProperty("volStatus7", "100"));
             
             LogistikSimulator.techWerkstatt = Boolean.parseBoolean(p.getProperty("tech_ws", "false"));
             LogistikSimulator.techRuheraum = Boolean.parseBoolean(p.getProperty("tech_rh", "false"));

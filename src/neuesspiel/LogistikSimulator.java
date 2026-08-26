@@ -30,6 +30,15 @@ public class LogistikSimulator {
     public static boolean cfgBeschaedigung = true;
     public static boolean cfgKrankheit = true;
     public static boolean cfgAutoTransfer = false;
+    
+    public static boolean cfgSoundNotruf = true;
+    public static boolean cfgSoundStatus6 = true;
+    public static boolean cfgSoundStatus7 = true;
+    
+    public static int volNotruf = 100;
+    public static int volStatus6 = 100;
+    public static int volStatus7 = 100;
+    
     public static int abgelehnteEinsaetzeHeute = 0;
 
     public static boolean techWerkstatt = false;
@@ -1062,7 +1071,7 @@ public class LogistikSimulator {
         for(int i=0; i<f.reqNFS; i++) r.add("NFS");
         for(int i=0; i<f.reqMA; i++) r.add("MA");
         for(int i=0; i<f.reqTF; i++) r.add("TF");
-        for(int i=0; i<f.reqFüAs; i++) r.add("FüAs");
+        for(int i=0; i<f.reqFüAs; i++) r.add("FueAs");
         for(int i=0; i<f.reqRS; i++) r.add("RS");
         for(int i=0; i<f.reqTM; i++) r.add("TM");
         return r;
@@ -1144,6 +1153,10 @@ public class LogistikSimulator {
     }
 
 public static void playSound(String dateiName) {
+        if (dateiName.equals("notruf.wav") && !cfgSoundNotruf) return;
+        if (dateiName.equals("status6.wav") && !cfgSoundStatus6) return;
+        if (dateiName.equals("status7.wav") && !cfgSoundStatus7) return;
+
         new Thread(() -> {
             try {
                 java.net.URL soundUrl = LogistikSimulator.class.getResource(dateiName);
@@ -1152,28 +1165,29 @@ public static void playSound(String dateiName) {
                     javax.sound.sampled.Clip clip = javax.sound.sampled.AudioSystem.getClip();
                     clip.open(audioInput);
                     
-                    // --- NEU: Lautstärke individuell anpassen ---
                     if (clip.isControlSupported(javax.sound.sampled.FloatControl.Type.MASTER_GAIN)) {
                         javax.sound.sampled.FloatControl gainControl = (javax.sound.sampled.FloatControl) clip.getControl(javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
                         
-                        // Hier kannst du die Sounds in Dezibel (dB) lauter (+) oder leiser (-) machen!
-                        if (dateiName.equals("notruf.wav")) {
-                            gainControl.setValue(0.0f);  // Beispiel: 5 Dezibel leiser
-                        } else if (dateiName.equals("status6.wav")) {
-                            gainControl.setValue(-7f);   // Original-Lautstaerke
-                        } else if (dateiName.equals("status7.wav")) {
-                            gainControl.setValue(-7f); // Beispiel: 12 Dezibel leiser (sehr leise)
+                        int vol = 100;
+                        if (dateiName.equals("notruf.wav")) vol = volNotruf;
+                        else if (dateiName.equals("status6.wav")) vol = volStatus6;
+                        else if (dateiName.equals("status7.wav")) vol = volStatus7;
+                        
+                        // Wenn der Regler auf 0 ist, stumm schalten. Sonst in Dezibel umrechnen.
+                        if (vol <= 0) {
+                            gainControl.setValue(gainControl.getMinimum());
+                        } else {
+                            float db = (float) (20.0 * Math.log10(vol / 100.0));
+                            // Verhindern, dass der Wert die Limits ueberschreitet
+                            db = Math.max(db, gainControl.getMinimum());
+                            db = Math.min(db, gainControl.getMaximum());
+                            gainControl.setValue(db);
                         }
                     }
-                    // --------------------------------------------
-
+                    
                     clip.start();
-                } else {
-                    System.out.println("Sounddatei nicht gefunden: " + dateiName);
                 }
-            } catch (Exception ex) {
-                // Fehler beim Abspielen ignorieren
-            }
+            } catch (Exception ex) {}
         }).start();
     }
 }

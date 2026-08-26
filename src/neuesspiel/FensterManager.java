@@ -667,44 +667,79 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneEinstellungen() {
-        JDialog d = new JDialog(frame, "Spieleinstellungen", true);
-        d.setSize(400, 300);
-        d.setLayout(new GridLayout(6, 1));
-        d.setLocationRelativeTo(frame);
+        JDialog d = new JDialog(LogistikSimulator.frame, "Spieleinstellungen", true);
+        d.setSize(500, 400); // Etwas breiter gemacht fuer die Schieberegler
+        d.setLayout(new GridLayout(9, 1, 5, 5)); 
+        d.setLocationRelativeTo(LogistikSimulator.frame);
+        d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", cfgKrankentransport);
-        JCheckBox cbDmg = new JCheckBox("Beschaedigte Fahrzeuge erlauben", cfgBeschaedigung);
-        JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", cfgKrankheit);
-        JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", cfgAutoTransfer);
+        JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", LogistikSimulator.cfgKrankentransport);
+        JCheckBox cbDmg = new JCheckBox("Beschaedigte Fahrzeuge erlauben", LogistikSimulator.cfgBeschaedigung);
+        JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", LogistikSimulator.cfgKrankheit);
+        JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer);
+        
+        JCheckBox[] topBoxes = {cbKtp, cbDmg, cbSick, cbAuto};
+        for (JCheckBox box : topBoxes) {
+            box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false);
+            d.add(box);
+        }
+
+        // --- SOUND 1: NOTRUF ---
+        JPanel pnlS1 = new JPanel(new BorderLayout(10, 0)); pnlS1.setBackground(new Color(35, 35, 35));
+        JCheckBox cbSoundNotruf = new JCheckBox("Sound: Neuer Notruf", LogistikSimulator.cfgSoundNotruf);
+        cbSoundNotruf.setForeground(Color.WHITE); cbSoundNotruf.setBackground(new Color(35, 35, 35));
+        JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf); slNotruf.setBackground(new Color(35, 35, 35));
+        pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER);
+        d.add(pnlS1);
+
+        // --- SOUND 2: STATUS 6 ---
+        JPanel pnlS2 = new JPanel(new BorderLayout(10, 0)); pnlS2.setBackground(new Color(35, 35, 35));
+        JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6 (Defekt)", LogistikSimulator.cfgSoundStatus6);
+        cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35));
+        JSlider slStatus6 = new JSlider(0, 100, LogistikSimulator.volStatus6); slStatus6.setBackground(new Color(35, 35, 35));
+        pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER);
+        d.add(pnlS2);
+
+        // --- SOUND 3: STATUS 7 ---
+        JPanel pnlS3 = new JPanel(new BorderLayout(10, 0)); pnlS3.setBackground(new Color(35, 35, 35));
+        JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7 (Warten)", LogistikSimulator.cfgSoundStatus7);
+        cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35));
+        JSlider slStatus7 = new JSlider(0, 100, LogistikSimulator.volStatus7); slStatus7.setBackground(new Color(35, 35, 35));
+        pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER);
+        d.add(pnlS3);
         
         JButton btnReset = new JButton("Spielstand zuruecksetzen");
-        btnReset.setBackground(new Color(192, 57, 43));
-        btnReset.setForeground(Color.WHITE);
+        btnReset.setBackground(new Color(192, 57, 43)); btnReset.setForeground(Color.WHITE);
         btnReset.addActionListener(e -> {
-            String wahl = JOptionPane.showInputDialog(d, "ACHTUNG: Dies setzt den Spielstand zurueck!\n(Einsaetze und Materialien bleiben erhalten.)\nZum Bestaetigen bitte exakt 'LOESCHEN' eingeben:");
+            String wahl = JOptionPane.showInputDialog(d, "ACHTUNG: Dies setzt den Spielstand zurueck!\nZum Bestaetigen bitte exakt 'LOESCHEN' eingeben:");
             if(wahl != null && wahl.equals("LOESCHEN")) {
-                File file = new File("savegame.properties");
-                if(file.exists()) file.delete();
-                initStandardDaten();
-                uiAktualisieren(getUhrzeit());
-                JOptionPane.showMessageDialog(d, "Spielstand wurde erfolgreich zurueckgesetzt!");
-                d.dispose();
-            } else if (wahl != null) {
-                JOptionPane.showMessageDialog(d, "Eingabe fehlerhaft. Abbruch.");
-            }
+                new java.io.File("savegame.properties").delete();
+                LogistikSimulator.initStandardDaten(); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                JOptionPane.showMessageDialog(d, "Spielstand wurde erfolgreich zurueckgesetzt!"); d.dispose();
+            } else if (wahl != null) JOptionPane.showMessageDialog(d, "Eingabe fehlerhaft. Abbruch.");
         });
 
         JButton btnSave = new JButton("Speichern & Schliessen");
         btnSave.addActionListener(e -> {
-            cfgKrankentransport = cbKtp.isSelected();
-            cfgBeschaedigung = cbDmg.isSelected();
-            cfgKrankheit = cbSick.isSelected();
-            cfgAutoTransfer = cbAuto.isSelected();
+            LogistikSimulator.cfgKrankentransport = cbKtp.isSelected();
+            LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected();
+            LogistikSimulator.cfgKrankheit = cbSick.isSelected();
+            LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected();
+            
+            LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected();
+            LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected();
+            LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
+            
+            // NEU: Lautstaerken abspeichern
+            LogistikSimulator.volNotruf = slNotruf.getValue();
+            LogistikSimulator.volStatus6 = slStatus6.getValue();
+            LogistikSimulator.volStatus7 = slStatus7.getValue();
+            
             SpeicherManager.speichern("savegame.properties");
             d.dispose();
         });
 
-        d.add(cbKtp); d.add(cbDmg); d.add(cbSick); d.add(cbAuto); d.add(btnReset); d.add(btnSave);
+        d.add(btnReset); d.add(btnSave);
         d.setVisible(true);
     }
 
