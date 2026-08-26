@@ -1143,7 +1143,7 @@ public class LogistikSimulator {
         }
     }
 
-    public static void playSound(String dateiName) {
+public static void playSound(String dateiName) {
         new Thread(() -> {
             try {
                 java.net.URL soundUrl = LogistikSimulator.class.getResource(dateiName);
@@ -1151,6 +1151,22 @@ public class LogistikSimulator {
                     javax.sound.sampled.AudioInputStream audioInput = javax.sound.sampled.AudioSystem.getAudioInputStream(soundUrl);
                     javax.sound.sampled.Clip clip = javax.sound.sampled.AudioSystem.getClip();
                     clip.open(audioInput);
+                    
+                    // --- NEU: Lautstärke individuell anpassen ---
+                    if (clip.isControlSupported(javax.sound.sampled.FloatControl.Type.MASTER_GAIN)) {
+                        javax.sound.sampled.FloatControl gainControl = (javax.sound.sampled.FloatControl) clip.getControl(javax.sound.sampled.FloatControl.Type.MASTER_GAIN);
+                        
+                        // Hier kannst du die Sounds in Dezibel (dB) lauter (+) oder leiser (-) machen!
+                        if (dateiName.equals("notruf.wav")) {
+                            gainControl.setValue(0.0f);  // Beispiel: 5 Dezibel leiser
+                        } else if (dateiName.equals("status6.wav")) {
+                            gainControl.setValue(-2.5f);   // Original-Lautstaerke
+                        } else if (dateiName.equals("status7.wav")) {
+                            gainControl.setValue(-2.5f); // Beispiel: 12 Dezibel leiser (sehr leise)
+                        }
+                    }
+                    // --------------------------------------------
+
                     clip.start();
                 } else {
                     System.out.println("Sounddatei nicht gefunden: " + dateiName);
