@@ -30,7 +30,7 @@ jobs:
           curl -L -o launch4j.zip "https://sourceforge.net/projects/launch4j/files/launch4j-3/3.50/launch4j-3.50-win32.zip/download"
           tar -xf launch4j.zip
         shell: cmd
-
+        
       - name: 📦 EXE mit Launch4j erstellen
         run: launch4j\launch4jc.exe launch4j-config.xml
         shell: cmd
