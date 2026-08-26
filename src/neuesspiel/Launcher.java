@@ -23,7 +23,7 @@ public class Launcher {
             UIManager.put("OptionPane.messageForeground", Color.WHITE);
         } catch (Exception e) {}
 
-        JFrame frame = new JFrame("BOS Leitstellen Simulator - Launcher");
+        JFrame frame = new JFrame("FEUERWEHR-VERWALTUNGS-SPIEL");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setSize(400, 300);
         frame.setLocationRelativeTo(null); 
