@@ -10,7 +10,7 @@ public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
     public static final String CURRENT_VERSION = "v5"; // Für den Test eine ältere Version eintragen
-    public static final String GITHUB_REPO = "SN-ILW/Feuerwehr-Verwaltung"; 
+    public static final String GITHUB_REPO = "SN-ILW/FEUERVERWALTUNG"; 
     public static final String EXE_NAME = "Feuerwehr-Verwaltung.exe";
     // ----------------------------------
 
