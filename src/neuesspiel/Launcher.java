@@ -79,7 +79,7 @@ public class Launcher {
         return btn;
     }
 
-    private static void checkForUpdates(JFrame parentFrame) {
+private static void checkForUpdates(JFrame parentFrame) {
         try {
             URL url = new URL("https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
@@ -88,30 +88,47 @@ public class Launcher {
             conn.setRequestProperty("User-Agent", "Mozilla/5.0");
 
             if (conn.getResponseCode() == 200) {
+                // Den gesamten Text von GitHub einlesen (egal ob eine Zeile oder 100 Zeilen)
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                StringBuilder jsonBuilder = new StringBuilder();
                 String line;
-                String latestVersion = "";
-                String downloadUrl = "";
-                
                 while ((line = reader.readLine()) != null) {
-                    if (line.contains("\"tag_name\":")) {
-                        latestVersion = line.split(":")[1].replace("\"", "").replace(",", "").trim();
-                    }
-                    if (line.contains("\"browser_download_url\":") && line.contains(".exe")) {
-                        int start = line.indexOf("https://");
-                        if(start != -1) {
-                            int end = line.indexOf("\"", start);
-                            if(end != -1) {
-                                downloadUrl = line.substring(start, end);
-                            }
-                        }
-                    }
+                    jsonBuilder.append(line);
                 }
                 reader.close();
+                String json = jsonBuilder.toString();
+
+                String latestVersion = "";
+                String downloadUrl = "";
+
+                // 1. Exaktes Auslesen der Version (tag_name)
+                int tagKey = json.indexOf("\"tag_name\"");
+                if (tagKey != -1) {
+                    int valStart = json.indexOf("\"", json.indexOf(":", tagKey));
+                    int valEnd = json.indexOf("\"", valStart + 1);
+                    if (valStart != -1 && valEnd != -1) {
+                        latestVersion = json.substring(valStart + 1, valEnd);
+                    }
+                }
+                
+                // 2. Exaktes Auslesen des .exe Download-Links
+                int dlKey = json.indexOf("\"browser_download_url\"");
+                while (dlKey != -1) {
+                    int valStart = json.indexOf("\"", json.indexOf(":", dlKey));
+                    int valEnd = json.indexOf("\"", valStart + 1);
+                    if (valStart != -1 && valEnd != -1) {
+                        String foundUrl = json.substring(valStart + 1, valEnd);
+                        if (foundUrl.endsWith(".exe")) {
+                            downloadUrl = foundUrl;
+                            break; // Den richtigen Link gefunden!
+                        }
+                    }
+                    dlKey = json.indexOf("\"browser_download_url\"", valEnd);
+                }
 
                 if (!latestVersion.isEmpty() && !latestVersion.equals(CURRENT_VERSION)) {
                     if (downloadUrl.isEmpty()) {
-                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden, aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
