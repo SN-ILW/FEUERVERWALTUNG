@@ -531,19 +531,32 @@ public class LogistikSimulator {
         StringBuilder fms = new StringBuilder();
         fms.append("<html><body style='color:#a9b7c6; font-family:Consolas, sans-serif; font-size:12px; margin:5px;'>");
         
-        boolean hasWarnings = false;
+boolean hasWarnings = false;
         StringBuilder warnings = new StringBuilder();
+        
+        // 1. Hauptlager pruefen (Warnt jetzt schon, wenn weniger als das 5-fache der normalen Schwelle da ist!)
         for(CustomMaterial cm : customMaterials) {
             int hLag = hauptlager.getOrDefault(cm.name, 0);
-            if(hLag <= cm.warnSchwelle) {
+            if(hLag <= (cm.warnSchwelle * 5)) {
                 hasWarnings = true;
                 warnings.append("- Hauptlager: ").append(cm.name).append(" fast leer (").append(hLag).append(")<br>");
             }
         }
-        if(hasWarnings) fms.append("<div style='color:#e74c3c; margin-bottom:10px;'><b>MATERIAL-WARNUNGEN:</b><br>").append(warnings.toString()).append("</div>");
         
-        if(!lieferungen.isEmpty()) {
-            fms.append("<div style='color:#f39c12; margin-bottom:10px;'>-> ").append(lieferungen.size()).append(" LKWs unterwegs!</div>");
+        // 2. Einzelne Wachen pruefen (Bleibt exakt beim Editor-Wert)
+        for(Wache w : wachen) {
+            for(CustomMaterial cm : customMaterials) {
+                int wLag = w.material.getOrDefault(cm.name, 0);
+                if(wLag <= cm.warnSchwelle) {
+                    hasWarnings = true;
+                    warnings.append("- ").append(w.name).append(": ").append(cm.name).append(" fast leer (").append(wLag).append(")<br>");
+                }
+            }
+        }
+        
+        // 3. Warnungen oben im FMS-Board ausgeben
+        if(hasWarnings) {
+            fms.append("<div style='color:#e74c3c; margin-bottom:10px;'><b>MATERIAL-WARNUNGEN:</b><br>").append(warnings.toString()).append("</div>");
         }
 
         for(Wache w : wachen) {
@@ -565,8 +578,15 @@ public class LogistikSimulator {
                 else if(f.status == 7) fms.append("-> <a href='HOSP:").append(f.funkrufname).append("' style='color:#9b59b6; text-decoration:underline;'>Patient geladen (Zielklinik waehlen)</a>");
                 else if(f.status == 6) {
                     fms.append("-> <span style='color:#e74c3c;'>GRUND: ").append(f.ausfallGrund).append("</span>");
-                    if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
-                    else if (f.ausfallGrund.equals("Beschadigung")) fms.append(" (Wartet auf Werkstatt)");
+                    if (f.ausfallGrund.equals("Personalwechsel")) {
+                        fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
+                    } else if (f.ausfallGrund.equals("Beschadigung")) {
+                        fms.append(" (Wartet auf Werkstatt)");
+                    } 
+                    // NEU: Anzeige der restlichen Sekunden in der Werkstatt
+                    else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) {
+                        fms.append(" (In Werkstatt fuer ").append(f.reparaturDauer/speed).append(" Sec.)");
+                    }
                 }
                 fms.append("<br>");
             }

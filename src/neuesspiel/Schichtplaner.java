@@ -199,12 +199,26 @@ public class Schichtplaner {
         });
 
         // "Mal-Werkzeug" (Stempel-Listener)
-        MouseAdapter stampAdapter = new MouseAdapter() {
-            private void paintCell(MouseEvent e) {
+MouseAdapter stampAdapter = new MouseAdapter() {
+            private void paintCell(MouseEvent e, boolean isClick) {
                 int row = table.rowAtPoint(e.getPoint());
                 int col = table.columnAtPoint(e.getPoint());
                 if (row >= 0 && col >= 0) {
-                    ausgewaehlterTagIndex = col; // NEU: Angeklickter Tag wird sofort zur Info unten links
+                    ausgewaehlterTagIndex = col; // Angeklickter Tag wird sofort zur Info unten links
+
+                    // --- NEUE SPERRE FÜR VERGANGENE TAGE ---
+                    int heutigerTagIndex = LogistikSimulator.getCurrentDate().getDayOfMonth() - 1;
+                    
+                    // Wenn wir im aktuellen Monat sind UND die Spalte VOR dem heutigen Tag liegt
+                    if (zeigeAktuellenMonat && col < heutigerTagIndex) {
+                        // Fehlermeldung nur beim echten Klicken anzeigen (nicht beim Draggen/Malen)
+                        if (isClick) {
+                            JOptionPane.showMessageDialog(table, "Vergangene Schichten können rückwirkend nicht mehr geändert werden!", "Tag gesperrt", JOptionPane.WARNING_MESSAGE);
+                        }
+                        return; // Bricht das Stempeln sofort ab!
+                    }
+                    // ---------------------------------------
+
                     String werkzeug = SwingUtilities.isRightMouseButton(e) ? "Frei" : stempelListe.getSelectedValue();
                     if(werkzeug != null) {
                         tableModel.setValueAt(werkzeug, row, col);
@@ -212,8 +226,9 @@ public class Schichtplaner {
                     }
                 }
             }
-            @Override public void mousePressed(MouseEvent e) { paintCell(e); }
-            @Override public void mouseDragged(MouseEvent e) { paintCell(e); }
+            
+            @Override public void mousePressed(MouseEvent e) { paintCell(e, true); }  // true = Ist ein Klick
+            @Override public void mouseDragged(MouseEvent e) { paintCell(e, false); } // false = Ist nur ein Ziehen
         };
         table.addMouseListener(stampAdapter);
         table.addMouseMotionListener(stampAdapter);
