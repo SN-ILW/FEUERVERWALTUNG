@@ -84,9 +84,13 @@ public class Schichtplaner {
         JLabel l2 = new JLabel("2. Stempel waehlen:"); l2.setForeground(Color.WHITE); l2.setFont(new Font("Segoe UI", Font.BOLD, 14));
         
         DefaultListModel<String> stempelModel = new DefaultListModel<>();
-        stempelModel.addElement("Frei"); stempelModel.addElement("Urlaub"); stempelModel.addElement("Krank"); stempelModel.addElement("Lehrgang");
+        stempelModel.addElement("Frei"); 
+        stempelModel.addElement("Bereitschaft"); // <-- HIER EINFUEGEN
+        stempelModel.addElement("Urlaub"); 
+        stempelModel.addElement("Krank"); 
+        stempelModel.addElement("Lehrgang");
         for (Fahrzeug f : aktuelleWache.fuhrpark) stempelModel.addElement(f.funkrufname);
-
+        
         JList<String> stempelListe = new JList<String>(stempelModel) {
             @Override
             public String getToolTipText(MouseEvent evt) {
@@ -239,7 +243,11 @@ public class Schichtplaner {
             saveTableData();
             aktuelleWache = wachen.get(cbWachen.getSelectedIndex());
             stempelModel.clear();
-            stempelModel.addElement("Frei");stempelModel.addElement("Bereitschaft"); stempelModel.addElement("Urlaub"); stempelModel.addElement("Krank"); stempelModel.addElement("Lehrgang");
+            stempelModel.addElement("Frei"); 
+            stempelModel.addElement("Bereitschaft"); // <-- UND HIER EINFUEGEN
+            stempelModel.addElement("Urlaub"); 
+            stempelModel.addElement("Krank"); 
+            stempelModel.addElement("Lehrgang");
             for (Fahrzeug f : aktuelleWache.fuhrpark) stempelModel.addElement(f.funkrufname);
             stempelListe.setSelectedIndex(0);
             loadTableData();
