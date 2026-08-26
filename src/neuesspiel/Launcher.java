@@ -10,7 +10,7 @@ public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
     // Trage hier deinen GitHub-Namen und den Repo-Namen ein (z.B. "DeinName/BOS-Simulator")
-    public static final String CURRENT_VERSION = "v0.1.0"; // Je nachdem, auf welcher Version dein lokales Spiel gerade ist
+    public static final String CURRENT_VERSION = "v2"; // Je nachdem, auf welcher Version dein lokales Spiel gerade ist
 public static final String GITHUB_REPO = "ianwi/Feuerwehr-Verwaltung";
     // ----------------------------------
 
