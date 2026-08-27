@@ -7,7 +7,6 @@ import java.util.ArrayList;
 
 public class SpeicherManager {
 
-    // KUGELSICHERE HILFSMETHODEN
     private static void setSafe(Properties p, String key, String val) {
         if (key != null) {
             p.setProperty(key, val != null ? val : "");
@@ -143,7 +142,9 @@ public class SpeicherManager {
                 setSafe(p, "wache_" + i + "_name", w.name);
                 setSafe(p, "wache_" + i + "_kennung", w.kennung);
                 
-                // Fuhrpark (Fahrzeuge) speichern
+                // NEU: Die Wachen-Stufe wird jetzt gespeichert!
+                setSafe(p, "wache_" + i + "_stufe", String.valueOf(w.stufe));
+                
                 if (w.fuhrpark != null) {
                     setSafe(p, "wache_" + i + "_fzgCount", String.valueOf(w.fuhrpark.size()));
                     for (int f = 0; f < w.fuhrpark.size(); f++) {
@@ -353,7 +354,9 @@ public class SpeicherManager {
             for (int i = 0; i < wachenCount; i++) {
                 Wache w = new Wache(p.getProperty("wache_" + i + "_name", "Wache"), p.getProperty("wache_" + i + "_kennung", "00"));
                 
-                // Fuhrpark (Fahrzeuge) laden -> KORREKTUR: km und tuev sind Integer!
+                // NEU: Die Wachen-Stufe wird geladen!
+                w.stufe = parseIntSafe(p.getProperty("wache_" + i + "_stufe"), 1);
+                
                 int fzgCount = parseIntSafe(p.getProperty("wache_" + i + "_fzgCount"), 0);
                 for(int f = 0; f < fzgCount; f++) {
                     String fPfx = "wache_" + i + "_fzg_" + f;

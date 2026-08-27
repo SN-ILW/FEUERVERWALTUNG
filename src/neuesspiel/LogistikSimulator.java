@@ -544,7 +544,6 @@ public class LogistikSimulator {
     }
 
     public static void uiAktualisieren(String zeit) {
-        // NEU: Logistik Button hier verstecken, so reagiert er ohne Verzoegerung!
         if (btnLog != null) {
             btnLog.setVisible(cfgLogistikAktiv);
         }
@@ -604,7 +603,8 @@ public class LogistikSimulator {
         }
 
         for(Wache w : wachen) {
-            fms.append("<b style='color:#ffffff;'>=== ").append(w.name).append(" (").append(w.kennung).append(") ===</b><br>");
+            // NEU: Anzeige der Wachen-Stufe und Max. Fahrzeuge!
+            fms.append("<b style='color:#ffffff;'>=== ").append(w.name).append(" (Stufe ").append(w.stufe).append(") [").append(w.fuhrpark.size()).append("/").append(getFahrzeugLimit(w.stufe)).append("] ===</b><br>");
             for(Fahrzeug f : w.fuhrpark) {
                 String color = "#ffffff";
                 if(f.status == 1) color = "#3498db";
@@ -796,13 +796,28 @@ public class LogistikSimulator {
         }
         return null;
     }
+    
+    // NEU: Die Methode zur Berechnung der Stellplaetze pro Level
+    public static int getFahrzeugLimit(int wachenStufe) {
+        if(wachenStufe == 1) return 3;
+        if(wachenStufe == 2) return 6;
+        if(wachenStufe == 3) return 10;
+        return 15; // Stufe 4+
+    }
 
     public static void kaufFahrzeug(Wache w, String typ, int preis) {
+        // NEU: Platz-Check vor dem Kauf!
+        if(w.fuhrpark.size() >= getFahrzeugLimit(w.stufe)) {
+            JOptionPane.showMessageDialog(frame, "Die Wache ist voll! (Stufe " + w.stufe + " erlaubt max. " + getFahrzeugLimit(w.stufe) + " Fahrzeuge).\nBitte baue die Wache unter 'Wachen & Gebaeude' aus!", "Fehler", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        
         if (budget >= preis) {
             budget -= preis;
             Fahrzeug f = new Fahrzeug(w.generiereFunkrufname(typ), typ);
             w.addFahrzeug(f);
             f.status = 6; f.ausfallGrund = "Personal fehlt";
+            SpeicherManager.speichern("savegame.properties"); // NEU: Direkt speichern
             uiAktualisieren(getUhrzeit());
         } else {
             JOptionPane.showMessageDialog(frame, "Nicht genug Budget!", "Fehler", JOptionPane.ERROR_MESSAGE);

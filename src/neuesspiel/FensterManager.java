@@ -518,11 +518,12 @@ public class FensterManager {
     }
     
     public static void oeffneWachenAusbau() {
-        JDialog d = createFramelessDialog("Wachen & Gebaeude", 650, 500);
+        JDialog d = createFramelessDialog("Wachen & Gebaeude", 650, 550);
         JPanel content = new JPanel(new BorderLayout(10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35, 35, 35));
         
+        // --- 1. OBERER BEREICH: LOKALE WACHEN-UPGRADES ---
         JPanel pnlLokaleWache = new JPanel(new BorderLayout(5, 5));
         pnlLokaleWache.setBackground(new Color(35, 35, 35));
         pnlLokaleWache.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Lokale Wachen-Ausbauten", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
@@ -535,20 +536,38 @@ public class FensterManager {
         pnlWahl.add(lblWahl); pnlWahl.add(cbWachen);
         pnlLokaleWache.add(pnlWahl, BorderLayout.NORTH);
         
-        JPanel pnlUpgrades = new JPanel(new GridLayout(3, 1, 5, 5));
+        JPanel pnlUpgrades = new JPanel(new GridLayout(4, 1, 5, 5)); // NEU: 4 Zeilen
         pnlUpgrades.setBackground(new Color(35, 35, 35));
         
-        JButton btnWerkstatt = new JButton("Lokale Werkstatt (10.000 EUR)");
-        JButton btnRuheraum = new JButton("Lokaler Ruheraum (15.000 EUR)");
-        JButton btnLogistik = new JButton("Logistik-Zentrum (12.500 EUR)");
+        JButton btnStufe = new JButton(); // NEU: Level-Up Button
+        btnStufe.setBackground(new Color(41, 128, 185));
+        btnStufe.setForeground(Color.WHITE);
         
-        pnlUpgrades.add(btnWerkstatt); pnlUpgrades.add(btnRuheraum); pnlUpgrades.add(btnLogistik);
+        JButton btnWerkstatt = new JButton();
+        JButton btnRuheraum = new JButton();
+        JButton btnLogistik = new JButton();
+        
+        pnlUpgrades.add(btnStufe);
+        pnlUpgrades.add(btnWerkstatt); 
+        pnlUpgrades.add(btnRuheraum); 
+        pnlUpgrades.add(btnLogistik);
         pnlLokaleWache.add(pnlUpgrades, BorderLayout.CENTER);
         
         Runnable updateLocalButtons = () -> {
             int wIndex = cbWachen.getSelectedIndex();
             if (wIndex == -1) return;
             Wache target = wachen.get(wIndex);
+            
+            // Level Logik
+            int stufe = target.stufe;
+            int nextCost = stufe == 1 ? 25000 : (stufe == 2 ? 50000 : (stufe == 3 ? 100000 : 0));
+            if(stufe < 4) {
+                btnStufe.setText("Wache auf Stufe " + (stufe+1) + " ausbauen (" + nextCost + " EUR)");
+                btnStufe.setEnabled(true);
+            } else {
+                btnStufe.setText("Wache auf Maximalstufe (4) ausgebaut!");
+                btnStufe.setEnabled(false);
+            }
             
             boolean hatW = false, hatR = false, hatL = false;
             if (target.upgrades != null) {
@@ -560,27 +579,49 @@ public class FensterManager {
             }
             
             if (hatW) { btnWerkstatt.setText("Lokale Werkstatt (Gekauft)"); btnWerkstatt.setEnabled(false); }
+            else if (stufe < 2) { btnWerkstatt.setText("Lokale Werkstatt (Ab Wachen-Stufe 2)"); btnWerkstatt.setEnabled(false); }
             else { btnWerkstatt.setText("Lokale Werkstatt (10.000 EUR)"); btnWerkstatt.setEnabled(true); }
             
             if (hatR) { btnRuheraum.setText("Lokaler Ruheraum (Gekauft)"); btnRuheraum.setEnabled(false); }
+            else if (stufe < 2) { btnRuheraum.setText("Lokaler Ruheraum (Ab Wachen-Stufe 2)"); btnRuheraum.setEnabled(false); }
             else { btnRuheraum.setText("Lokaler Ruheraum (15.000 EUR)"); btnRuheraum.setEnabled(true); }
             
             if (hatL) { btnLogistik.setText("Logistik-Zentrum (Gekauft)"); btnLogistik.setEnabled(false); }
+            else if (stufe < 3) { btnLogistik.setText("Logistik-Zentrum (Ab Wachen-Stufe 3)"); btnLogistik.setEnabled(false); }
             else { btnLogistik.setText("Logistik-Zentrum (12.500 EUR)"); btnLogistik.setEnabled(true); }
         };
+        
         updateLocalButtons.run();
         cbWachen.addActionListener(e -> updateLocalButtons.run());
         
-        btnWerkstatt.addActionListener(e -> {
-            if (budget >= 10000) { budget -= 10000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("werkstatt", "Lokale Werkstatt", "Reparaturen 50% guenstiger", 10000)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
-        });
-        btnRuheraum.addActionListener(e -> {
-            if (budget >= 15000) { budget -= 15000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("ruheraum", "Lokaler Ruheraum", "Krankheitsrate sinkt", 15000)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
-        });
-        btnLogistik.addActionListener(e -> {
-            if (budget >= 12500) { budget -= 12500; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("logistik", "Logistik-Zentrum", "Mehr Lagerplatz", 12500)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+        btnStufe.addActionListener(e -> {
+            Wache target = wachen.get(cbWachen.getSelectedIndex());
+            int nextCost = target.stufe == 1 ? 25000 : (target.stufe == 2 ? 50000 : 100000);
+            if (budget >= nextCost) {
+                budget -= nextCost;
+                target.stufe++;
+                SpeicherManager.speichern("savegame.properties");
+                updateLocalButtons.run();
+                uiAktualisieren(getUhrzeit());
+            } else {
+                JOptionPane.showMessageDialog(d, "Nicht genug Budget (" + nextCost + " EUR benoetigt)!");
+            }
         });
         
+        btnWerkstatt.addActionListener(e -> {
+            if (budget >= 10000) { budget -= 10000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("werkstatt", "Lokale Werkstatt", "Reparaturen 50% guenstiger", 10000)); SpeicherManager.speichern("savegame.properties"); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+            else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
+        });
+        btnRuheraum.addActionListener(e -> {
+            if (budget >= 15000) { budget -= 15000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("ruheraum", "Lokaler Ruheraum", "Krankheitsrate sinkt", 15000)); SpeicherManager.speichern("savegame.properties"); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+            else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
+        });
+        btnLogistik.addActionListener(e -> {
+            if (budget >= 12500) { budget -= 12500; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("logistik", "Logistik-Zentrum", "Mehr Lagerplatz", 12500)); SpeicherManager.speichern("savegame.properties"); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+            else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
+        });
+        
+        // --- 2. UNTERER BEREICH: GLOBALE LEITSTELLEN-UPGRADES ---
         JPanel pnlGlobal = new JPanel(new GridLayout(5, 1, 5, 5));
         pnlGlobal.setBackground(new Color(35, 35, 35));
         pnlGlobal.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Zentrale (Leitstelle & Verwaltung)", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
@@ -709,6 +750,7 @@ public class FensterManager {
             Wache zielWache = wachen.get(zielIndex);
             
             if(currentWache == zielWache) { JOptionPane.showMessageDialog(d, "Das Fahrzeug steht bereits auf dieser Wache!"); return; }
+            if(zielWache.fuhrpark.size() >= getFahrzeugLimit(zielWache.stufe)) { JOptionPane.showMessageDialog(d, "Die Zielwache ist voll! (Stufe " + zielWache.stufe + " erreicht)"); return; }
             if(targetFz.status != 1 && targetFz.status != 2 && targetFz.status != 6) { JOptionPane.showMessageDialog(d, "Fahrzeug muss auf Status 1, 2 oder 6 sein!"); return; }
             
             String alteKennung = targetFz.funkrufname;
@@ -716,6 +758,7 @@ public class FensterManager {
             for(Personal p : currentWache.personalPool) { if(p.zugewiesenesFahrzeug.equals(alteKennung)) p.zugewiesenesFahrzeug = "Keines"; if(p.geplantesFahrzeug.equals(alteKennung)) p.geplantesFahrzeug = "Keines"; }
             
             targetFz.status = 6; targetFz.ausfallGrund = "Personal fehlt";
+            SpeicherManager.speichern("savegame.properties");
             JOptionPane.showMessageDialog(d, "Fahrzeug umstationiert! Neuer Funkrufname: " + targetFz.funkrufname + "\nAchtung: Das Personal wurde vom Fahrzeug entfernt.");
             uiAktualisieren(getUhrzeit()); d.dispose();
         });
@@ -752,6 +795,7 @@ public class FensterManager {
             
             if(budget >= cost) {
                 budget -= cost; p.status = "Lehrgang"; p.geplanterStatus = "Lehrgang"; p.lehrgangDauerSec = (int)(3 * 60 * rabatt); p.lehrgangThema = q;
+                SpeicherManager.speichern("savegame.properties");
                 JOptionPane.showMessageDialog(d, p.name + " ist nun fuer " + p.lehrgangDauerSec + " Sekunden auf Lehrgang zum " + q + "!");
                 uiAktualisieren(getUhrzeit()); d.dispose();
             } else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
@@ -852,7 +896,7 @@ public class FensterManager {
             JButton btn = new JButton("10x " + cm.name + " umlagern");
             btn.addActionListener(e -> {
                 Wache target = wachen.get(wahlen.getSelectedIndex());
-                if (hauptlager.getOrDefault(cm.name, 0) >= 10) { hauptlager.put(cm.name, hauptlager.get(cm.name) - 10); target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10); uiAktualisieren(getUhrzeit()); } 
+                if (hauptlager.getOrDefault(cm.name, 0) >= 10) { hauptlager.put(cm.name, hauptlager.get(cm.name) - 10); target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
                 else { JOptionPane.showMessageDialog(d, "Zu wenig Bestand im Hauptlager!"); }
             });
             content.add(btn);
@@ -873,7 +917,7 @@ public class FensterManager {
             double rabatt = techGrossabnehmer ? 0.8 : 1.0; int endPreis = (int)(cm.preis * rabatt);
             JButton btn = new JButton(cm.bestellMenge + "x " + cm.name + " (" + endPreis + " EURO)");
             btn.addActionListener(e -> {
-                if (budget >= endPreis) { budget -= endPreis; lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60)); uiAktualisieren(getUhrzeit()); } 
+                if (budget >= endPreis) { budget -= endPreis; lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60)); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
                 else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
             });
             content.add(btn);
@@ -1320,6 +1364,7 @@ public class FensterManager {
                 LogistikSimulator.verliehenesPersonal.remove(p);
             }
 
+            SpeicherManager.speichern("savegame.properties");
             JOptionPane.showMessageDialog(d, p.name + " wurde erfolgreich nach " + zielWache.name + " umstationiert.\nAchtung: Bitte teile die Person im Schichtplan neu einem Fahrzeug zu!");
             LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
             d.dispose();

@@ -11,6 +11,7 @@ public class Wache {
     public HashMap<String, Integer> material;
     
     public ArrayList<WachenAusbau> upgrades; 
+    public int stufe; // NEU: Das Level der Wache!
 
     public Wache(String name, String kennung) {
         this.name = name;
@@ -19,6 +20,7 @@ public class Wache {
         this.personalPool = new ArrayList<>();
         this.material = new HashMap<>();
         this.upgrades = new ArrayList<>(); 
+        this.stufe = 1; // NEU: Jede Wache startet auf Stufe 1
     }
 
     public void addFahrzeug(Fahrzeug f) {
