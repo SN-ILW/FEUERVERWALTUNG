@@ -7,6 +7,11 @@ import java.util.ArrayList;
 
 public class SpeicherManager {
 
+    // NEU: Diese Methode sucht den sicheren Windows-Benutzerordner (C:\Users\DeinName\)
+    public static String getSicherenSpeicherPfad() {
+        return System.getProperty("user.home") + java.io.File.separator + "FeuerwehrVerwaltung_Savegame.properties";
+    }
+
     private static void setSafe(Properties p, String key, String val) {
         if (key != null) {
             p.setProperty(key, val != null ? val : "");
@@ -34,7 +39,11 @@ public class SpeicherManager {
 
     public static void speichern(String dateiPfad) {
         System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
-        try (FileOutputStream out = new FileOutputStream(dateiPfad);
+        
+        // HIER DER TRICK: Wir ignorieren den uebergebenen Pfad und nutzen unseren sicheren Pfad!
+        String echterPfad = getSicherenSpeicherPfad();
+        
+        try (FileOutputStream out = new FileOutputStream(echterPfad);
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
              
             Properties p = new Properties();
@@ -48,21 +57,6 @@ public class SpeicherManager {
             
             setSafe(p, "aktuellerKredit", String.valueOf(LogistikSimulator.aktuellerKredit));
             setSafe(p, "taeglicheKreditRate", String.valueOf(LogistikSimulator.taeglicheKreditRate));
-            
-            //hotkeys
-            setSafe(p, "hk_pause", String.valueOf(LogistikSimulator.hotkeyPause));
-            setSafe(p, "hk_play", String.valueOf(LogistikSimulator.hotkeyPlay));
-            setSafe(p, "hk_fast", String.valueOf(LogistikSimulator.hotkeyFast));
-            setSafe(p, "hk_disp", String.valueOf(LogistikSimulator.hotkeyDisp));
-            setSafe(p, "hk_dienst", String.valueOf(LogistikSimulator.hotkeyDienstplan));
-            setSafe(p, "hk_post", String.valueOf(LogistikSimulator.hotkeyPostfach));
-            setSafe(p, "hk_fuhr", String.valueOf(LogistikSimulator.hotkeyFuhrpark));
-            setSafe(p, "hk_e_erst", String.valueOf(LogistikSimulator.hotkeyEinsatzErsteller));
-            setSafe(p, "hk_e_edit", String.valueOf(LogistikSimulator.hotkeyEinsatzEditor));
-            setSafe(p, "hk_pers", String.valueOf(LogistikSimulator.hotkeyPersonalEinstellen));
-            
-            
-            
             
             setSafe(p, "techGrossabnehmer", String.valueOf(LogistikSimulator.techGrossabnehmer));
             setSafe(p, "lehrerStufe", String.valueOf(LogistikSimulator.lehrerStufe));
@@ -83,6 +77,17 @@ public class SpeicherManager {
             setSafe(p, "volNotruf", String.valueOf(LogistikSimulator.volNotruf));
             setSafe(p, "volStatus6", String.valueOf(LogistikSimulator.volStatus6));
             setSafe(p, "volStatus7", String.valueOf(LogistikSimulator.volStatus7));
+
+            setSafe(p, "hk_pause", String.valueOf(LogistikSimulator.hotkeyPause));
+            setSafe(p, "hk_play", String.valueOf(LogistikSimulator.hotkeyPlay));
+            setSafe(p, "hk_fast", String.valueOf(LogistikSimulator.hotkeyFast));
+            setSafe(p, "hk_disp", String.valueOf(LogistikSimulator.hotkeyDisp));
+            setSafe(p, "hk_dienst", String.valueOf(LogistikSimulator.hotkeyDienstplan));
+            setSafe(p, "hk_post", String.valueOf(LogistikSimulator.hotkeyPostfach));
+            setSafe(p, "hk_fuhr", String.valueOf(LogistikSimulator.hotkeyFuhrpark));
+            setSafe(p, "hk_e_erst", String.valueOf(LogistikSimulator.hotkeyEinsatzErsteller));
+            setSafe(p, "hk_e_edit", String.valueOf(LogistikSimulator.hotkeyEinsatzEditor));
+            setSafe(p, "hk_pers", String.valueOf(LogistikSimulator.hotkeyPersonalEinstellen));
 
             if (LogistikSimulator.aktuelleMission != null) {
                 setSafe(p, "miss_titel", LogistikSimulator.aktuelleMission.titel);
@@ -157,7 +162,6 @@ public class SpeicherManager {
                 setSafe(p, "wache_" + i + "_name", w.name);
                 setSafe(p, "wache_" + i + "_kennung", w.kennung);
                 
-                // NEU: Die Wachen-Stufe wird jetzt gespeichert!
                 setSafe(p, "wache_" + i + "_stufe", String.valueOf(w.stufe));
                 
                 if (w.fuhrpark != null) {
@@ -257,9 +261,11 @@ public class SpeicherManager {
     }
 
     public static boolean laden(String dateiPfad) {
-        File file = new File(dateiPfad);
+        String echterPfad = getSicherenSpeicherPfad();
+        File file = new File(echterPfad);
+        
         if (!file.exists()) {
-            System.out.println("[DEBUG] Keine Savegame Datei gefunden.");
+            System.out.println("[DEBUG] Keine Savegame Datei unter " + echterPfad + " gefunden.");
             return false;
         }
 
@@ -280,24 +286,6 @@ public class SpeicherManager {
             LogistikSimulator.vorlagenPool.clear();
             LogistikSimulator.customMaterials.clear();
             LogistikSimulator.hauptlager.clear();
-            
-            //hotkeys
-            LogistikSimulator.hotkeyPause = parseIntSafe(p.getProperty("hk_pause"), java.awt.event.KeyEvent.VK_SPACE);
-            LogistikSimulator.hotkeyPlay = parseIntSafe(p.getProperty("hk_play"), java.awt.event.KeyEvent.VK_1);
-            LogistikSimulator.hotkeyFast = parseIntSafe(p.getProperty("hk_fast"), java.awt.event.KeyEvent.VK_2);
-            LogistikSimulator.hotkeyDisp = parseIntSafe(p.getProperty("hk_disp"), java.awt.event.KeyEvent.VK_D);
-            LogistikSimulator.hotkeyDienstplan = parseIntSafe(p.getProperty("hk_dienst"), java.awt.event.KeyEvent.VK_F1);
-            LogistikSimulator.hotkeyPostfach = parseIntSafe(p.getProperty("hk_post"), java.awt.event.KeyEvent.VK_M);
-            LogistikSimulator.hotkeyFuhrpark = parseIntSafe(p.getProperty("hk_fuhr"), java.awt.event.KeyEvent.VK_F);
-            LogistikSimulator.hotkeyEinsatzErsteller = parseIntSafe(p.getProperty("hk_e_erst"), java.awt.event.KeyEvent.VK_F2);
-            LogistikSimulator.hotkeyEinsatzEditor = parseIntSafe(p.getProperty("hk_e_edit"), java.awt.event.KeyEvent.VK_F3);
-            LogistikSimulator.hotkeyPersonalEinstellen = parseIntSafe(p.getProperty("hk_pers"), java.awt.event.KeyEvent.VK_P);
-            
-            
-            
-            
-            
-            
             
             LogistikSimulator.budget = parseIntSafe(p.getProperty("budget"), 25000);
             LogistikSimulator.xp = parseIntSafe(p.getProperty("xp"), 0);
@@ -324,6 +312,17 @@ public class SpeicherManager {
             LogistikSimulator.cfgKrankheit = parseBoolSafe(p.getProperty("cfgKrankheit"), true);
             LogistikSimulator.cfgAutoTransfer = parseBoolSafe(p.getProperty("cfgAutoTransfer"), false);
             LogistikSimulator.cfgLogistikAktiv = parseBoolSafe(p.getProperty("cfgLogistikAktiv"), true);
+            
+            LogistikSimulator.hotkeyPause = parseIntSafe(p.getProperty("hk_pause"), java.awt.event.KeyEvent.VK_SPACE);
+            LogistikSimulator.hotkeyPlay = parseIntSafe(p.getProperty("hk_play"), java.awt.event.KeyEvent.VK_1);
+            LogistikSimulator.hotkeyFast = parseIntSafe(p.getProperty("hk_fast"), java.awt.event.KeyEvent.VK_2);
+            LogistikSimulator.hotkeyDisp = parseIntSafe(p.getProperty("hk_disp"), java.awt.event.KeyEvent.VK_D);
+            LogistikSimulator.hotkeyDienstplan = parseIntSafe(p.getProperty("hk_dienst"), java.awt.event.KeyEvent.VK_F1);
+            LogistikSimulator.hotkeyPostfach = parseIntSafe(p.getProperty("hk_post"), java.awt.event.KeyEvent.VK_M);
+            LogistikSimulator.hotkeyFuhrpark = parseIntSafe(p.getProperty("hk_fuhr"), java.awt.event.KeyEvent.VK_F);
+            LogistikSimulator.hotkeyEinsatzErsteller = parseIntSafe(p.getProperty("hk_e_erst"), java.awt.event.KeyEvent.VK_F2);
+            LogistikSimulator.hotkeyEinsatzEditor = parseIntSafe(p.getProperty("hk_e_edit"), java.awt.event.KeyEvent.VK_F3);
+            LogistikSimulator.hotkeyPersonalEinstellen = parseIntSafe(p.getProperty("hk_pers"), java.awt.event.KeyEvent.VK_P);
             
             if (p.containsKey("miss_titel")) {
                 LogistikSimulator.aktuelleMission = new TagesMission(p.getProperty("miss_titel", "Mission"), p.getProperty("miss_desc", ""), p.getProperty("miss_typ", "ALLE"), parseIntSafe(p.getProperty("miss_ziel"), 1), parseIntSafe(p.getProperty("miss_geld"), 0), parseIntSafe(p.getProperty("miss_xp"), 0));
@@ -387,7 +386,6 @@ public class SpeicherManager {
             for (int i = 0; i < wachenCount; i++) {
                 Wache w = new Wache(p.getProperty("wache_" + i + "_name", "Wache"), p.getProperty("wache_" + i + "_kennung", "00"));
                 
-                // NEU: Die Wachen-Stufe wird geladen!
                 w.stufe = parseIntSafe(p.getProperty("wache_" + i + "_stufe"), 1);
                 
                 int fzgCount = parseIntSafe(p.getProperty("wache_" + i + "_fzgCount"), 0);

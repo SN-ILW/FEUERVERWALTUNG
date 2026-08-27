@@ -14,16 +14,10 @@ import static neuesspiel.LogistikSimulator.*;
 
 public class FensterManager {
 
-    
-    //hotkeys
     public static JDialog hotkeyPopup = null;
     public static java.util.function.IntConsumer currentHotkeySetter = null;
     public static JButton currentHotkeyBtn = null;
-    
-    
-    
-    
-    
+
     private static JDialog createFramelessDialog(String title, int width, int height) {
         JDialog d = new JDialog(frame, title, true);
         d.setUndecorated(true);
@@ -815,7 +809,7 @@ public class FensterManager {
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
-public static void oeffneEinstellungen() {
+    public static void oeffneEinstellungen() {
         JDialog d = createFramelessDialog("Spieleinstellungen", 500, 480);
         JTabbedPane tabs = new JTabbedPane();
         tabs.setBackground(new Color(45, 45, 45)); tabs.setForeground(Color.WHITE);
@@ -849,7 +843,7 @@ public static void oeffneEinstellungen() {
 
         tabs.addTab("Allgemein", pnlAllgemein);
 
-        // --- TAB 2: HOTKEYS (jetzt mit Scrollbar, weil es 10 Stück sind!) ---
+        // --- TAB 2: HOTKEYS ---
         JPanel pnlHotkeys = new JPanel(new GridLayout(10, 2, 10, 10)); // 10 Zeilen
         pnlHotkeys.setBorder(BorderFactory.createEmptyBorder(10,20,10,20)); pnlHotkeys.setBackground(new Color(35, 35, 35));
 
@@ -915,7 +909,9 @@ public static void oeffneEinstellungen() {
             String wahl = JOptionPane.showInputDialog(d, "ACHTUNG: Dies setzt den Spielstand zurueck!\nZum Bestaetigen bitte exakt 'LOESCHEN' eingeben:");
             if(wahl != null && wahl.equals("LOESCHEN")) { new java.io.File("savegame.properties").delete(); LogistikSimulator.initStandardDaten(); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); JOptionPane.showMessageDialog(d, "Spielstand wurde erfolgreich zurueckgesetzt!"); d.dispose(); }
         });
-        JButton btnSave = new JButton("Speichern & Schliessen");
+        
+        // --- HIER IST DER REPARIERTE BUTTON! ---
+        JButton btnSave = LogistikSimulator.createStyledButton("Speichern & Schliessen", new Color(39, 174, 96));
         btnSave.addActionListener(e -> {
             LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected(); LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected(); LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected(); LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
@@ -937,7 +933,7 @@ public static void oeffneEinstellungen() {
         hotkeyPopup.setLocationRelativeTo(LogistikSimulator.frame);
         hotkeyPopup.getContentPane().setBackground(new Color(231, 76, 60));
         
-        JLabel lbl = new JLabel("Bitte drücke JETZT die neue Taste...", SwingConstants.CENTER);
+        JLabel lbl = new JLabel("Bitte druecke JETZT die neue Taste...", SwingConstants.CENTER);
         lbl.setForeground(Color.WHITE); 
         lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
         hotkeyPopup.add(lbl);
@@ -1474,9 +1470,6 @@ public static void oeffneEinstellungen() {
         d.setVisible(true);
     }
     
-    // =========================================================================
-    // NEU: Das interaktive Alarmierungsfenster (Dispatch Overhaul)
-    // =========================================================================
     public static void oeffneAlarmierungsFenster(Einsatz ein) {
         JDialog d = createFramelessDialog("Alarmierung: " + ein.vorlage.stichwort + " - " + ein.beschreibung, 800, 600);
         
@@ -1489,7 +1482,6 @@ public static void oeffneEinstellungen() {
         lblTitel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         pnlTop.add(lblTitel);
         
-        // Anzeige der benoetigten Fahrzeuge
         StringBuilder reqText = new StringBuilder("Benoetigt: ");
         if(ein.vorlage.reqELW > 0) reqText.append(ein.vorlage.reqELW).append("x ELW  ");
         if(ein.vorlage.reqHLF > 0) reqText.append(ein.vorlage.reqHLF).append("x HLF  ");
@@ -1507,14 +1499,13 @@ public static void oeffneEinstellungen() {
         
         d.add(pnlTop, BorderLayout.NORTH);
 
-        // Tabelle mit Checkboxen fuer die freien Fahrzeuge
         String[] cols = {"Auswaehlen", "Funkrufname", "Typ", "Wache", "Status"};
         DefaultTableModel model = new DefaultTableModel(cols, 0) {
             @Override public Class<?> getColumnClass(int columnIndex) {
-                return columnIndex == 0 ? Boolean.class : String.class; // Spalte 0 ist eine Checkbox!
+                return columnIndex == 0 ? Boolean.class : String.class; 
             }
             @Override public boolean isCellEditable(int row, int column) {
-                return column == 0; // Nur die Checkbox darf geklickt werden
+                return column == 0; 
             }
         };
 
@@ -1552,9 +1543,8 @@ public static void oeffneEinstellungen() {
         JButton btnAbbruch = new JButton("Abbrechen");
         btnAbbruch.addActionListener(e -> d.dispose());
 
-        // AAO Logik: Setzt die Haken automatisch
         btnAAO.addActionListener(e -> {
-            for(int i = 0; i < model.getRowCount(); i++) model.setValueAt(false, i, 0); // Reset
+            for(int i = 0; i < model.getRowCount(); i++) model.setValueAt(false, i, 0); 
             
             int needELW = ein.vorlage.reqELW, needHLF = ein.vorlage.reqHLF, needDLK = ein.vorlage.reqDLK;
             int needRTW = ein.vorlage.reqRTW, needNEF = ein.vorlage.reqNEF, needKTW = ein.vorlage.reqKTW;
@@ -1571,7 +1561,6 @@ public static void oeffneEinstellungen() {
                 else if(f.typ.equals("TLF") && needTLF > 0) { model.setValueAt(true, i, 0); needTLF--; }
                 else if(f.typ.equals("MTW") && needMTW > 0) { model.setValueAt(true, i, 0); needMTW--; }
             }
-            // Falls KTW fehlt, nimm stattdessen einen RTW (Fallback)
             if(needKTW > 0) {
                 for(int i = 0; i < verfuegbar.size(); i++) {
                     Fahrzeug f = verfuegbar.get(i);
@@ -1582,7 +1571,6 @@ public static void oeffneEinstellungen() {
             }
         });
 
-        // Alarm Logik: Prüft, ob alles ausgewählt wurde und sendet die Fahrzeuge raus
         btnAlarm.addActionListener(e -> {
             ArrayList<Fahrzeug> selectedFz = new ArrayList<>();
             int sELW=0, sHLF=0, sDLK=0, sRTW=0, sNEF=0, sKTW=0, sTLF=0, sMTW=0;
@@ -1604,7 +1592,6 @@ public static void oeffneEinstellungen() {
                 }
             }
             
-            // Reicht das ausgewaehlte Personal/Fahrzeug?
             int mELW = Math.max(0, ein.vorlage.reqELW - sELW);
             int mHLF = Math.max(0, ein.vorlage.reqHLF - sHLF);
             int mDLK = Math.max(0, ein.vorlage.reqDLK - sDLK);
@@ -1613,7 +1600,6 @@ public static void oeffneEinstellungen() {
             int mMTW = Math.max(0, ein.vorlage.reqMTW - sMTW);
             
             int fehlendeKTW = Math.max(0, ein.vorlage.reqKTW - sKTW);
-            // Freie RTWs duerfen fehlende KTWs ausgleichen!
             int ueberschussRTW = Math.max(0, sRTW - ein.vorlage.reqRTW);
             fehlendeKTW = Math.max(0, fehlendeKTW - ueberschussRTW);
             int mRTW = Math.max(0, ein.vorlage.reqRTW - sRTW);
@@ -1629,14 +1615,13 @@ public static void oeffneEinstellungen() {
                         ueberlandHilfeAktiv = true;
                     } else {
                         JOptionPane.showMessageDialog(d, "Zu wenig Geld!", "Fehler", JOptionPane.ERROR_MESSAGE);
-                        return; // Abbruch
+                        return; 
                     }
                 } else {
-                    return; // Abbruch
+                    return; 
                 }
             }
 
-            // Material Check
             boolean matsDa = true;
             if (cfgLogistikAktiv) {
                 for(String m : ein.reqMaterial.keySet()) {
@@ -1649,8 +1634,7 @@ public static void oeffneEinstellungen() {
                 JOptionPane.showMessageDialog(d, "Nicht genug Material (" + ein.reqMaterial.keySet().iterator().next() + ") auf den Wachen!", "Material fehlt", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-//test
-            // Wenn wir hier ankommen: ALARM!
+
             int xpBel = 0;
             int multiplier = isRushHour() ? 3 : 1;
             
