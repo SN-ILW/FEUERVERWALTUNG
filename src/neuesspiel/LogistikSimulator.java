@@ -17,31 +17,24 @@ public class LogistikSimulator {
     public static JPanel notrufPanel;
     public static JEditorPane fmsBoard;
     
-    // NEU: Listen fuer die Vertraege
-    public static ArrayList<VertragVorlage> vertragsVorlagen = new ArrayList<>();
-    public static ArrayList<Vertrag> aktiveVertraege = new ArrayList<>();
-    
-    // NEU: Logistik-Schalter
-    public static boolean cfgLogistikAktiv = true;
-    public static JButton btnLog; // Muss public static sein, damit wir ihn verstecken koennen!
-    
+    public static TagesMission aktuelleMission = null; // NEU: Mission
+    public static JButton btnPostfach, btnTagBeenden;
     public static int aktuellerKredit = 0;
     public static int taeglicheKreditRate = 0;
-    
-    public static JButton btnPostfach, btnTagBeenden;
-
     public static int budget = 25000;
     public static int xp = 0;
     public static int level = 1;
     public static int tag = 1;
     public static int inGameSekunden = 7 * 3600; 
     public static int speed = 1; 
-
+    public static boolean cfgLogistikAktiv = true;
+    public static JButton btnLog;
     public static boolean cfgKrankentransport = true;
     public static boolean cfgBeschaedigung = true;
     public static boolean cfgKrankheit = true;
     public static boolean cfgAutoTransfer = false;
-    
+    public static ArrayList<VertragVorlage> vertragsVorlagen = new ArrayList<>();
+    public static ArrayList<Vertrag> aktiveVertraege = new ArrayList<>();
     public static boolean cfgSoundNotruf = true;
     public static boolean cfgSoundStatus6 = true;
     public static boolean cfgSoundStatus7 = true;
@@ -257,6 +250,10 @@ public class LogistikSimulator {
         
         JButton btnSys = createStyledButton("System & Editor", new Color(127, 140, 141));
         JButton btnKlinik = createStyledButton("Kliniken & Betten", new Color(230, 126, 34)); 
+        
+        JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
+        btnBank.setForeground(Color.BLACK);
+        
         btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
         btnTagBeenden.setEnabled(false);
 
@@ -275,6 +272,7 @@ public class LogistikSimulator {
         btnBau.addActionListener(e -> FensterManager.oeffneWachenAusbau());
         btnSys.addActionListener(e -> FensterManager.oeffneSystemHauptmenu());
         btnKlinik.addActionListener(e -> FensterManager.oeffneBettenUebersicht());
+        btnBank.addActionListener(e -> FensterManager.oeffneBank());
         btnTagBeenden.addActionListener(e -> {
             if(!hatGenugGeplantesPersonal()) {
                 int wahl = JOptionPane.showConfirmDialog(frame, "Fuer den naechsten Tag ist nicht ausreichend Personal geplant!\nEinige Fahrzeuge werden ausfallen.\nTrotzdem den Tag beenden?", "Schichtplan unvollstaendig", JOptionPane.YES_NO_OPTION);
@@ -283,23 +281,8 @@ public class LogistikSimulator {
             tagesWechsel();
         });
         
-
-        
-       // NEU: Der Bank-Button
-        JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
-        btnBank.setForeground(Color.BLACK);
-        btnBank.addActionListener(e -> FensterManager.oeffneBank());
-
         pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
         pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
-        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
-        
-        btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
-        btnTagBeenden.setEnabled(false);
-
-        // ...
-
-        // Und unten beim Hinzufuegen (pnlBottom.add) ersetzt du das 'new JLabel("")' durch 'btnBank':
         pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
         
         frame.add(pnlTop, BorderLayout.NORTH);
@@ -373,27 +356,29 @@ public class LogistikSimulator {
                             }
                         }
                         
-                        // NEU: Vertrags-Fortschritt
-                            for(Vertrag v : aktiveVertraege) {
-                                if(ein.vorlage.art.equals(v.zielEinsatzArt) || ein.vorlage.stichwort.equals(v.zielEinsatzArt)) {
-                                    v.aktuelleMenge++;
-                                }
-                            }
-                        
                         if (ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
                             budget += ein.belohnungGeld;
                             tagesStatistik.add(ein);
                             checkLevelUp();
-                            // NEU: Vertrags-Fortschritt
- 
+                            
+                            // NEU: Tagesmission Fortschritt pruefen
+                            if(aktuelleMission != null && !aktuelleMission.abgeschlossen) {
+                                if(aktuelleMission.typ.equals("ALLE") || aktuelleMission.typ.equals(ein.vorlage.art)) {
+                                    aktuelleMission.fortschritt++;
+                                    if(aktuelleMission.fortschritt >= aktuelleMission.zielWert) {
+                                        aktuelleMission.abgeschlossen = true;
+                                        budget += aktuelleMission.belohnungGeld;
+                                        xp += aktuelleMission.belohnungXp;
+                                        postfach.add(0, new Email("Leitstelle", "Tagesmission erfuellt!", "Du hast die heutige Mission ('" + aktuelleMission.titel + "') geschafft!\nBelohnung: " + aktuelleMission.belohnungGeld + " EUR und " + aktuelleMission.belohnungXp + " XP.", "Info", null, -1, -1));
+                                    }
+                                }
+                            }
+                            
                             for(Wache w : wachen) {
                                 for(Fahrzeug f : w.fuhrpark) {
                                     if (f.aktuellerEinsatz == ein) { 
                                         f.aktuellerEinsatz = null;
-                                        
-                                        // NEU: Pro Einsatz 15 bis 40 Kilometer sammeln
-                                        f.kilometer += 15 + (int)(Math.random() * 25);
                                         
                                         if(f.typ.equals("RTW")) {
                                             if(calltakerStufe >= 2 && Math.random() > 0.5) {
@@ -409,11 +394,21 @@ public class LogistikSimulator {
                                         
                                         if (cfgBeschaedigung) {
                                             double baseChance = 0.05;
-                                            // NEU: 15% höheres Risiko für Motorschaden/Panne, wenn Inspektion ignoriert wird!
                                             if (f.kilometer >= f.naechsteInspektion) {
                                                 baseChance += 0.15; 
                                             }
                                             double damageChance = baseChance * Math.pow(0.95, level - 1); 
+                                            
+                                            // NEU: Mechaniker-Bonus prüfen
+                                            for(Wache wCheck : wachen) {
+                                                for(Personal pCheck : wCheck.personalPool) {
+                                                    if(pCheck.zugewiesenesFahrzeug.equals(f.funkrufname)) {
+                                                        for(MitarbeiterEigenschaft eig : pCheck.eigenschaften) {
+                                                            if(eig.typ.equals("TECHNIK")) damageChance *= eig.effektWert;
+                                                        }
+                                                    }
+                                                }
+                                            }
                                             if (Math.random() < damageChance) {
                                                 f.status = 6; 
                                                 f.ausfallGrund = "Beschadigung"; 
@@ -471,7 +466,8 @@ public class LogistikSimulator {
                                 for(Wache wc : wachen) for(Personal p : wc.personalPool) if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) bTime = 60;
                                 int mult = isRushHour() ? 3 : 1;
                                 
-                                f.status = 3; f.aktuellerEinsatz = aktuellerNotruf; f.anfahrtsZeit = bTime * mult;
+                                f.status = 3; f.aktuellerEinsatz = aktuellerNotruf; 
+                                f.anfahrtsZeit = (int)(bTime * mult * getSpeedMultiplier(f));
                                 aktuellerNotruf.xpBelohnung = 25 * aktuellerNotruf.vorlage.minLevel;
                                 aktiveEinsaetze.add(aktuellerNotruf);
                                 aktuellerNotruf = null;
@@ -554,7 +550,14 @@ public class LogistikSimulator {
         String rushHourText = isRushHour() ? " | RUSH-HOUR (Verkehr blockiert)" : "";
         String eventText = aktuellesEvent != null ? " | EVENT: " + aktuellesEvent.name : "";
         topUhrzeitLabel.setText(getDatumUndUhrzeit() + " " + zeit + " Uhr" + rushHourText + eventText + " | Leitstelle & Logistik");
-        playerInfoLabel.setText("Level: " + level + " | XP: " + xp + " / " + getRequiredXpForLevel(level) + " | Budget: " + budget + " \u20AC");
+        
+        // NEU: Tagesmission im UI
+        String missionText = "";
+        if(aktuelleMission != null) {
+            String status = aktuelleMission.abgeschlossen ? "(ERFUELLT!)" : "(" + aktuelleMission.fortschritt + "/" + aktuelleMission.zielWert + ")";
+            missionText = "  |  Mission: " + aktuelleMission.titel + " " + status;
+        }
+        playerInfoLabel.setText("Level: " + level + " | XP: " + xp + " / " + getRequiredXpForLevel(level) + " | Budget: " + budget + " \u20AC" + missionText);
         
         long unread = postfach.stream().filter(m -> !m.gelesen).count();
         btnPostfach.setText("Postfach (" + unread + ")");
@@ -572,7 +575,7 @@ public class LogistikSimulator {
         StringBuilder fms = new StringBuilder();
         fms.append("<html><body style='color:#a9b7c6; font-family:Consolas, sans-serif; font-size:12px; margin:5px;'>");
         
-boolean hasWarnings = false;
+        boolean hasWarnings = false;
         StringBuilder warnings = new StringBuilder();
         
         // 1. Hauptlager pruefen (Warnt jetzt schon, wenn weniger als das 5-fache der normalen Schwelle da ist!)
@@ -611,11 +614,6 @@ boolean hasWarnings = false;
                 else if(f.status == 7 || f.status == 8) color = "#9b59b6";
                 
                 fms.append("<span style='color:#ffffff;'>[").append(f.typ).append("]</span> <b>").append(f.funkrufname).append("</b> | Status: <b style='color:").append(color).append(";'>").append(f.status).append("</b> ");
-                
-                // NEU: TÜV-Warnung
-                if (f.kilometer >= f.naechsteInspektion) {
-                    fms.append("<span style='color:#f39c12; font-weight:bold;'> [Inspektion Empfohlen!] </span>");
-                }
                 
                 if(f.status == 3) fms.append("-> Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("-> Rueckfahrt: ").append(f.anfahrtsZeit/speed).append("s");
@@ -658,8 +656,6 @@ boolean hasWarnings = false;
             lage.append(e.getLagemeldungText()).append("\n\n");
         }
         txtEinsatz.setText(lage.toString());
-        // Logistik-Button verstecken, wenn deaktiviert
-        if (btnLog != null) btnLog.setVisible(cfgLogistikAktiv);
     }
 
     public static void generiereNotruf(String uhrzeit) {
@@ -897,11 +893,29 @@ boolean hasWarnings = false;
             if(wahl != null) {
                 Wache target = null; for(Wache w : wachen) if(w.name.equals(wahl)) target = w;
                 
-                String[] vornamen = {"Max", "Anna", "Lisa", "Paul", "Tom", "Julia", "Felix", "Marie", "Leon", "Lena", "Lukas", "Laura", "Finn", "Sarah", "Jonas", "Mia", "Ben", "Lara", "Elias", "Lea", "Luis", "Hannah", "Noah", "Emma", "Julian", "Sophia", "Tim", "Johanna", "Moritz", "Charlotte", "Niklas", "Nele", "Philipp", "Lilly", "David", "Amelie", "Jan", "Maja", "Simon", "Klara", "Maximilian", "Emilia", "Alexander", "Marlene", "Anton", "Pia", "Jonathan", "Lina", "Pauline", "Oskar", "Frieda", "Jakob", "Paula", "Mats", "Alina", "Vincent", "Emily", "Till", "Leni", "Linus", "Isabell", "Leonard", "Theresa", "Marlon", "Helena", "Jannis", "Viktoria", "Hannes", "Zoe", "Erik", "Mathilda", "Bastian", "Mila"};
-                String[] nachnamen = {"Muller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz", "Hoffmann", "Schafer", "Koch", "Bauer", "Richter", "Klein", "Wolf", "Schroder", "Neumann", "Braun", "Werner", "Schwarz", "Hofmann", "Zimmermann", "Schmitt", "Hartmann", "Schmid", "Weiss", "Schmitz", "Kruger", "Lange", "Meier", "Walter", "Kohler", "Maier", "Huber", "Mayer", "Herrmann", "Weise", "Dietz", "Krause", "Lehmann", "Haas", "Hahn", "Schubert", "Roth", "Wenzel", "Kramer", "Vogel", "Kuhn", "Lorenz", "Gunther", "Franke", "Baumann", "Schulte", "Arnold", "Gotz", "Bohm", "Kraus", "Frank", "Winkler", "Seidel", "Haase", "Lorenzen", "Voigt", "Martin", "Schutz", "Ruf", "Steiner", "Horn", "Dietrich", "Riedel", "Werth", "Busch", "Sauer", "Fuchs", "Thomas", "Graf", "Berg", "Hubner", "Pohl", "Beyer", "Marx", "Wittka", "Quessel"};
+                String[] vornamen = {"Max", "Anna", "Lisa", "Paul", "Tom", "Julia", "Felix", "Marie", "Leon", "Lena", "Lukas", "Laura"};
+                String[] nachnamen = {"Muller", "Schmidt", "Schneider", "Fischer", "Weber", "Meyer", "Wagner", "Becker", "Schulz"};
                 String neu = vornamen[(int)(Math.random()*vornamen.length)] + " " + nachnamen[(int)(Math.random()*nachnamen.length)];
                 
                 Personal potenziell = new Personal(neu, "Anwaerter");
+                
+                // --- NEU: RPG EIGENSCHAFTEN AUSWUERFELN ---
+                MitarbeiterEigenschaft[] pool = {
+                    new MitarbeiterEigenschaft("Bleifuss", "Faehrt 15% schneller", "SPEED", 0.85),
+                    new MitarbeiterEigenschaft("Vorsichtig", "Faehrt 15% langsamer", "SPEED", 1.15),
+                    new MitarbeiterEigenschaft("Eisern", "Wird kaum krank", "GESUNDHEIT", 0.2),
+                    new MitarbeiterEigenschaft("Anfaellig", "Wird haeufig krank", "GESUNDHEIT", 1.8),
+                    new MitarbeiterEigenschaft("Mechaniker", "Fahrzeug geht seltener kaputt", "TECHNIK", 0.5)
+                };
+                
+                int anzahlTraits = (Math.random() > 0.7) ? 2 : 1; // 30% Chance auf 2 Eigenschaften
+                for(int i=0; i<anzahlTraits; i++) {
+                    MitarbeiterEigenschaft gewaehlt = pool[(int)(Math.random() * pool.length)];
+                    boolean hatSchon = false;
+                    for(MitarbeiterEigenschaft e : potenziell.eigenschaften) if(e.name.equals(gewaehlt.name)) hatSchon = true;
+                    if(!hatSchon) potenziell.eigenschaften.add(gewaehlt);
+                }
+                
                 target.personalPool.add(potenziell);
                 budget -= 500;
                 
@@ -911,7 +925,11 @@ boolean hasWarnings = false;
                     postfach.add(MailGenerator.generiereVorwissen(potenziell, tag, w));
                 }
                 
-                JOptionPane.showMessageDialog(frame, neu + " wurde als Anwaerter auf " + target.name + " eingestellt!");
+                // Eigenschaft in der Meldung anzeigen
+                StringBuilder traitText = new StringBuilder();
+                for(MitarbeiterEigenschaft e : potenziell.eigenschaften) traitText.append("\n- ").append(e.name).append(" (").append(e.beschreibung).append(")");
+                
+                JOptionPane.showMessageDialog(frame, neu + " wurde als Anwaerter auf " + target.name + " eingestellt!\n\nBesondere Eigenschaften:" + traitText.toString());
                 SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit());
             }
         } else { JOptionPane.showMessageDialog(frame, "Zu wenig Budget (500 EURO benoetigt)!", "Fehler", JOptionPane.ERROR_MESSAGE); }
@@ -926,38 +944,8 @@ boolean hasWarnings = false;
             budget += 1000;
         }
 
-     StringBuilder sb = new StringBuilder();
+        StringBuilder sb = new StringBuilder();
         sb.append("=== TAGESABSCHLUSS TAG ").append(tag).append(" ===\n\n");
-        
-        // --- NEU: KREDIT-ABBUCHUNG ---
-        if (aktuellerKredit > 0) {
-            int abzug = Math.min(taeglicheKreditRate, aktuellerKredit);
-            budget -= abzug;
-            aktuellerKredit -= abzug;
-            if (aktuellerKredit <= 0) {
-                taeglicheKreditRate = 0;
-                sb.append("🏦 Kredit wurde heute vollstaendig abbezahlt!\n\n");
-            } else {
-                sb.append("🏦 Kreditrate bezahlt: -").append(abzug).append(" EUR (Restschulden: ").append(aktuellerKredit).append(" EUR)\n\n");
-            }
-        }
-        // -----------------------------
-        
-        // --- NEU: VERTRAGS-ABRECHNUNG ---
-        if (!aktiveVertraege.isEmpty()) {
-            sb.append("=== VERTRAGSABRECHNUNG ===\n");
-            for (Vertrag v : aktiveVertraege) {
-                if (v.aktuelleMenge >= v.zielMenge) {
-                    budget += v.belohnungProTag;
-                    sb.append("✅ ").append(v.auftraggeber).append(" erfuellt! (+").append(v.belohnungProTag).append(" EUR)\n");
-                } else {
-                    budget -= v.strafeBeiFehlschlag;
-                    sb.append("❌ ").append(v.auftraggeber).append(" verfehlt! (-").append(v.strafeBeiFehlschlag).append(" EUR)\n");
-                }
-                v.aktuelleMenge = 0; // Reset fuer den naechsten Tag
-            }
-            sb.append("\n");
-        }
         
         if (aktuellesEvent != null) {
             aktuellesEvent.dauerTage--;
@@ -1042,6 +1030,12 @@ boolean hasWarnings = false;
                 
                 if (p.schichtenMonat > 15 && cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
                     double chance = techRuheraum ? 0.05 : 0.10;
+                    
+                    // NEU: RPG-Eigenschaft für Gesundheit anwenden
+                    for (MitarbeiterEigenschaft e : p.eigenschaften) {
+                        if (e.typ.equals("GESUNDHEIT")) chance *= e.effektWert;
+                    }
+                    
                     if (Math.random() < chance) {
                         int dauer = 2 + (int)(Math.random() * 5);
                         p.krankBis = tag + dauer; 
@@ -1049,7 +1043,7 @@ boolean hasWarnings = false;
                     }
                 }
                 
-               // Chance auf Urlaub deutlich erhoeht (von 0.02 auf 0.06 -> also 6% pro Tag)
+                // Chance auf Urlaub
                 if (Math.random() < 0.06 && p.urlaubStart == -1 && p.krankBis == -1 && !p.status.equals("Lehrgang")) {
                     int dauer = 5 + (int)(Math.random() * 10);
                     int startExtra = 2 + (int)(Math.random() * 5);
@@ -1092,19 +1086,21 @@ boolean hasWarnings = false;
                         f.ausfallGrund = "Personal fehlt";
                     }
                 }
-            }
-        }
+            } // ENDE der Fahrzeug-Schleife
+        } // ENDE der Wachen-Schleife
 
         JOptionPane.showMessageDialog(frame, sb.toString(), "Feierabend!", JOptionPane.INFORMATION_MESSAGE);
         inGameSekunden = 7 * 3600;
         tagesStatistik.clear();
         abgelehnteEinsaetzeHeute = 0;
         SpeicherManager.speichern("savegame.properties");
+        generiereTagesMission();
         uiAktualisieren(getUhrzeit());
-    }
-    
+    } // ENDE der Methode tagesWechsel()
+
     // NEUE METHODE: Prueft, ob die Wache fuer den FAHRZEUG-TYP genug Material hat
     public static boolean hatGenugMaterial(Fahrzeug f, Wache w) {
+        if (!cfgLogistikAktiv) return true;
         for(CustomMaterial cm : customMaterials) {
             // Nur pruefen, wenn das Material auch fuer diesen Fahrzeugtyp benoetigt wird!
             if(cm.fahrzeuge.contains(f.typ)) {
@@ -1270,9 +1266,23 @@ boolean hasWarnings = false;
                 f.status = 2; 
             }
         }
+        generiereTagesMission();
     }
 
-public static void playSound(String dateiName) {
+    public static void generiereTagesMission() {
+        int rand = (int)(Math.random() * 4);
+        if (rand == 0) {
+            aktuelleMission = new TagesMission("Krankentransport-Meister", "Schliesse 3 KTP Einsaetze ab.", "KTP", 3, 1500, 300);
+        } else if (rand == 1) {
+            aktuelleMission = new TagesMission("Feuerwehr-Held", "Schliesse 2 Feuerwehreinsaetze (FW) ab.", "FW", 2, 2000, 400);
+        } else if (rand == 2) {
+            aktuelleMission = new TagesMission("Rettungsdienst-Profi", "Schliesse 3 Rettungsdiensteinsaetze (RD) ab.", "RD", 3, 1800, 350);
+        } else {
+            aktuelleMission = new TagesMission("Fleissiger Disponent", "Schliesse 5 beliebige Einsaetze ab.", "ALLE", 5, 2500, 500);
+        }
+    }
+    
+    public static void playSound(String dateiName) {
         if (dateiName.equals("notruf.wav") && !cfgSoundNotruf) return;
         if (dateiName.equals("status6.wav") && !cfgSoundStatus6) return;
         if (dateiName.equals("status7.wav") && !cfgSoundStatus7) return;
@@ -1311,7 +1321,7 @@ public static void playSound(String dateiName) {
         }).start();
     }
 
-public static void fahrzeugeInspektion() {
+    public static void fahrzeugeInspektion() {
         ArrayList<Fahrzeug> faellig = new ArrayList<>();
         // Nur freie Fahrzeuge (Status 1 oder 2) dürfen in die Inspektion
         for (Wache w : wachen) {
@@ -1353,5 +1363,20 @@ public static void fahrzeugeInspektion() {
             }
         }
     }
-
+    
+    // NEU: Hilfsmethode fuer den RPG-Speed-Bonus
+    public static double getSpeedMultiplier(Fahrzeug f) {
+        double mult = 1.0;
+        for(Wache w : wachen) {
+            for(Personal p : w.personalPool) {
+                if(p.zugewiesenesFahrzeug.equals(f.funkrufname)) {
+                    for(MitarbeiterEigenschaft e : p.eigenschaften) {
+                        if(e.typ.equals("SPEED")) mult *= e.effektWert;
+                    }
+                }
+            }
+        }
+        return mult;
+    }
+    
 }

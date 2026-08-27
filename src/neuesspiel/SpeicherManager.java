@@ -17,17 +17,6 @@ public class SpeicherManager {
             p.setProperty("sekunden", String.valueOf(LogistikSimulator.inGameSekunden));
             p.setProperty("abgelehnt_heute", String.valueOf(LogistikSimulator.abgelehnteEinsaetzeHeute)); 
             
-            p.setProperty("aktuellerKredit", String.valueOf(LogistikSimulator.aktuellerKredit));
-            p.setProperty("taeglicheKreditRate", String.valueOf(LogistikSimulator.taeglicheKreditRate));
-            
-            p.setProperty("cfgSoundNotruf", String.valueOf(LogistikSimulator.cfgSoundNotruf));
-            p.setProperty("cfgSoundStatus6", String.valueOf(LogistikSimulator.cfgSoundStatus6));
-            p.setProperty("cfgSoundStatus7", String.valueOf(LogistikSimulator.cfgSoundStatus7));
-            
-            p.setProperty("volNotruf", String.valueOf(LogistikSimulator.volNotruf));
-            p.setProperty("volStatus6", String.valueOf(LogistikSimulator.volStatus6));
-            p.setProperty("volStatus7", String.valueOf(LogistikSimulator.volStatus7));
-            
             p.setProperty("cfg_ktp", String.valueOf(LogistikSimulator.cfgKrankentransport));
             p.setProperty("cfg_dmg", String.valueOf(LogistikSimulator.cfgBeschaedigung));
             p.setProperty("cfg_sick", String.valueOf(LogistikSimulator.cfgKrankheit));
@@ -43,6 +32,18 @@ public class SpeicherManager {
             p.setProperty("tech_klinik_crivitz", String.valueOf(LogistikSimulator.techKlinikCrivitz)); 
             p.setProperty("tech_klinik_leezen", String.valueOf(LogistikSimulator.techKlinikLeezen)); 
             p.setProperty("tech_klinik_hagenow", String.valueOf(LogistikSimulator.techKlinikHagenow)); 
+
+            if (LogistikSimulator.aktuellesEvent != null) {
+                p.setProperty("event_aktiv", "true");
+                p.setProperty("event_name", LogistikSimulator.aktuellesEvent.name);
+                p.setProperty("event_desc", LogistikSimulator.aktuellesEvent.beschreibung);
+                p.setProperty("event_dauer", String.valueOf(LogistikSimulator.aktuellesEvent.dauerTage));
+                p.setProperty("event_cR1", String.valueOf(LogistikSimulator.aktuellesEvent.chanceR1));
+                p.setProperty("event_cH1", String.valueOf(LogistikSimulator.aktuellesEvent.chanceH1));
+                p.setProperty("event_gMult", String.valueOf(LogistikSimulator.aktuellesEvent.globalRateMultiplier));
+            } else {
+                p.setProperty("event_aktiv", "false");
+            }
 
             p.setProperty("stat_count", String.valueOf(LogistikSimulator.tagesStatistik.size()));
             for(int i = 0; i < LogistikSimulator.tagesStatistik.size(); i++) {
@@ -109,10 +110,6 @@ public class SpeicherManager {
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", String.valueOf(f.reparaturDauer));
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", String.valueOf(f.anfahrtsZeit));
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", String.valueOf(f.originalAnfahrt)); 
-                    
-                    // NEU: Kilometer und Inspektion speichern
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_kilometer", String.valueOf(f.kilometer));
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_naechsteInspektion", String.valueOf(f.naechsteInspektion));
                 }
 
                 p.setProperty("wache_" + wIdx + "_pers_count", String.valueOf(w.personalPool.size()));
@@ -130,16 +127,17 @@ public class SpeicherManager {
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_uEnd", String.valueOf(pers.urlaubEnd));
                     
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", String.valueOf(pers.schichtenMonat));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
-                    
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
-                }
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
+                
+                // NEU: Speichern der Monats-Plaene (31 Tage x 2)
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
             }
+        }
 
-            p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
+        p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
             for(int i = 0; i < LogistikSimulator.postfach.size(); i++) {
                 Email m = LogistikSimulator.postfach.get(i);
                 p.setProperty("mail_"+i+"_abs", m.absender);
@@ -178,17 +176,6 @@ public class SpeicherManager {
             LogistikSimulator.cfgKrankheit = Boolean.parseBoolean(p.getProperty("cfg_sick", "true"));
             LogistikSimulator.cfgAutoTransfer = Boolean.parseBoolean(p.getProperty("cfg_auto", "false"));
             
-            LogistikSimulator.cfgSoundNotruf = Boolean.parseBoolean(p.getProperty("cfgSoundNotruf", "true"));
-            LogistikSimulator.cfgSoundStatus6 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus6", "true"));
-            LogistikSimulator.cfgSoundStatus7 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus7", "true"));
-            
-            LogistikSimulator.aktuellerKredit = Integer.parseInt(p.getProperty("aktuellerKredit", "0"));
-            LogistikSimulator.taeglicheKreditRate = Integer.parseInt(p.getProperty("taeglicheKreditRate", "0"));
-            
-            LogistikSimulator.volNotruf = Integer.parseInt(p.getProperty("volNotruf", "100"));
-            LogistikSimulator.volStatus6 = Integer.parseInt(p.getProperty("volStatus6", "100"));
-            LogistikSimulator.volStatus7 = Integer.parseInt(p.getProperty("volStatus7", "100"));
-            
             LogistikSimulator.techWerkstatt = Boolean.parseBoolean(p.getProperty("tech_ws", "false"));
             LogistikSimulator.techRuheraum = Boolean.parseBoolean(p.getProperty("tech_rh", "false"));
             LogistikSimulator.techGrossabnehmer = Boolean.parseBoolean(p.getProperty("tech_ga", "false"));
@@ -207,6 +194,19 @@ public class SpeicherManager {
             LogistikSimulator.techKlinikCrivitz = Boolean.parseBoolean(p.getProperty("tech_klinik_crivitz", "false")); 
             LogistikSimulator.techKlinikLeezen = Boolean.parseBoolean(p.getProperty("tech_klinik_leezen", "false")); 
             LogistikSimulator.techKlinikHagenow = Boolean.parseBoolean(p.getProperty("tech_klinik_hagenow", "false")); 
+
+            boolean eventAktiv = Boolean.parseBoolean(p.getProperty("event_aktiv", "false"));
+            if (eventAktiv) {
+                String eName = p.getProperty("event_name", "Unbekanntes Event");
+                String eDesc = p.getProperty("event_desc", "");
+                int eDauer = Integer.parseInt(p.getProperty("event_dauer", "1"));
+                double eCR1 = Double.parseDouble(p.getProperty("event_cR1", "1.0"));
+                double eCH1 = Double.parseDouble(p.getProperty("event_cH1", "1.0"));
+                double eGMult = Double.parseDouble(p.getProperty("event_gMult", "1.0"));
+                LogistikSimulator.aktuellesEvent = new Event(eName, eDesc, eDauer, eCR1, eCH1, eGMult);
+            } else {
+                LogistikSimulator.aktuellesEvent = null;
+            }
 
             LogistikSimulator.vorlagenPool.clear();
             int vorCount = Integer.parseInt(p.getProperty("vor_count", "0"));
@@ -284,11 +284,6 @@ public class SpeicherManager {
                     f.reparaturDauer = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", "0"));
                     f.anfahrtsZeit = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", "0"));
                     f.originalAnfahrt = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", "0")); 
-                    
-                    // NEU: Kilometer und Inspektion laden
-                    f.kilometer = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_kilometer", "0"));
-                    f.naechsteInspektion = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_naechsteInspektion", "1000"));
-                    
                     w.fuhrpark.add(f);
                 }
 
@@ -317,7 +312,7 @@ public class SpeicherManager {
                 pers.lehrgangThema = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", "");
                 pers.praeferenzGesendet = Boolean.parseBoolean(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", "false"));
                 
-                // Laden der Monats-Plaene (31 Tage x 2)
+                // NEU: Laden der Monats-Plaene (31 Tage x 2)
                 String pAkt = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", "");
                 if (!pAkt.isEmpty()) {
                     String[] parts = pAkt.split(",");
@@ -374,8 +369,10 @@ public class SpeicherManager {
                     
                     boolean persDa = LogistikSimulator.hatGenugPersonal(f);
                     boolean matDa = true;
-                    for(CustomMaterial cm : LogistikSimulator.customMaterials) {
-                        if(w.material.getOrDefault(cm.name, 0) < 5) matDa = false;
+                    if (LogistikSimulator.cfgLogistikAktiv) {
+                        for(CustomMaterial cm : LogistikSimulator.customMaterials) {
+                            if(w.material.getOrDefault(cm.name, 0) < 5) matDa = false;
+                        }
                     }
 
                     if (f.status == 6 && f.ausfallGrund.startsWith("Material")) {
