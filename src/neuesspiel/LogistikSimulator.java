@@ -962,26 +962,17 @@ boolean hasWarnings = false;
                     p.zugewiesenesFahrzeug = planHeute;
                 }
                 
-      // NEU: Krankheitsrisiko steigt mit Anzahl der Schichten
-                if (cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
-                    double baseChance = 0.0;
-                    
-                    // Ab 10 Schichten beginnt das Risiko (1% pro Schicht drueber)
-                    if (p.schichtenMonat > 10) {
-                        baseChance = (p.schichtenMonat - 10) * 0.01; 
-                        
-                        // Wenn der Ruheraum gebaut ist, halbiert sich das Risiko
-                        if (techRuheraum) baseChance = baseChance / 2.0;
-                        
-                        if (Math.random() < baseChance) {
-                            int dauer = 2 + (int)(Math.random() * 5);
-                            p.krankBis = tag + dauer; 
-                            postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
-                        }
+                if (p.schichtenMonat > 15 && cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
+                    double chance = techRuheraum ? 0.05 : 0.10;
+                    if (Math.random() < chance) {
+                        int dauer = 2 + (int)(Math.random() * 5);
+                        p.krankBis = tag + dauer; 
+                        postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
                     }
                 }
                 
-                if (Math.random() < 0.02 && p.urlaubStart == -1 && p.krankBis == -1 && !p.status.equals("Lehrgang")) {
+               // Chance auf Urlaub deutlich erhoeht (von 0.02 auf 0.06 -> also 6% pro Tag)
+                if (Math.random() < 0.06 && p.urlaubStart == -1 && p.krankBis == -1 && !p.status.equals("Lehrgang")) {
                     int dauer = 5 + (int)(Math.random() * 10);
                     int startExtra = 2 + (int)(Math.random() * 5);
                     postfach.add(MailGenerator.generiereUrlaubsantrag(p, tag + startExtra, tag + startExtra + dauer));
