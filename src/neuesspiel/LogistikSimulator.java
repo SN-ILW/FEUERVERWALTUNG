@@ -877,6 +877,10 @@ public class LogistikSimulator {
             Fahrzeug f = new Fahrzeug(w.generiereFunkrufname(typ), typ);
             w.addFahrzeug(f);
             f.status = 6; f.ausfallGrund = "Personal fehlt";
+            
+            // NEU: Sofort nach dem Kauf sortieren!
+            sortiereFuhrpark(w); 
+            
             SpeicherManager.speichern("savegame.properties");
             uiAktualisieren(getUhrzeit());
         } else {
@@ -1538,4 +1542,9 @@ public class LogistikSimulator {
         }
         return mult;
     }
+
+public static void sortiereFuhrpark(Wache w) {
+        w.fuhrpark.sort(java.util.Comparator.comparing(f -> f.funkrufname));
+    }
+
 }

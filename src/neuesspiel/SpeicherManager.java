@@ -402,6 +402,8 @@ public class SpeicherManager {
                     w.fuhrpark.add(fzg);
                 }
                 
+                LogistikSimulator.sortiereFuhrpark(w); // NEU: Autos beim Laden ordnen!
+                
                 int wMatCount = parseIntSafe(p.getProperty("wache_" + i + "_matCount"), 0);
                 for(int m = 0; m < wMatCount; m++) {
                     String n = p.getProperty("wache_" + i + "_mat_" + m + "_name", "Unbekannt");

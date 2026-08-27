@@ -654,15 +654,15 @@ public class FensterManager {
         pnlGlobal.setBackground(new Color(35, 35, 35));
         pnlGlobal.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Zentrale (Leitstelle & Verwaltung)", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
         
-        JButton btnGruenden = new JButton("Neue Wache gruenden (10.000 EURO) [" + wachen.size() + "/" + getMaxWachenErlaubt() + "]");
+        JButton btnGruenden = new JButton("Neue Wache gruenden (50.000 EURO) [" + wachen.size() + "/" + getMaxWachenErlaubt() + "]");
         btnGruenden.addActionListener(e -> {
             if(wachen.size() >= getMaxWachenErlaubt()) { JOptionPane.showMessageDialog(d, "Dein Level ist zu niedrig fuer eine weitere Wache!"); return; }
-            if(budget >= 10000) {
+            if(budget >= 50000) {
                 String name = JOptionPane.showInputDialog(d, "Name der neuen Wache:");
                 if(name != null && !name.trim().isEmpty()) {
                     String kennung = JOptionPane.showInputDialog(d, "Zweinstellige Kennung (z.B. 46):");
                     if(kennung != null && kennung.length() == 2) {
-                        budget -= 10000; wachen.add(new Wache(name, kennung)); JOptionPane.showMessageDialog(d, "Wache erfolgreich gegruendet!");
+                        budget -= 50000; wachen.add(new Wache(name, kennung)); JOptionPane.showMessageDialog(d, "Wache erfolgreich gegruendet!");
                         d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit());
                     }
                 }
@@ -785,7 +785,13 @@ public class FensterManager {
             currentWache.fuhrpark.remove(targetFz); targetFz.funkrufname = zielWache.generiereFunkrufname(targetFz.typ); zielWache.addFahrzeug(targetFz);
             for(Personal p : currentWache.personalPool) { if(p.zugewiesenesFahrzeug.equals(alteKennung)) p.zugewiesenesFahrzeug = "Keines"; if(p.geplantesFahrzeug.equals(alteKennung)) p.geplantesFahrzeug = "Keines"; }
             
+            LogistikSimulator.sortiereFuhrpark(currentWache);
+            LogistikSimulator.sortiereFuhrpark(zielWache);
+
+            for(Personal p : currentWache.personalPool) { if(p.zugewiesenesFahrzeug.equals(alteKennung)) p.zugewiesenesFahrzeug = "Keines"; if(p.geplantesFahrzeug.equals(alteKennung)) p.geplantesFahrzeug = "Keines"; }
+            
             targetFz.status = 6; targetFz.ausfallGrund = "Personal fehlt";
+            
             SpeicherManager.speichern("savegame.properties");
             JOptionPane.showMessageDialog(d, "Fahrzeug umstationiert! Neuer Funkrufname: " + targetFz.funkrufname + "\nAchtung: Das Personal wurde vom Fahrzeug entfernt.");
             uiAktualisieren(getUhrzeit()); d.dispose();
