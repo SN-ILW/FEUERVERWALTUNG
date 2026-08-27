@@ -406,7 +406,9 @@ public class LogistikSimulator {
                     
                     if (ein.bereitZumLoeschen) {
                         boolean ressourcenDa = true;
-                        if (!ein.reqMaterial.isEmpty()) {
+                        
+                        // FIX: Material wird nur geprueft und abgezogen, wenn Logistik überhaupt aktiviert ist!
+                        if (cfgLogistikAktiv && !ein.reqMaterial.isEmpty()) {
                             for(Wache w : wachen) {
                                 for(String m : ein.reqMaterial.keySet()) {
                                     if(w.material.getOrDefault(m, 0) >= ein.reqMaterial.get(m)) {
@@ -416,7 +418,8 @@ public class LogistikSimulator {
                             }
                         }
                         
-                        if (ressourcenDa || ein.reqMaterial.isEmpty()) {
+                        // FIX: Wenn Logistik aus ist (!cfgLogistikAktiv), gilt der Einsatz automatisch als erfolgreich beendet!
+                        if (!cfgLogistikAktiv || ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
                             budget += ein.belohnungGeld;
                             tagesStatistik.add(ein);
@@ -1001,17 +1004,22 @@ public class LogistikSimulator {
                 budget -= 500;
                 
                 // FIX: Vorwissen wird sofort aktiviert und schickt nur noch eine Info-Mail!
+                // FIX: Vorwissen wird sofort aktiviert und schickt eine detaillierte Info-Mail
                 if (Math.random() > 0.6) {
                     String[] vorwissen = {"TM", "RS", "GF"};
                     String w = vorwissen[(int)(Math.random() * vorwissen.length)];
                     
-                    potenziell.qualifikationen.remove("Anwaerter"); // Kein Anwärter mehr
+                    potenziell.qualifikationen.remove("Anwaerter");
                     if (!potenziell.qualifikationen.contains(w)) {
-                        potenziell.qualifikationen.add(w); // Qualifikation sicher eintragen
+                        potenziell.qualifikationen.add(w); 
                     }
                     
-                    // Schicke reine Info-Mail!
-                    postfach.add(new Email("Personalwesen", "[Vorwissen] " + potenziell.name, "Info", "Dein neuer Mitarbeiter " + potenziell.name + " bringt bereits die Qualifikation " + w + " mit und ist sofort voll einsatzfaehig!", potenziell, tag, tag));
+                    // NEU: Echte Absender-Adresse und detaillierter Text ueber die Vorerfahrung
+                    String absender = "Personalabteilung <Personal@sn-ilw.de>";
+                    String betreff = "Neue Personalakte: " + potenziell.name;
+                    String text = "Hallo Leitstelle,\n\ndein neuer Mitarbeiter " + potenziell.name + " bringt bereits Vorerfahrung als [" + w + "] mit.\n\nWir haben diese Qualifikation direkt uebernommen und in der Akte vermerkt. Die Person ueberspringt somit die Probezeit als Anwaerter und ist ab sofort voll einsatzfaehig.\n\nMit freundlichen Gruessen,\nDeine Personalabteilung";
+                    
+                    postfach.add(new Email(absender, betreff, text, "Info", potenziell, tag, tag));
                 }
                 
                 StringBuilder traitText = new StringBuilder();
