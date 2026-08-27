@@ -995,9 +995,17 @@ boolean hasWarnings = false;
             
             for(Fahrzeug f : w.fuhrpark) {
                 if (hatGenugPersonal(f)) {
-                    if (f.status == 6 && (f.ausfallGrund.equals("Personal fehlt") || f.ausfallGrund.equals("Personalwechsel"))) {
-                        f.status = 2; 
-                        f.ausfallGrund = "";
+                    // NEU: Zusaetzliche Pruefung, ob das Material ausreicht!
+                    if (hatGenugMaterial(f, w)) {
+                        if (f.status == 6 && (f.ausfallGrund.equals("Personal fehlt") || f.ausfallGrund.equals("Personalwechsel") || f.ausfallGrund.equals("Material fehlt"))) {
+                            f.status = 2; 
+                            f.ausfallGrund = "";
+                        }
+                    } else {
+                        if (f.status == 1 || f.status == 2) {
+                            f.status = 6;
+                            f.ausfallGrund = "Material fehlt";
+                        }
                     }
                 } else {
                     if (f.status == 1 || f.status == 2) {
@@ -1014,6 +1022,19 @@ boolean hasWarnings = false;
         abgelehnteEinsaetzeHeute = 0;
         SpeicherManager.speichern("savegame.properties");
         uiAktualisieren(getUhrzeit());
+    }
+    
+    // NEUE METHODE: Prueft, ob die Wache fuer den FAHRZEUG-TYP genug Material hat
+    public static boolean hatGenugMaterial(Fahrzeug f, Wache w) {
+        for(CustomMaterial cm : customMaterials) {
+            // Nur pruefen, wenn das Material auch fuer diesen Fahrzeugtyp benoetigt wird!
+            if(cm.fahrzeuge.contains(f.typ)) {
+                if(w.material.getOrDefault(cm.name, 0) < 5) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
     
     public static boolean hatGenugGeplantesPersonal() {
