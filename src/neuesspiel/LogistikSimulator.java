@@ -256,7 +256,11 @@ public class LogistikSimulator {
         btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
         btnTagBeenden.setEnabled(false);
 
-        btnDisp.addActionListener(e -> disponiereNotruf());
+        btnDisp.addActionListener(e -> {
+    if(aktuellerNotruf != null) {
+        FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
+    }
+});
         btnNach.addActionListener(e -> FensterManager.oeffneNachforderungMenu());
         btnAblehnen.addActionListener(e -> { 
             if(aktuellerNotruf != null) { 

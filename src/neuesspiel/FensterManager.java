@@ -523,7 +523,6 @@ public class FensterManager {
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35, 35, 35));
         
-        // --- 1. OBERER BEREICH: LOKALE WACHEN-UPGRADES ---
         JPanel pnlLokaleWache = new JPanel(new BorderLayout(5, 5));
         pnlLokaleWache.setBackground(new Color(35, 35, 35));
         pnlLokaleWache.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Lokale Wachen-Ausbauten", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
@@ -536,10 +535,10 @@ public class FensterManager {
         pnlWahl.add(lblWahl); pnlWahl.add(cbWachen);
         pnlLokaleWache.add(pnlWahl, BorderLayout.NORTH);
         
-        JPanel pnlUpgrades = new JPanel(new GridLayout(4, 1, 5, 5)); // NEU: 4 Zeilen
+        JPanel pnlUpgrades = new JPanel(new GridLayout(4, 1, 5, 5)); 
         pnlUpgrades.setBackground(new Color(35, 35, 35));
         
-        JButton btnStufe = new JButton(); // NEU: Level-Up Button
+        JButton btnStufe = new JButton(); 
         btnStufe.setBackground(new Color(41, 128, 185));
         btnStufe.setForeground(Color.WHITE);
         
@@ -558,7 +557,6 @@ public class FensterManager {
             if (wIndex == -1) return;
             Wache target = wachen.get(wIndex);
             
-            // Level Logik
             int stufe = target.stufe;
             int nextCost = stufe == 1 ? 25000 : (stufe == 2 ? 50000 : (stufe == 3 ? 100000 : 0));
             if(stufe < 4) {
@@ -621,7 +619,6 @@ public class FensterManager {
             else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
         });
         
-        // --- 2. UNTERER BEREICH: GLOBALE LEITSTELLEN-UPGRADES ---
         JPanel pnlGlobal = new JPanel(new GridLayout(5, 1, 5, 5));
         pnlGlobal.setBackground(new Color(35, 35, 35));
         pnlGlobal.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Zentrale (Leitstelle & Verwaltung)", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
@@ -1380,6 +1377,217 @@ public class FensterManager {
         content.add(new JLabel("")); content.add(btnTransfer);
 
         d.add(content, BorderLayout.CENTER);
+        d.setVisible(true);
+    }
+    
+    // =========================================================================
+    // NEU: Das interaktive Alarmierungsfenster (Dispatch Overhaul)
+    // =========================================================================
+    public static void oeffneAlarmierungsFenster(Einsatz ein) {
+        JDialog d = createFramelessDialog("Alarmierung: " + ein.vorlage.stichwort + " - " + ein.beschreibung, 800, 600);
+        
+        JPanel pnlTop = new JPanel(new GridLayout(2, 1, 5, 5));
+        pnlTop.setBackground(new Color(35, 35, 35));
+        pnlTop.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JLabel lblTitel = new JLabel("NOTRUF: " + ein.vorlage.stichwort + " | " + ein.beschreibung, SwingConstants.CENTER);
+        lblTitel.setForeground(new Color(231, 76, 60));
+        lblTitel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        pnlTop.add(lblTitel);
+        
+        // Anzeige der benoetigten Fahrzeuge
+        StringBuilder reqText = new StringBuilder("Benoetigt: ");
+        if(ein.vorlage.reqELW > 0) reqText.append(ein.vorlage.reqELW).append("x ELW  ");
+        if(ein.vorlage.reqHLF > 0) reqText.append(ein.vorlage.reqHLF).append("x HLF  ");
+        if(ein.vorlage.reqDLK > 0) reqText.append(ein.vorlage.reqDLK).append("x DLK  ");
+        if(ein.vorlage.reqRTW > 0) reqText.append(ein.vorlage.reqRTW).append("x RTW  ");
+        if(ein.vorlage.reqNEF > 0) reqText.append(ein.vorlage.reqNEF).append("x NEF  ");
+        if(ein.vorlage.reqKTW > 0) reqText.append(ein.vorlage.reqKTW).append("x KTW  ");
+        if(ein.vorlage.reqTLF > 0) reqText.append(ein.vorlage.reqTLF).append("x TLF  ");
+        if(ein.vorlage.reqMTW > 0) reqText.append(ein.vorlage.reqMTW).append("x MTW  ");
+        
+        JLabel lblReq = new JLabel(reqText.toString(), SwingConstants.CENTER);
+        lblReq.setForeground(Color.WHITE);
+        lblReq.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        pnlTop.add(lblReq);
+        
+        d.add(pnlTop, BorderLayout.NORTH);
+
+        // Tabelle mit Checkboxen fuer die freien Fahrzeuge
+        String[] cols = {"Auswaehlen", "Funkrufname", "Typ", "Wache", "Status"};
+        DefaultTableModel model = new DefaultTableModel(cols, 0) {
+            @Override public Class<?> getColumnClass(int columnIndex) {
+                return columnIndex == 0 ? Boolean.class : String.class; // Spalte 0 ist eine Checkbox!
+            }
+            @Override public boolean isCellEditable(int row, int column) {
+                return column == 0; // Nur die Checkbox darf geklickt werden
+            }
+        };
+
+        ArrayList<Fahrzeug> verfuegbar = new ArrayList<>();
+        for(Wache w : wachen) {
+            for(Fahrzeug f : w.fuhrpark) {
+                if(f.status == 1 || f.status == 2) {
+                    verfuegbar.add(f);
+                    model.addRow(new Object[]{false, f.funkrufname, f.typ, w.name, "Status " + f.status});
+                }
+            }
+        }
+
+        JTable table = new JTable(model);
+        table.setRowHeight(25);
+        table.setBackground(new Color(43, 43, 43));
+        table.setForeground(Color.WHITE);
+        table.getTableHeader().setBackground(new Color(20, 30, 48));
+        table.getTableHeader().setForeground(Color.WHITE);
+        table.getColumnModel().getColumn(0).setMaxWidth(80);
+        d.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        JPanel pnlBottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        pnlBottom.setBackground(new Color(35, 35, 35));
+
+        JButton btnAAO = new JButton("AAO nutzen (Auto-Auswahl)");
+        btnAAO.setBackground(new Color(41, 128, 185));
+        btnAAO.setForeground(Color.WHITE);
+        
+        JButton btnAlarm = new JButton("ALARM AUSLOESEN");
+        btnAlarm.setBackground(new Color(39, 174, 96));
+        btnAlarm.setForeground(Color.WHITE);
+        btnAlarm.setFont(new Font("Segoe UI", Font.BOLD, 14));
+
+        JButton btnAbbruch = new JButton("Abbrechen");
+        btnAbbruch.addActionListener(e -> d.dispose());
+
+        // AAO Logik: Setzt die Haken automatisch
+        btnAAO.addActionListener(e -> {
+            for(int i = 0; i < model.getRowCount(); i++) model.setValueAt(false, i, 0); // Reset
+            
+            int needELW = ein.vorlage.reqELW, needHLF = ein.vorlage.reqHLF, needDLK = ein.vorlage.reqDLK;
+            int needRTW = ein.vorlage.reqRTW, needNEF = ein.vorlage.reqNEF, needKTW = ein.vorlage.reqKTW;
+            int needTLF = ein.vorlage.reqTLF, needMTW = ein.vorlage.reqMTW;
+            
+            for(int i = 0; i < verfuegbar.size(); i++) {
+                Fahrzeug f = verfuegbar.get(i);
+                if(f.typ.equals("ELW") && needELW > 0) { model.setValueAt(true, i, 0); needELW--; }
+                else if(f.typ.equals("HLF") && needHLF > 0) { model.setValueAt(true, i, 0); needHLF--; }
+                else if(f.typ.equals("DLK") && needDLK > 0) { model.setValueAt(true, i, 0); needDLK--; }
+                else if(f.typ.equals("RTW") && needRTW > 0) { model.setValueAt(true, i, 0); needRTW--; }
+                else if(f.typ.equals("NEF") && needNEF > 0) { model.setValueAt(true, i, 0); needNEF--; }
+                else if(f.typ.equals("KTW") && needKTW > 0) { model.setValueAt(true, i, 0); needKTW--; }
+                else if(f.typ.equals("TLF") && needTLF > 0) { model.setValueAt(true, i, 0); needTLF--; }
+                else if(f.typ.equals("MTW") && needMTW > 0) { model.setValueAt(true, i, 0); needMTW--; }
+            }
+            // Falls KTW fehlt, nimm stattdessen einen RTW (Fallback)
+            if(needKTW > 0) {
+                for(int i = 0; i < verfuegbar.size(); i++) {
+                    Fahrzeug f = verfuegbar.get(i);
+                    if(f.typ.equals("RTW") && !(Boolean)model.getValueAt(i, 0) && needKTW > 0) {
+                        model.setValueAt(true, i, 0); needKTW--;
+                    }
+                }
+            }
+        });
+
+        // Alarm Logik: Prüft, ob alles ausgewählt wurde und sendet die Fahrzeuge raus
+        btnAlarm.addActionListener(e -> {
+            ArrayList<Fahrzeug> selectedFz = new ArrayList<>();
+            int sELW=0, sHLF=0, sDLK=0, sRTW=0, sNEF=0, sKTW=0, sTLF=0, sMTW=0;
+            
+            for(int i = 0; i < model.getRowCount(); i++) {
+                if((Boolean)model.getValueAt(i, 0)) {
+                    Fahrzeug f = verfuegbar.get(i);
+                    selectedFz.add(f);
+                    switch(f.typ) {
+                        case "ELW": sELW++; break;
+                        case "HLF": sHLF++; break;
+                        case "DLK": sDLK++; break;
+                        case "RTW": sRTW++; break;
+                        case "NEF": sNEF++; break;
+                        case "KTW": sKTW++; break;
+                        case "TLF": sTLF++; break;
+                        case "MTW": sMTW++; break;
+                    }
+                }
+            }
+            
+            // Reicht das ausgewaehlte Personal/Fahrzeug?
+            int mELW = Math.max(0, ein.vorlage.reqELW - sELW);
+            int mHLF = Math.max(0, ein.vorlage.reqHLF - sHLF);
+            int mDLK = Math.max(0, ein.vorlage.reqDLK - sDLK);
+            int mNEF = Math.max(0, ein.vorlage.reqNEF - sNEF);
+            int mTLF = Math.max(0, ein.vorlage.reqTLF - sTLF);
+            int mMTW = Math.max(0, ein.vorlage.reqMTW - sMTW);
+            
+            int fehlendeKTW = Math.max(0, ein.vorlage.reqKTW - sKTW);
+            // Freie RTWs duerfen fehlende KTWs ausgleichen!
+            int ueberschussRTW = Math.max(0, sRTW - ein.vorlage.reqRTW);
+            fehlendeKTW = Math.max(0, fehlendeKTW - ueberschussRTW);
+            int mRTW = Math.max(0, ein.vorlage.reqRTW - sRTW);
+            
+            int totalMissing = mELW + mHLF + mDLK + mNEF + mTLF + mMTW + mRTW + fehlendeKTW;
+            
+            boolean ueberlandHilfeAktiv = false;
+            if(totalMissing > 0) {
+                int wahl = JOptionPane.showConfirmDialog(d, "Dir fehlen " + totalMissing + " Fahrzeuge zum Ausruecken!\nSoll der Landkreis aushelfen? (" + (totalMissing*500) + " EURO)", "Ueberlandhilfe", JOptionPane.YES_NO_OPTION);
+                if (wahl == JOptionPane.YES_OPTION) {
+                    if (budget >= (totalMissing*500)) {
+                        budget -= (totalMissing*500);
+                        ueberlandHilfeAktiv = true;
+                    } else {
+                        JOptionPane.showMessageDialog(d, "Zu wenig Geld!", "Fehler", JOptionPane.ERROR_MESSAGE);
+                        return; // Abbruch
+                    }
+                } else {
+                    return; // Abbruch
+                }
+            }
+
+            // Material Check
+            boolean matsDa = true;
+            if (cfgLogistikAktiv) {
+                for(String m : ein.reqMaterial.keySet()) {
+                    boolean found = false;
+                    for(Wache w : wachen) { if(w.hatMaterial(m, ein.reqMaterial.get(m))) found = true; }
+                    if(!found) matsDa = false;
+                }
+            }
+            if (!matsDa) {
+                JOptionPane.showMessageDialog(d, "Nicht genug Material (" + ein.reqMaterial.keySet().iterator().next() + ") auf den Wachen!", "Material fehlt", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Wenn wir hier ankommen: ALARM!
+            int xpBel = 0;
+            int multiplier = isRushHour() ? 3 : 1;
+            
+            for (Fahrzeug f : selectedFz) {
+                int baseTime = 30; 
+                for(Wache wCheck : wachen) {
+                    for(Personal p : wCheck.personalPool) { 
+                        if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { baseTime = 60; break; } 
+                    }
+                }
+                f.status = 3; 
+                f.anfahrtsZeit = (int)(baseTime * multiplier * getSpeedMultiplier(f)); 
+                f.aktuellerEinsatz = ein;
+                xpBel += 25;
+            }
+            
+            if (!selectedFz.isEmpty() || ueberlandHilfeAktiv) {
+                ein.xpBelohnung = xpBel * ein.vorlage.minLevel;
+                aktiveEinsaetze.add(ein);
+            }
+            
+            LogistikSimulator.aktuellerNotruf = null;
+            uiAktualisieren(getUhrzeit());
+            d.dispose();
+        });
+
+        pnlBottom.add(btnAAO);
+        pnlBottom.add(btnAlarm);
+        pnlBottom.add(btnAbbruch);
+        d.add(pnlBottom, BorderLayout.SOUTH);
+
         d.setVisible(true);
     }
 }
