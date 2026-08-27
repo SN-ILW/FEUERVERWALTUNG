@@ -10,7 +10,7 @@ public class Wache {
     public ArrayList<Personal> personalPool = new ArrayList<>();
     public HashMap<String, Integer> fahrzeugCounter = new HashMap<>();
     public HashMap<String, Integer> material = new HashMap<>();
-
+    public java.util.ArrayList<WachenAusbau> ausbauten = new java.util.ArrayList<>();
     public Wache(String name, String kennung) {
         this.name = name;
         this.kennung = kennung;

@@ -17,6 +17,14 @@ public class LogistikSimulator {
     public static JPanel notrufPanel;
     public static JEditorPane fmsBoard;
     
+    // NEU: Listen fuer die Vertraege
+    public static ArrayList<VertragVorlage> vertragsVorlagen = new ArrayList<>();
+    public static ArrayList<Vertrag> aktiveVertraege = new ArrayList<>();
+    
+    // NEU: Logistik-Schalter
+    public static boolean cfgLogistikAktiv = true;
+    public static JButton btnLog; // Muss public static sein, damit wir ihn verstecken koennen!
+    
     public static int aktuellerKredit = 0;
     public static int taeglicheKreditRate = 0;
     
@@ -243,7 +251,7 @@ public class LogistikSimulator {
         btnPostfach = createStyledButton("Postfach (0)", new Color(108, 122, 137));
         
         JButton btnPers = createStyledButton("Personalwesen", new Color(41, 128, 185));
-        JButton btnLog = createStyledButton("Lager & Logistik", new Color(22, 160, 133));
+        btnLog = createStyledButton("Lager & Logistik", new Color(22, 160, 133));
         JButton btnFuhr = createStyledButton("Fuhrpark & Werkstatt", new Color(192, 57, 43));
         JButton btnBau = createStyledButton("Wachen & Gebaeude", new Color(142, 68, 173));
         
@@ -275,9 +283,7 @@ public class LogistikSimulator {
             tagesWechsel();
         });
         
-        pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
-        pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
-        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); new JLabel(""); pnlBottom.add(btnTagBeenden);
+
         
        // NEU: Der Bank-Button
         JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
@@ -367,16 +373,27 @@ public class LogistikSimulator {
                             }
                         }
                         
+                        // NEU: Vertrags-Fortschritt
+                            for(Vertrag v : aktiveVertraege) {
+                                if(ein.vorlage.art.equals(v.zielEinsatzArt) || ein.vorlage.stichwort.equals(v.zielEinsatzArt)) {
+                                    v.aktuelleMenge++;
+                                }
+                            }
+                        
                         if (ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
                             budget += ein.belohnungGeld;
                             tagesStatistik.add(ein);
                             checkLevelUp();
-                            
+                            // NEU: Vertrags-Fortschritt
+ 
                             for(Wache w : wachen) {
                                 for(Fahrzeug f : w.fuhrpark) {
                                     if (f.aktuellerEinsatz == ein) { 
                                         f.aktuellerEinsatz = null;
+                                        
+                                        // NEU: Pro Einsatz 15 bis 40 Kilometer sammeln
+                                        f.kilometer += 15 + (int)(Math.random() * 25);
                                         
                                         if(f.typ.equals("RTW")) {
                                             if(calltakerStufe >= 2 && Math.random() > 0.5) {
@@ -392,6 +409,10 @@ public class LogistikSimulator {
                                         
                                         if (cfgBeschaedigung) {
                                             double baseChance = 0.05;
+                                            // NEU: 15% höheres Risiko für Motorschaden/Panne, wenn Inspektion ignoriert wird!
+                                            if (f.kilometer >= f.naechsteInspektion) {
+                                                baseChance += 0.15; 
+                                            }
                                             double damageChance = baseChance * Math.pow(0.95, level - 1); 
                                             if (Math.random() < damageChance) {
                                                 f.status = 6; 
@@ -591,6 +612,11 @@ boolean hasWarnings = false;
                 
                 fms.append("<span style='color:#ffffff;'>[").append(f.typ).append("]</span> <b>").append(f.funkrufname).append("</b> | Status: <b style='color:").append(color).append(";'>").append(f.status).append("</b> ");
                 
+                // NEU: TÜV-Warnung
+                if (f.kilometer >= f.naechsteInspektion) {
+                    fms.append("<span style='color:#f39c12; font-weight:bold;'> [Inspektion Empfohlen!] </span>");
+                }
+                
                 if(f.status == 3) fms.append("-> Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("-> Rueckfahrt: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 8) fms.append("-> Auf dem Weg zur Klinik: ").append(f.anfahrtsZeit/speed).append("s");
@@ -632,6 +658,8 @@ boolean hasWarnings = false;
             lage.append(e.getLagemeldungText()).append("\n\n");
         }
         txtEinsatz.setText(lage.toString());
+        // Logistik-Button verstecken, wenn deaktiviert
+        if (btnLog != null) btnLog.setVisible(cfgLogistikAktiv);
     }
 
     public static void generiereNotruf(String uhrzeit) {
@@ -914,6 +942,22 @@ boolean hasWarnings = false;
             }
         }
         // -----------------------------
+        
+        // --- NEU: VERTRAGS-ABRECHNUNG ---
+        if (!aktiveVertraege.isEmpty()) {
+            sb.append("=== VERTRAGSABRECHNUNG ===\n");
+            for (Vertrag v : aktiveVertraege) {
+                if (v.aktuelleMenge >= v.zielMenge) {
+                    budget += v.belohnungProTag;
+                    sb.append("✅ ").append(v.auftraggeber).append(" erfuellt! (+").append(v.belohnungProTag).append(" EUR)\n");
+                } else {
+                    budget -= v.strafeBeiFehlschlag;
+                    sb.append("❌ ").append(v.auftraggeber).append(" verfehlt! (-").append(v.strafeBeiFehlschlag).append(" EUR)\n");
+                }
+                v.aktuelleMenge = 0; // Reset fuer den naechsten Tag
+            }
+            sb.append("\n");
+        }
         
         if (aktuellesEvent != null) {
             aktuellesEvent.dauerTage--;
@@ -1266,4 +1310,48 @@ public static void playSound(String dateiName) {
             } catch (Exception ex) {}
         }).start();
     }
+
+public static void fahrzeugeInspektion() {
+        ArrayList<Fahrzeug> faellig = new ArrayList<>();
+        // Nur freie Fahrzeuge (Status 1 oder 2) dürfen in die Inspektion
+        for (Wache w : wachen) {
+            for (Fahrzeug f : w.fuhrpark) {
+                if (f.kilometer >= f.naechsteInspektion && (f.status == 1 || f.status == 2)) {
+                    faellig.add(f);
+                }
+            }
+        }
+        
+        if (faellig.isEmpty()) { 
+            JOptionPane.showMessageDialog(frame, "Aktuell muss kein freies Fahrzeug zur Inspektion!"); 
+            return; 
+        }
+        
+        String[] namen = new String[faellig.size()]; 
+        for(int i=0; i<faellig.size(); i++) {
+            namen[i] = faellig.get(i).funkrufname + " (" + faellig.get(i).kilometer + " km)";
+        }
+        
+        String wahl = (String) JOptionPane.showInputDialog(frame, "Welches Fahrzeug soll zur Inspektion? (Kosten: 750 EUR, Dauer: 4 In-Game-Stunden)", "TÜV & Inspektion", JOptionPane.QUESTION_MESSAGE, null, namen, namen[0]);
+        
+        if (wahl != null) {
+            if (budget >= 750) {
+                budget -= 750;
+                String fName = wahl.split(" ")[0]; // Funkrufname extrahieren
+                for (Fahrzeug f : faellig) {
+                    if (f.funkrufname.equals(fName)) {
+                        f.status = 6; 
+                        f.ausfallGrund = "In Bearbeitung"; 
+                        f.reparaturDauer = 1440; // 4 Stunden in Game-Sekunden
+                        f.naechsteInspektion = f.kilometer + 1000; // Nächster TÜV in 1000 km
+                        break;
+                    }
+                }
+                uiAktualisieren(getUhrzeit());
+            } else { 
+                JOptionPane.showMessageDialog(frame, "Nicht genug Budget (750 EUR)!"); 
+            }
+        }
+    }
+
 }

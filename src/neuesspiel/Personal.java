@@ -9,7 +9,7 @@ public class Personal {
     public String geplanterStatus = "Bereit"; 
     public String zugewiesenesFahrzeug = "Keines";
     public String geplantesFahrzeug = "Keines";
-    
+    public java.util.ArrayList<MitarbeiterEigenschaft> eigenschaften = new java.util.ArrayList<>();
     public int urlaubStart = -1;
     public int urlaubEnd = -1;
     public int krankBis = -1;

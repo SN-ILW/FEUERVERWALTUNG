@@ -109,6 +109,10 @@ public class SpeicherManager {
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", String.valueOf(f.reparaturDauer));
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", String.valueOf(f.anfahrtsZeit));
                     p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", String.valueOf(f.originalAnfahrt)); 
+                    
+                    // NEU: Kilometer und Inspektion speichern
+                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_kilometer", String.valueOf(f.kilometer));
+                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_naechsteInspektion", String.valueOf(f.naechsteInspektion));
                 }
 
                 p.setProperty("wache_" + wIdx + "_pers_count", String.valueOf(w.personalPool.size()));
@@ -126,17 +130,16 @@ public class SpeicherManager {
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_uEnd", String.valueOf(pers.urlaubEnd));
                     
                     p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", String.valueOf(pers.schichtenMonat));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
-                
-                // NEU: Speichern der Monats-Plaene (31 Tage x 2)
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
+                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
+                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
+                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
+                    
+                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
+                }
             }
-        }
 
-        p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
+            p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
             for(int i = 0; i < LogistikSimulator.postfach.size(); i++) {
                 Email m = LogistikSimulator.postfach.get(i);
                 p.setProperty("mail_"+i+"_abs", m.absender);
@@ -281,6 +284,11 @@ public class SpeicherManager {
                     f.reparaturDauer = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", "0"));
                     f.anfahrtsZeit = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", "0"));
                     f.originalAnfahrt = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", "0")); 
+                    
+                    // NEU: Kilometer und Inspektion laden
+                    f.kilometer = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_kilometer", "0"));
+                    f.naechsteInspektion = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_naechsteInspektion", "1000"));
+                    
                     w.fuhrpark.add(f);
                 }
 
@@ -309,7 +317,7 @@ public class SpeicherManager {
                 pers.lehrgangThema = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", "");
                 pers.praeferenzGesendet = Boolean.parseBoolean(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", "false"));
                 
-                // NEU: Laden der Monats-Plaene (31 Tage x 2)
+                // Laden der Monats-Plaene (31 Tage x 2)
                 String pAkt = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", "");
                 if (!pAkt.isEmpty()) {
                     String[] parts = pAkt.split(",");

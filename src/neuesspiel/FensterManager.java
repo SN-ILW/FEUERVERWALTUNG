@@ -5,11 +5,9 @@ import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
 import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
-import java.io.File;
 import java.util.ArrayList;
 
 import static neuesspiel.LogistikSimulator.*;
@@ -132,22 +130,37 @@ public class FensterManager {
     }
 
     public static void oeffneFuhrparkHauptmenu() {
-        JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 200);
-        JPanel content = new JPanel(new GridLayout(3, 1, 10, 10));
+        JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 250); 
+        
+        JPanel content = new JPanel(new GridLayout(4, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
-        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
-        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
-        JButton b3 = new JButton("Fahrzeug umstationieren"); b3.addActionListener(e -> { d.dispose(); oeffneFahrzeugTransfer(); });
+        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); 
+        b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
+        
+        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); 
+        b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
+        
+        JButton b3 = new JButton("Fahrzeug umstationieren"); 
+        b3.addActionListener(e -> { d.dispose(); oeffneFahrzeugTransfer(); });
+        
+        JButton b4 = new JButton("TÜV & Inspektion durchfuehren"); 
+        b4.addActionListener(e -> { d.dispose(); LogistikSimulator.fahrzeugeInspektion(); });
 
-        content.add(b1); content.add(b2); content.add(b3);
-        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+        content.add(b1); 
+        content.add(b2); 
+        content.add(b3);
+        content.add(b4);
+
+        d.add(content, BorderLayout.CENTER); 
+        d.setVisible(true);
     }
 
     public static void oeffneSystemHauptmenu() {
-        JDialog d = createFramelessDialog("System & Editor", 400, 400);
-        JPanel content = new JPanel(new GridLayout(7, 1, 10, 10));
+        // Fenster etwas vergroessert fuer 8 Buttons
+        JDialog d = createFramelessDialog("System & Editor", 400, 450);
+        JPanel content = new JPanel(new GridLayout(8, 1, 10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
@@ -158,8 +171,11 @@ public class FensterManager {
         JButton b5 = new JButton("Einsatz-Vorlage bearbeiten"); b5.addActionListener(e -> { d.dispose(); oeffneEinsatzBearbeiter(); });
         JButton b6 = new JButton("Material-Vorlage erstellen"); b6.addActionListener(e -> { d.dispose(); oeffneMaterialErsteller(); });
         JButton b7 = new JButton("Material-Vorlage bearbeiten"); b7.addActionListener(e -> { d.dispose(); oeffneMaterialBearbeiter(); });
-
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7);
+        
+        JButton btnVertragEditor = new JButton("Vertrags-Editor"); 
+        btnVertragEditor.addActionListener(e -> { d.dispose(); oeffneVertragsEditor(); });
+        
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(btnVertragEditor);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
@@ -203,16 +219,9 @@ public class FensterManager {
         content.add(topPanel, BorderLayout.NORTH); content.add(new JScrollPane(table), BorderLayout.CENTER);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
-    
-    // (Die weiteren Methoden bleiben hier aus Platzgruenden strukturell gleich,
-    // ersetze bei ihnen einfach in deinem Originalcode das "new JDialog(...)" durch
-    // "createFramelessDialog(...)" - das Prinzip ist exakt das selbe!)
-
 
     public static void oeffnePostfach() {
-        JDialog d = new JDialog(frame, "E-Mail Postfach", true);
-        d.setSize(900, 500);
-        d.setLocationRelativeTo(frame);
+        JDialog d = createFramelessDialog("E-Mail Postfach", 900, 500);
         d.setLayout(new BorderLayout());
 
         DefaultListModel<String> listModel = new DefaultListModel<>();
@@ -348,12 +357,12 @@ public class FensterManager {
             }
         });
 
-btnAblehnen.addActionListener(e -> {
+        btnAblehnen.addActionListener(e -> {
             int idx = list.getSelectedIndex();
             if(idx != -1) { 
                 Email mail = postfach.get(idx); 
                 
-                // NEU: 2.5% Chance auf "Frust-Krankmeldung", wenn Urlaub abgelehnt wird
+                // 2.5% Chance auf "Frust-Krankmeldung", wenn Urlaub abgelehnt wird
                 if (mail.typ.equals("Urlaub") && cfgKrankheit) {
                     if (Math.random() < 0.025) {
                         int dauer = 2 + (int)(Math.random() * 4); // 2 bis 5 Tage "krank"
@@ -365,8 +374,7 @@ btnAblehnen.addActionListener(e -> {
                             mail.person.zugewiesenesFahrzeug = "Keines";
                         }
                         
-                        // Wir schicken die E-Mail heimlich in den Posteingang, 
-                        // der Spieler sieht sie erst, wenn er das Postfach schliesst und wieder oeffnet oder aktualisiert
+                        // Wir schicken die E-Mail heimlich in den Posteingang
                         postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer));
                         JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Hoffen wir mal, dass das keine Konsequenzen hat...", "Info", JOptionPane.INFORMATION_MESSAGE);
                     }
@@ -379,22 +387,13 @@ btnAblehnen.addActionListener(e -> {
             }
         });
 
-btnLoeschen.addActionListener(e -> {
-            int selectedIndex = list.getSelectedIndex(); // Deine JList heißt 'list'
+        btnLoeschen.addActionListener(e -> {
+            int selectedIndex = list.getSelectedIndex(); 
             if (selectedIndex != -1) {
-                // Da deine Liste rueckwaerts ist, echten Index im postfach berechnen
                 int echterIndex = LogistikSimulator.postfach.size() - 1 - selectedIndex;
-                
-                // 1. Mail aus dem Hintergrund-System loeschen
                 LogistikSimulator.postfach.remove(echterIndex);
-                
-                // 2. Mail grafisch aus der Liste entfernen
                 ((DefaultListModel) list.getModel()).remove(selectedIndex); 
-                
-                // 3. Textfeld rechts leeren
-                txt.setText("Keine E-Mail ausgewaehlt."); // Dein Textfeld heißt 'txt'
-                
-                // 4. Den Button im Hauptmenue sofort aktualisieren (Zahlen-Counter)
+                txt.setText("Keine E-Mail ausgewaehlt."); 
                 LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
             }
         });
@@ -410,10 +409,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneBank() {
-        JDialog d = new JDialog(LogistikSimulator.frame, "Bank & Finanzen", true);
-        d.setSize(450, 350);
-        d.setLayout(new GridLayout(6, 1, 10, 10));
-        d.setLocationRelativeTo(LogistikSimulator.frame);
+        JDialog d = createFramelessDialog("Bank & Vertraege", 450, 450);
+        d.setLayout(new GridLayout(7, 1, 10, 10)); // Auf 7 Reihen angepasst, da der Editor weg ist!
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
         JLabel lblInfo = new JLabel("Aktuelle Schulden: " + LogistikSimulator.aktuellerKredit + " EUR", SwingConstants.CENTER);
@@ -421,70 +418,169 @@ btnLoeschen.addActionListener(e -> {
         lblInfo.setFont(new Font("Segoe UI", Font.BOLD, 16));
         d.add(lblInfo);
 
-        JButton btnKredit1 = LogistikSimulator.createStyledButton("Kleinkredit (10.000 EUR) - Ab Level 5", new Color(41, 128, 185));
-        JButton btnKredit2 = LogistikSimulator.createStyledButton("Mittelstand (50.000 EUR) - Ab Level 15", new Color(39, 174, 96));
-        JButton btnKredit3 = LogistikSimulator.createStyledButton("Grosskredit (100.000 EUR) - Ab Level 25", new Color(192, 57, 43));
+        JButton btnKredit1 = LogistikSimulator.createStyledButton("Kleinkredit (10.000 EUR)", new Color(41, 128, 185));
+        JButton btnKredit2 = LogistikSimulator.createStyledButton("Mittelstand (50.000 EUR)", new Color(39, 174, 96));
+        JButton btnKredit3 = LogistikSimulator.createStyledButton("Grosskredit (100.000 EUR)", new Color(192, 57, 43));
         
-        // Level-Sperren
         if (LogistikSimulator.level < 5) btnKredit1.setEnabled(false);
         if (LogistikSimulator.level < 15) btnKredit2.setEnabled(false);
         if (LogistikSimulator.level < 25) btnKredit3.setEnabled(false);
-
-        // Man darf immer nur EINEN Kredit gleichzeitig haben
         if (LogistikSimulator.aktuellerKredit > 0) {
             btnKredit1.setEnabled(false); btnKredit2.setEnabled(false); btnKredit3.setEnabled(false);
-            lblInfo.setText(lblInfo.getText() + " (Tilgung: " + LogistikSimulator.taeglicheKreditRate + " / Tag)");
         }
 
         java.awt.event.ActionListener listener = e -> {
-            int betrag = 0; int rate = 0;
-            if(e.getSource() == btnKredit1) { betrag = 10000; rate = 500; }
-            if(e.getSource() == btnKredit2) { betrag = 50000; rate = 1500; }
-            if(e.getSource() == btnKredit3) { betrag = 100000; rate = 2500; }
-            
-            int wahl = JOptionPane.showConfirmDialog(d, "Kredit ueber " + betrag + " EUR aufnehmen?\nDie Bank berechnet 10% Zinsen.\nEs werden taeglich automatisch " + rate + " EUR abgebucht.", "Vertrag unterschreiben", JOptionPane.YES_NO_OPTION);
-            if(wahl == JOptionPane.YES_OPTION) {
+            int betrag = e.getSource() == btnKredit1 ? 10000 : (e.getSource() == btnKredit2 ? 50000 : 100000);
+            int rate = e.getSource() == btnKredit1 ? 500 : (e.getSource() == btnKredit2 ? 1500 : 2500);
+            if(JOptionPane.showConfirmDialog(d, "Kredit aufnehmen?", "Bank", JOptionPane.YES_NO_OPTION) == JOptionPane.YES_OPTION) {
                 LogistikSimulator.budget += betrag;
-                LogistikSimulator.aktuellerKredit = betrag + (betrag / 10); // 10% Zinsen aufschlagen
+                LogistikSimulator.aktuellerKredit = betrag + (betrag / 10);
                 LogistikSimulator.taeglicheKreditRate = rate;
-                SpeicherManager.speichern("savegame.properties");
                 LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
                 d.dispose();
             }
         };
-        
         btnKredit1.addActionListener(listener); btnKredit2.addActionListener(listener); btnKredit3.addActionListener(listener);
-        d.add(btnKredit1); d.add(btnKredit2); d.add(btnKredit3);
         
-        JButton btnSondertilgung = LogistikSimulator.createStyledButton("Sofort-Tilgung (Alles abbezahlen)", new Color(243, 156, 18));
-        btnSondertilgung.setForeground(Color.BLACK);
-        if (LogistikSimulator.aktuellerKredit <= 0) btnSondertilgung.setEnabled(false);
-        
+        JButton btnSondertilgung = LogistikSimulator.createStyledButton("Sofort-Tilgung", new Color(243, 156, 18));
         btnSondertilgung.addActionListener(e -> {
              if (LogistikSimulator.budget >= LogistikSimulator.aktuellerKredit) {
                  LogistikSimulator.budget -= LogistikSimulator.aktuellerKredit;
-                 LogistikSimulator.aktuellerKredit = 0;
-                 LogistikSimulator.taeglicheKreditRate = 0;
-                 JOptionPane.showMessageDialog(d, "Kredit vollstaendig abbezahlt!");
-                 SpeicherManager.speichern("savegame.properties");
-                 LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
-                 d.dispose();
-             } else {
-                 JOptionPane.showMessageDialog(d, "Du hast nicht genug Geld fuer eine Kompletttilgung!");
+                 LogistikSimulator.aktuellerKredit = 0; LogistikSimulator.taeglicheKreditRate = 0;
+                 LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); d.dispose();
              }
         });
-        d.add(new JLabel("")); // Platzhalter
-        d.add(btnSondertilgung);
+        
+        JButton btnVertraege = LogistikSimulator.createStyledButton("Vertraege & Dauerauftraege", new Color(142, 68, 173));
+        btnVertraege.addActionListener(e -> { d.dispose(); oeffneVertragsMenu(); });
+        
+        d.add(btnKredit1); d.add(btnKredit2); d.add(btnKredit3); d.add(btnSondertilgung); 
+        d.add(new JLabel(" ")); d.add(btnVertraege); 
+        d.setVisible(true);
+    }
 
+    public static void oeffneVertragsMenu() {
+        if(LogistikSimulator.vertragsVorlagen.isEmpty()) {
+            LogistikSimulator.vertragsVorlagen.add(new VertragVorlage("Klinikverbund", "Taegliche KTW Fahrten", "KTP", 3, 1500, 1000));
+        }
+        
+        String[] namen = new String[LogistikSimulator.vertragsVorlagen.size()];
+        for(int i=0; i<LogistikSimulator.vertragsVorlagen.size(); i++) {
+            VertragVorlage v = LogistikSimulator.vertragsVorlagen.get(i);
+            namen[i] = v.auftraggeber + " (" + v.zielMenge + "x " + v.zielEinsatzArt + " / Tag)";
+        }
+        
+        String wahl = (String) JOptionPane.showInputDialog(LogistikSimulator.frame, "Verfuegbare Vertraege (Achtung: Strafen bei Nicht-Erfuellung!):\nAktive Vertraege: " + LogistikSimulator.aktiveVertraege.size(), "Vertragsverwaltung", JOptionPane.QUESTION_MESSAGE, null, namen, namen[0]);
+        
+        if (wahl != null) {
+            for(VertragVorlage vv : LogistikSimulator.vertragsVorlagen) {
+                if(wahl.startsWith(vv.auftraggeber)) {
+                    LogistikSimulator.aktiveVertraege.add(new Vertrag(vv.auftraggeber, vv.beschreibung, vv.zielEinsatzArt, vv.zielMenge, vv.belohnungProTag, vv.strafeBeiFehlschlag));
+                    JOptionPane.showMessageDialog(LogistikSimulator.frame, "Vertrag unterschrieben! Er muss ab HEUTE jeden Tag erfuellt werden.");
+                    break;
+                }
+            }
+        }
+    }
+
+    public static void oeffneVertragsEditor() {
+        JDialog d = createFramelessDialog("Vertrags-Verwaltung", 500, 400);
+        d.setLayout(new BorderLayout());
+        
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        Runnable updateList = () -> {
+            listModel.clear();
+            for (VertragVorlage v : LogistikSimulator.vertragsVorlagen) {
+                listModel.addElement(v.auftraggeber + " - " + v.zielMenge + "x " + v.zielEinsatzArt + " (" + v.belohnungProTag + " EUR)");
+            }
+        };
+        updateList.run(); 
+        
+        JList<String> list = new JList<>(listModel);
+        list.setBackground(new Color(43, 43, 43));
+        list.setForeground(Color.WHITE);
+        list.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
+        
+        JPanel pnlBtns = new JPanel(new GridLayout(1, 4, 5, 5));
+        pnlBtns.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        pnlBtns.setBackground(new Color(35, 35, 35));
+        
+        JButton btnNeu = new JButton("Neu");
+        JButton btnEdit = new JButton("Bearbeiten");
+        JButton btnDel = new JButton("Loeschen");
+        JButton btnClose = new JButton("Schliessen");
+        
+        btnClose.addActionListener(e -> d.dispose());
+        
+        btnNeu.addActionListener(e -> {
+            bearbeiteVertrag(null);
+            updateList.run();
+        });
+        
+        btnEdit.addActionListener(e -> {
+            int idx = list.getSelectedIndex();
+            if (idx != -1) {
+                bearbeiteVertrag(LogistikSimulator.vertragsVorlagen.get(idx));
+                updateList.run();
+            } else {
+                JOptionPane.showMessageDialog(d, "Bitte waehle zuerst einen Vertrag aus der Liste aus!");
+            }
+        });
+        
+        btnDel.addActionListener(e -> {
+            int idx = list.getSelectedIndex();
+            if (idx != -1) {
+                LogistikSimulator.vertragsVorlagen.remove(idx);
+                updateList.run();
+            }
+        });
+        
+        pnlBtns.add(btnNeu); pnlBtns.add(btnEdit); pnlBtns.add(btnDel); pnlBtns.add(btnClose);
+        
+        d.add(new JScrollPane(list), BorderLayout.CENTER);
+        d.add(pnlBtns, BorderLayout.SOUTH);
         d.setVisible(true);
     }
     
-    public static void oeffneWachenAusbau() {
-        JDialog d = new JDialog(frame, "Wachen & Gebaeude", true);
-        d.setSize(600, 450);
-        d.setLayout(new GridLayout(6, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
+    public static void bearbeiteVertrag(VertragVorlage v) {
+        JTextField fAuftraggeber = new JTextField(v == null ? "" : v.auftraggeber);
+        JTextField fZielArt = new JTextField(v == null ? "KTP" : v.zielEinsatzArt);
+        JTextField fMenge = new JTextField(v == null ? "3" : String.valueOf(v.zielMenge));
+        JTextField fGeld = new JTextField(v == null ? "1500" : String.valueOf(v.belohnungProTag));
+        JTextField fStrafe = new JTextField(v == null ? "1000" : String.valueOf(v.strafeBeiFehlschlag));
 
+        Object[] msg = { 
+            "Auftraggeber (Name):", fAuftraggeber, 
+            "Geforderte Einsatz-Art (z.B. KTP, R1, FW):", fZielArt, 
+            "Menge pro Tag:", fMenge, 
+            "Taegliche Belohnung (EUR):", fGeld, 
+            "Strafe bei Fehlschlag (EUR):", fStrafe 
+        };
+        
+        String titel = v == null ? "Neuen Vertrag erstellen" : "Vertrag bearbeiten";
+        
+        if (JOptionPane.showConfirmDialog(LogistikSimulator.frame, msg, titel, JOptionPane.OK_CANCEL_OPTION) == JOptionPane.OK_OPTION) {
+            try {
+                if (v == null) {
+                    VertragVorlage neu = new VertragVorlage(fAuftraggeber.getText(), "Individueller Vertrag", fZielArt.getText(), Integer.parseInt(fMenge.getText()), Integer.parseInt(fGeld.getText()), Integer.parseInt(fStrafe.getText()));
+                    LogistikSimulator.vertragsVorlagen.add(neu);
+                } else {
+                    v.auftraggeber = fAuftraggeber.getText();
+                    v.zielEinsatzArt = fZielArt.getText();
+                    v.zielMenge = Integer.parseInt(fMenge.getText());
+                    v.belohnungProTag = Integer.parseInt(fGeld.getText());
+                    v.strafeBeiFehlschlag = Integer.parseInt(fStrafe.getText());
+                }
+            } catch(Exception ex) {
+                JOptionPane.showMessageDialog(LogistikSimulator.frame, "Fehlerhafte Eingabe bei den Zahlen!");
+            }
+        }
+    }
+    
+    public static void oeffneWachenAusbau() {
+        JDialog d = createFramelessDialog("Wachen & Gebaeude", 600, 450);
+        d.setLayout(new GridLayout(7, 1, 10, 10)); // Layout fuer 7 Zeilen
+        
         JPanel p0 = new JPanel(new BorderLayout());
         JLabel lblWachenInfo = new JLabel("Neue Wache bauen (Aktuell: " + wachen.size() + " / Erlaubt: " + getMaxWachenErlaubt() + ")");
         JButton b0 = new JButton("Wache gruenden (10.000 EURO)");
@@ -559,7 +655,6 @@ btnLoeschen.addActionListener(e -> {
 
         d.add(p0); d.add(p1); d.add(p2); d.add(p3); d.add(p4); d.add(p5);
         
-        // NEU: Kliniken Kaufen Panel
         JPanel pnlKliniken = new JPanel(new GridLayout(1, 3, 5, 5));
         pnlKliniken.setBorder(BorderFactory.createTitledBorder("Krankenhaeuser (Zielorte fuer RTWs)"));
         
@@ -576,17 +671,14 @@ btnLoeschen.addActionListener(e -> {
         btnHagenow.addActionListener(e -> { if(budget >= 20000) { budget -= 20000; techKlinikHagenow = true; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
         
         pnlKliniken.add(btnCrivitz); pnlKliniken.add(btnLeezen); pnlKliniken.add(btnHagenow);
-        d.setLayout(new GridLayout(7, 1, 10, 10)); // Layout anpassen fuer 7 Zeilen
         d.add(pnlKliniken);
 
         d.setVisible(true);
     }
 
     public static void oeffneKrankenhausWahl(Fahrzeug f) {
-        JDialog d = new JDialog(frame, "Zielklinik waehlen fuer " + f.funkrufname, true);
-        d.setSize(450, 350);
+        JDialog d = createFramelessDialog("Zielklinik waehlen fuer " + f.funkrufname, 450, 350);
         d.setLayout(new GridLayout(5, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
 
         JLabel l = new JLabel("Patient verladen. Bitte Zielklinik waehlen:", SwingConstants.CENTER);
         d.add(l);
@@ -622,10 +714,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneBettenUebersicht() {
-        JDialog d = new JDialog(frame, "Klinik- & Bettenuebersicht", false);
-        d.setSize(450, 300);
+        JDialog d = createFramelessDialog("Klinik- & Bettenuebersicht", 450, 300);
         d.setLayout(new GridLayout(6, 1, 10, 10));
-        d.setLocationRelativeTo(frame);
 
         d.add(new JLabel("Aktuelle Aufnahmekapazitaeten der Kliniken:", SwingConstants.CENTER));
 
@@ -659,10 +749,8 @@ btnLoeschen.addActionListener(e -> {
     public static void oeffneFahrzeugTransfer() {
         if(wachen.size() < 2) { JOptionPane.showMessageDialog(frame, "Du brauchst mindestens zwei Wachen fuer einen Transfer!"); return; }
         
-        JDialog d = new JDialog(frame, "Fahrzeug umstationieren", true);
-        d.setSize(400, 200);
+        JDialog d = createFramelessDialog("Fahrzeug umstationieren", 400, 200);
         d.setLayout(new GridLayout(3, 2, 10, 10));
-        d.setLocationRelativeTo(frame);
 
         JComboBox<String> cbFz = new JComboBox<>();
         for(Wache w : wachen) for(Fahrzeug f : w.fuhrpark) cbFz.addItem(f.funkrufname + " (" + w.name + ")");
@@ -708,10 +796,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffnePersonalWeiterbildung() {
-        JDialog d = new JDialog(frame, "Manuelle Personal Weiterbildung", true);
-        d.setSize(400, 200);
+        JDialog d = createFramelessDialog("Manuelle Personal Weiterbildung", 400, 200);
         d.setLayout(new GridLayout(3, 2, 10, 10));
-        d.setLocationRelativeTo(frame);
 
         ArrayList<Personal> alleMitarbeiter = new ArrayList<>();
         JComboBox<String> cbPers = new JComboBox<>();
@@ -761,10 +847,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneEinstellungen() {
-        JDialog d = new JDialog(LogistikSimulator.frame, "Spieleinstellungen", true);
-        d.setSize(500, 400); // Etwas breiter gemacht fuer die Schieberegler
-        d.setLayout(new GridLayout(9, 1, 5, 5)); 
-        d.setLocationRelativeTo(LogistikSimulator.frame);
+        JDialog d = createFramelessDialog("Spieleinstellungen", 500, 450); // Fenster leicht vergroessert fuer den neuen Logistik Schalter
+        d.setLayout(new GridLayout(10, 1, 5, 5)); 
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
         JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", LogistikSimulator.cfgKrankentransport);
@@ -772,13 +856,15 @@ btnLoeschen.addActionListener(e -> {
         JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", LogistikSimulator.cfgKrankheit);
         JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer);
         
-        JCheckBox[] topBoxes = {cbKtp, cbDmg, cbSick, cbAuto};
+        // NEU: Logistik Checkbox
+        JCheckBox cbLogistik = new JCheckBox("Lager & Logistik System aktivieren", LogistikSimulator.cfgLogistikAktiv);
+        
+        JCheckBox[] topBoxes = {cbKtp, cbDmg, cbSick, cbAuto, cbLogistik};
         for (JCheckBox box : topBoxes) {
             box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false);
             d.add(box);
         }
 
-        // --- SOUND 1: NOTRUF ---
         JPanel pnlS1 = new JPanel(new BorderLayout(10, 0)); pnlS1.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundNotruf = new JCheckBox("Sound: Neuer Notruf", LogistikSimulator.cfgSoundNotruf);
         cbSoundNotruf.setForeground(Color.WHITE); cbSoundNotruf.setBackground(new Color(35, 35, 35));
@@ -786,7 +872,6 @@ btnLoeschen.addActionListener(e -> {
         pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER);
         d.add(pnlS1);
 
-        // --- SOUND 2: STATUS 6 ---
         JPanel pnlS2 = new JPanel(new BorderLayout(10, 0)); pnlS2.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6 (Defekt)", LogistikSimulator.cfgSoundStatus6);
         cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35));
@@ -794,7 +879,6 @@ btnLoeschen.addActionListener(e -> {
         pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER);
         d.add(pnlS2);
 
-        // --- SOUND 3: STATUS 7 ---
         JPanel pnlS3 = new JPanel(new BorderLayout(10, 0)); pnlS3.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7 (Warten)", LogistikSimulator.cfgSoundStatus7);
         cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35));
@@ -820,16 +904,19 @@ btnLoeschen.addActionListener(e -> {
             LogistikSimulator.cfgKrankheit = cbSick.isSelected();
             LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected();
             
+            // Logistik Schalter uebernehmen
+            LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
+            
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected();
             LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected();
             LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
             
-            // NEU: Lautstaerken abspeichern
             LogistikSimulator.volNotruf = slNotruf.getValue();
             LogistikSimulator.volStatus6 = slStatus6.getValue();
             LogistikSimulator.volStatus7 = slStatus7.getValue();
             
             SpeicherManager.speichern("savegame.properties");
+            uiAktualisieren(getUhrzeit()); // Damit sich der Button direkt versteckt/zeigt
             d.dispose();
         });
 
@@ -839,10 +926,8 @@ btnLoeschen.addActionListener(e -> {
 
     public static void oeffneFuhrpark() {
         if(wachen.isEmpty()){ JOptionPane.showMessageDialog(frame, "Du hast keine Wache!"); return; }
-        JDialog d = new JDialog(frame, "Fuhrpark verwalten", true);
-        d.setSize(400, 300);
+        JDialog d = createFramelessDialog("Fuhrpark verwalten", 400, 300);
         d.setLayout(new GridLayout(7, 2, 10, 10));
-        d.setLocationRelativeTo(frame);
 
         d.add(new JLabel("Fuer welche Wache moechtest du kaufen?"));
         JComboBox<String> cbWachen = new JComboBox<>();
@@ -861,10 +946,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneMaterialErsteller() {
-        JDialog d = new JDialog(frame, "Eigenes Material Erstellen", true);
-        d.setSize(500, 400);
+        JDialog d = createFramelessDialog("Eigenes Material Erstellen", 500, 400);
         d.setLayout(new BorderLayout());
-        d.setLocationRelativeTo(frame);
 
         JPanel form = new JPanel(new GridLayout(7, 2, 5, 5));
         JTextField txtName = new JTextField();
@@ -917,10 +1000,8 @@ btnLoeschen.addActionListener(e -> {
 
     public static void oeffneMaterialBearbeiter() {
         if(customMaterials.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Materialien!"); return; }
-        JDialog d = new JDialog(frame, "Material Bearbeiten", true);
-        d.setSize(500, 450);
+        JDialog d = createFramelessDialog("Material Bearbeiten", 500, 450);
         d.setLayout(new BorderLayout());
-        d.setLocationRelativeTo(frame);
 
         JPanel topSelect = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topSelect.add(new JLabel("Zu bearbeitendes Material:"));
@@ -1006,10 +1087,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneEinsatzErsteller() {
-        JDialog d = new JDialog(frame, "Einsatz-Vorlagen Ersteller", true);
-        d.setSize(600, 500);
+        JDialog d = createFramelessDialog("Einsatz-Vorlagen Ersteller", 600, 500);
         d.setLayout(new BorderLayout());
-        d.setLocationRelativeTo(frame);
 
         JPanel mainPanel = new JPanel(new GridLayout(10, 2, 5, 5));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -1081,10 +1160,8 @@ btnLoeschen.addActionListener(e -> {
 
     public static void oeffneEinsatzBearbeiter() {
         if(vorlagenPool.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Einsatzvorlagen!"); return; }
-        JDialog d = new JDialog(frame, "Einsatz-Vorlagen Bearbeiten", true);
-        d.setSize(600, 550);
+        JDialog d = createFramelessDialog("Einsatz-Vorlagen Bearbeiten", 600, 550);
         d.setLayout(new BorderLayout());
-        d.setLocationRelativeTo(frame);
 
         JPanel topSelect = new JPanel(new FlowLayout(FlowLayout.LEFT));
         topSelect.add(new JLabel("Vorlage waehlen:"));
@@ -1189,10 +1266,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneNachforderungMenu() {
-        JDialog d = new JDialog(frame, "Offene Nachforderungen", true); 
-        d.setSize(500, 300); 
+        JDialog d = createFramelessDialog("Offene Nachforderungen", 500, 300); 
         d.setLayout(new BorderLayout(10, 10));
-        d.setLocationRelativeTo(frame);
         
         JPanel centerPanel = new JPanel(new GridLayout(0, 1, 5, 5));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -1270,10 +1345,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneLogistikMenu() {
-        JDialog d = new JDialog(frame, "Wache versorgen", true);
-        d.setSize(400, 300);
+        JDialog d = createFramelessDialog("Wache versorgen", 400, 300);
         d.setLayout(new GridLayout(0, 1, 5, 5));
-        d.setLocationRelativeTo(frame);
 
         d.add(new JLabel("Zu beliefernde Wache auswaehlen:"));
         JComboBox<String> wahlen = new JComboBox<>();
@@ -1288,7 +1361,6 @@ btnLoeschen.addActionListener(e -> {
                     hauptlager.put(cm.name, hauptlager.get(cm.name) - 10);
                     target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10);
                     uiAktualisieren(getUhrzeit());
-                   // JOptionPane.showMessageDialog(d, "Material umgelagert!");
                 } else {
                     JOptionPane.showMessageDialog(d, "Zu wenig Bestand im Hauptlager!");
                 }
@@ -1304,10 +1376,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneBestellMenu() {
-        JDialog d = new JDialog(frame, "Einkauf (Lieferung in 60s)", true);
-        d.setSize(400, 300);
+        JDialog d = createFramelessDialog("Einkauf (Lieferung in 60s)", 400, 300);
         d.setLayout(new GridLayout(0, 1, 5, 5));
-        d.setLocationRelativeTo(frame);
 
         for(int i=0; i<customMaterials.size(); i++) {
             CustomMaterial cm = customMaterials.get(i);
@@ -1319,7 +1389,6 @@ btnLoeschen.addActionListener(e -> {
                     budget -= endPreis;
                     lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60));
                     uiAktualisieren(getUhrzeit());
-                    //JOptionPane.showMessageDialog(d, "Bestellung aufgegeben!");
                 } else {
                     JOptionPane.showMessageDialog(d, "Nicht genug Budget!");
                 }
@@ -1335,10 +1404,8 @@ btnLoeschen.addActionListener(e -> {
     }
 
     public static void oeffneEinsatzDetails(Einsatz ein) {
-        JDialog d = new JDialog(frame, "Einsatzakte: " + ein.vorlage.stichwort, true);
-        d.setSize(500, 400);
+        JDialog d = createFramelessDialog("Einsatzakte: " + ein.vorlage.stichwort, 500, 400);
         d.setLayout(new BorderLayout());
-        d.setLocationRelativeTo(frame);
 
         JTextArea txtLage = new JTextArea(ein.getLagemeldungText());
         txtLage.setEditable(false);

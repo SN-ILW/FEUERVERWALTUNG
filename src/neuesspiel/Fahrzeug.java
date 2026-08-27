@@ -9,7 +9,8 @@ public class Fahrzeug {
     public Einsatz aktuellerEinsatz = null;
     public String ausfallGrund = "";
     public int reparaturDauer = 0;
-    
+    public int kilometer = 0;
+    public int naechsteInspektion = 1000;
     public int reqEL=0, reqGF=0, reqNA=0, reqNFS=0, reqMA=0, reqTF=0, reqFüAs=0, reqRS=0, reqTM=0;
     
     public Fahrzeug(String kennung, String typ) {
