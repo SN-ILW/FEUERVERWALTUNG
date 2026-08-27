@@ -1,392 +1,235 @@
 package neuesspiel;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.io.*;
 import java.util.Properties;
+import java.util.ArrayList;
 
 public class SpeicherManager {
-    public static boolean speichern(String dateiname) {
-        try {
+
+    public static void speichern(String dateiPfad) {
+        try (FileOutputStream out = new FileOutputStream(dateiPfad)) {
             Properties p = new Properties();
+            
             p.setProperty("budget", String.valueOf(LogistikSimulator.budget));
-            p.setProperty("tag", String.valueOf(LogistikSimulator.tag));
-            p.setProperty("level", String.valueOf(LogistikSimulator.level));
             p.setProperty("xp", String.valueOf(LogistikSimulator.xp));
-            p.setProperty("sekunden", String.valueOf(LogistikSimulator.inGameSekunden));
-            p.setProperty("abgelehnt_heute", String.valueOf(LogistikSimulator.abgelehnteEinsaetzeHeute)); 
+            p.setProperty("level", String.valueOf(LogistikSimulator.level));
+            p.setProperty("tag", String.valueOf(LogistikSimulator.tag));
+            p.setProperty("inGameSekunden", String.valueOf(LogistikSimulator.inGameSekunden));
+            p.setProperty("speed", String.valueOf(LogistikSimulator.speed));
             
-            p.setProperty("cfg_ktp", String.valueOf(LogistikSimulator.cfgKrankentransport));
-            p.setProperty("cfg_dmg", String.valueOf(LogistikSimulator.cfgBeschaedigung));
-            p.setProperty("cfg_sick", String.valueOf(LogistikSimulator.cfgKrankheit));
-            p.setProperty("cfg_auto", String.valueOf(LogistikSimulator.cfgAutoTransfer));
-
-            p.setProperty("tech_ws", String.valueOf(LogistikSimulator.techWerkstatt));
-            p.setProperty("tech_rh", String.valueOf(LogistikSimulator.techRuheraum));
-            p.setProperty("tech_ga", String.valueOf(LogistikSimulator.techGrossabnehmer));
-            p.setProperty("tech_lehrer", String.valueOf(LogistikSimulator.lehrerStufe)); 
+            p.setProperty("aktuellerKredit", String.valueOf(LogistikSimulator.aktuellerKredit));
+            p.setProperty("taeglicheKreditRate", String.valueOf(LogistikSimulator.taeglicheKreditRate));
             
-            p.setProperty("tech_calltaker_stufe", String.valueOf(LogistikSimulator.calltakerStufe)); 
+            p.setProperty("techGrossabnehmer", String.valueOf(LogistikSimulator.techGrossabnehmer));
+            p.setProperty("lehrerStufe", String.valueOf(LogistikSimulator.lehrerStufe));
+            p.setProperty("calltakerStufe", String.valueOf(LogistikSimulator.calltakerStufe));
+            p.setProperty("techKlinikCrivitz", String.valueOf(LogistikSimulator.techKlinikCrivitz));
+            p.setProperty("techKlinikLeezen", String.valueOf(LogistikSimulator.techKlinikLeezen));
+            p.setProperty("techKlinikHagenow", String.valueOf(LogistikSimulator.techKlinikHagenow));
+            
+            p.setProperty("cfgKrankentransport", String.valueOf(LogistikSimulator.cfgKrankentransport));
+            p.setProperty("cfgBeschaedigung", String.valueOf(LogistikSimulator.cfgBeschaedigung));
+            p.setProperty("cfgKrankheit", String.valueOf(LogistikSimulator.cfgKrankheit));
+            p.setProperty("cfgAutoTransfer", String.valueOf(LogistikSimulator.cfgAutoTransfer));
+            p.setProperty("cfgLogistikAktiv", String.valueOf(LogistikSimulator.cfgLogistikAktiv));
+            
+            p.setProperty("cfgSoundNotruf", String.valueOf(LogistikSimulator.cfgSoundNotruf));
+            p.setProperty("cfgSoundStatus6", String.valueOf(LogistikSimulator.cfgSoundStatus6));
+            p.setProperty("cfgSoundStatus7", String.valueOf(LogistikSimulator.cfgSoundStatus7));
+            p.setProperty("volNotruf", String.valueOf(LogistikSimulator.volNotruf));
+            p.setProperty("volStatus6", String.valueOf(LogistikSimulator.volStatus6));
+            p.setProperty("volStatus7", String.valueOf(LogistikSimulator.volStatus7));
 
-            p.setProperty("tech_klinik_crivitz", String.valueOf(LogistikSimulator.techKlinikCrivitz)); 
-            p.setProperty("tech_klinik_leezen", String.valueOf(LogistikSimulator.techKlinikLeezen)); 
-            p.setProperty("tech_klinik_hagenow", String.valueOf(LogistikSimulator.techKlinikHagenow)); 
-
-            if (LogistikSimulator.aktuellesEvent != null) {
-                p.setProperty("event_aktiv", "true");
-                p.setProperty("event_name", LogistikSimulator.aktuellesEvent.name);
-                p.setProperty("event_desc", LogistikSimulator.aktuellesEvent.beschreibung);
-                p.setProperty("event_dauer", String.valueOf(LogistikSimulator.aktuellesEvent.dauerTage));
-                p.setProperty("event_cR1", String.valueOf(LogistikSimulator.aktuellesEvent.chanceR1));
-                p.setProperty("event_cH1", String.valueOf(LogistikSimulator.aktuellesEvent.chanceH1));
-                p.setProperty("event_gMult", String.valueOf(LogistikSimulator.aktuellesEvent.globalRateMultiplier));
-            } else {
-                p.setProperty("event_aktiv", "false");
+            // Tagesmission
+            if (LogistikSimulator.aktuelleMission != null) {
+                p.setProperty("miss_titel", LogistikSimulator.aktuelleMission.titel);
+                p.setProperty("miss_desc", LogistikSimulator.aktuelleMission.beschreibung);
+                p.setProperty("miss_typ", LogistikSimulator.aktuelleMission.typ);
+                p.setProperty("miss_ziel", String.valueOf(LogistikSimulator.aktuelleMission.zielWert));
+                p.setProperty("miss_geld", String.valueOf(LogistikSimulator.aktuelleMission.belohnungGeld));
+                p.setProperty("miss_xp", String.valueOf(LogistikSimulator.aktuelleMission.belohnungXp));
+                p.setProperty("miss_fort", String.valueOf(LogistikSimulator.aktuelleMission.fortschritt));
+                p.setProperty("miss_done", String.valueOf(LogistikSimulator.aktuelleMission.abgeschlossen));
             }
 
-            p.setProperty("stat_count", String.valueOf(LogistikSimulator.tagesStatistik.size()));
-            for(int i = 0; i < LogistikSimulator.tagesStatistik.size(); i++) {
-                Einsatz ein = LogistikSimulator.tagesStatistik.get(i);
-                p.setProperty("stat_" + i + "_desc", ein.beschreibung);
-                p.setProperty("stat_" + i + "_xp", String.valueOf(ein.xpBelohnung));
+            // Vertraege
+            p.setProperty("vertragsCount", String.valueOf(LogistikSimulator.aktiveVertraege.size()));
+            for(int i = 0; i < LogistikSimulator.aktiveVertraege.size(); i++) {
+                Vertrag v = LogistikSimulator.aktiveVertraege.get(i);
+                p.setProperty("v_" + i + "_ag", v.auftraggeber);
+                p.setProperty("v_" + i + "_desc", v.beschreibung);
+                p.setProperty("v_" + i + "_art", v.zielEinsatzArt);
+                p.setProperty("v_" + i + "_ziel", String.valueOf(v.zielMenge));
+                p.setProperty("v_" + i + "_akt", String.valueOf(v.aktuelleMenge));
+                p.setProperty("v_" + i + "_bel", String.valueOf(v.belohnungProTag));
+                p.setProperty("v_" + i + "_strafe", String.valueOf(v.strafeBeiFehlschlag));
             }
 
-            p.setProperty("mat_count", String.valueOf(LogistikSimulator.customMaterials.size()));
-            for(int i = 0; i < LogistikSimulator.customMaterials.size(); i++) {
-                CustomMaterial cm = LogistikSimulator.customMaterials.get(i);
-                p.setProperty("mat_" + i + "_name", cm.name);
-                p.setProperty("mat_" + i + "_fz", String.join(",", cm.fahrzeuge));
-                p.setProperty("mat_" + i + "_sw", String.join(",", cm.einsatzStichworte));
-                p.setProperty("mat_" + i + "_max", String.valueOf(cm.maxVerbrauch));
-                p.setProperty("mat_" + i + "_preis", String.valueOf(cm.preis));
-                p.setProperty("mat_" + i + "_menge", String.valueOf(cm.bestellMenge));
-                p.setProperty("mat_" + i + "_warn", String.valueOf(cm.warnSchwelle));
-                p.setProperty("lager_" + cm.name, String.valueOf(LogistikSimulator.hauptlager.getOrDefault(cm.name, 0)));
-            }
-
-            p.setProperty("vor_count", String.valueOf(LogistikSimulator.vorlagenPool.size()));
-            for(int i = 0; i < LogistikSimulator.vorlagenPool.size(); i++) {
-                EinsatzVorlage v = LogistikSimulator.vorlagenPool.get(i);
-                p.setProperty("vor_" + i + "_art", v.art);
-                p.setProperty("vor_" + i + "_sw", v.stichwort);
-                p.setProperty("vor_" + i + "_desc", v.beschreibung);
-                p.setProperty("vor_" + i + "_rtw", String.valueOf(v.reqRTW));
-                p.setProperty("vor_" + i + "_nef", String.valueOf(v.reqNEF));
-                p.setProperty("vor_" + i + "_ktw", String.valueOf(v.reqKTW));
-                p.setProperty("vor_" + i + "_hlf", String.valueOf(v.reqHLF));
-                p.setProperty("vor_" + i + "_dlk", String.valueOf(v.reqDLK));
-                p.setProperty("vor_" + i + "_elw", String.valueOf(v.reqELW));
-                p.setProperty("vor_" + i + "_hN", String.valueOf(v.hatNachforderung));
-                p.setProperty("vor_" + i + "_nP", String.valueOf(v.nachforderungProzent));
-                p.setProperty("vor_" + i + "_nT", v.nachforderungTyp);
-                p.setProperty("vor_" + i + "_lvl", String.valueOf(v.minLevel));
-            }
-
-            p.setProperty("wachen_count", String.valueOf(LogistikSimulator.wachen.size()));
-            for(int wIdx = 0; wIdx < LogistikSimulator.wachen.size(); wIdx++) {
-                Wache w = LogistikSimulator.wachen.get(wIdx);
-                p.setProperty("wache_" + wIdx + "_name", w.name);
-                p.setProperty("wache_" + wIdx + "_kennung", w.kennung);
+            p.setProperty("wachenCount", String.valueOf(LogistikSimulator.wachen.size()));
+            for (int i = 0; i < LogistikSimulator.wachen.size(); i++) {
+                Wache w = LogistikSimulator.wachen.get(i);
+                p.setProperty("wache_" + i + "_name", w.name);
+                p.setProperty("wache_" + i + "_kennung", w.kennung);
                 
-                p.setProperty("wache_" + wIdx + "_c_hlf", String.valueOf(w.fahrzeugCounter.getOrDefault("HLF", 0)));
-                p.setProperty("wache_" + wIdx + "_c_rtw", String.valueOf(w.fahrzeugCounter.getOrDefault("RTW", 0)));
-                p.setProperty("wache_" + wIdx + "_c_elw", String.valueOf(w.fahrzeugCounter.getOrDefault("ELW", 0)));
-                p.setProperty("wache_" + wIdx + "_c_dlk", String.valueOf(w.fahrzeugCounter.getOrDefault("DLK", 0)));
-                p.setProperty("wache_" + wIdx + "_c_nef", String.valueOf(w.fahrzeugCounter.getOrDefault("NEF", 0)));
-                p.setProperty("wache_" + wIdx + "_c_ktw", String.valueOf(w.fahrzeugCounter.getOrDefault("KTW", 0)));
-                
-                for(CustomMaterial cm : LogistikSimulator.customMaterials) {
-                    p.setProperty("wache_" + wIdx + "_mat_" + cm.name, String.valueOf(w.material.getOrDefault(cm.name, 0)));
+                // Lokale Upgrades speichern
+                p.setProperty("wache_" + i + "_upgradeCount", String.valueOf(w.upgrades.size()));
+                for(int u = 0; u < w.upgrades.size(); u++) {
+                    WachenAusbau wa = w.upgrades.get(u);
+                    p.setProperty("wache_" + i + "_upg_" + u + "_id", wa.id);
+                    p.setProperty("wache_" + i + "_upg_" + u + "_name", wa.name);
+                    p.setProperty("wache_" + i + "_upg_" + u + "_desc", wa.beschreibung);
+                    p.setProperty("wache_" + i + "_upg_" + u + "_cost", String.valueOf(wa.kosten));
                 }
 
-                p.setProperty("wache_" + wIdx + "_fz_count", String.valueOf(w.fuhrpark.size()));
-                for(int fIdx = 0; fIdx < w.fuhrpark.size(); fIdx++) {
-                    Fahrzeug f = w.fuhrpark.get(fIdx);
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_kennung", f.funkrufname);
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_typ", f.typ);
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_status", String.valueOf(f.status));
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_ausfall", f.ausfallGrund != null ? f.ausfallGrund : "");
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", String.valueOf(f.reparaturDauer));
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", String.valueOf(f.anfahrtsZeit));
-                    p.setProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", String.valueOf(f.originalAnfahrt)); 
+                p.setProperty("wache_" + i + "_persCount", String.valueOf(w.personalPool.size()));
+                for (int j = 0; j < w.personalPool.size(); j++) {
+                    Personal pers = w.personalPool.get(j);
+                    String prefix = "wache_" + i + "_pers_" + j;
+                    p.setProperty(prefix + "_name", pers.name);
+                    p.setProperty(prefix + "_status", pers.status);
+                    p.setProperty(prefix + "_qual", String.join(",", pers.qualifikationen));
+                    p.setProperty(prefix + "_schichten", String.valueOf(pers.schichtenMonat));
+                    p.setProperty(prefix + "_uStart", String.valueOf(pers.urlaubStart));
+                    p.setProperty(prefix + "_uEnd", String.valueOf(pers.urlaubEnd));
+                    p.setProperty(prefix + "_kBis", String.valueOf(pers.krankBis));
+                    p.setProperty(prefix + "_fzg", pers.zugewiesenesFahrzeug);
+                    p.setProperty(prefix + "_gStat", pers.geplanterStatus);
+                    p.setProperty(prefix + "_gFzg", pers.geplantesFahrzeug);
+                    
+                    p.setProperty(prefix + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                    p.setProperty(prefix + "_planNext", String.join(",", pers.planNaechsterMonat));
+                    
+                    // RPG Eigenschaften speichern
+                    p.setProperty(prefix + "_eigCount", String.valueOf(pers.eigenschaften.size()));
+                    for(int x = 0; x < pers.eigenschaften.size(); x++) {
+                        MitarbeiterEigenschaft eig = pers.eigenschaften.get(x);
+                        p.setProperty(prefix + "_eig_" + x + "_n", eig.name);
+                        p.setProperty(prefix + "_eig_" + x + "_d", eig.beschreibung);
+                        p.setProperty(prefix + "_eig_" + x + "_t", eig.typ);
+                        p.setProperty(prefix + "_eig_" + x + "_e", String.valueOf(eig.effektWert));
+                    }
                 }
-
-                p.setProperty("wache_" + wIdx + "_pers_count", String.valueOf(w.personalPool.size()));
-                for(int pIdx = 0; pIdx < w.personalPool.size(); pIdx++) {
-                    Personal pers = w.personalPool.get(pIdx);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_name", pers.name);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_qual", String.join(",", pers.qualifikationen));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_stat", pers.status);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planStat", pers.geplanterStatus);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_fz", pers.zugewiesenesFahrzeug);
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_plan", pers.geplantesFahrzeug);
-                    
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_kBis", String.valueOf(pers.krankBis));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_uStart", String.valueOf(pers.urlaubStart));
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_uEnd", String.valueOf(pers.urlaubEnd));
-                    
-                    p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", String.valueOf(pers.schichtenMonat));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", pers.lehrgangThema);
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", String.valueOf(pers.praeferenzGesendet));
-                
-                // NEU: Speichern der Monats-Plaene (31 Tage x 2)
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", String.join(",", pers.planAktuellerMonat));
-                p.setProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", String.join(",", pers.planNaechsterMonat));
             }
+
+            p.store(out, "Logistik Simulator Savegame");
+        } catch (Exception e) {
+            e.printStackTrace();
         }
-
-        p.setProperty("mail_count", String.valueOf(LogistikSimulator.postfach.size()));
-            for(int i = 0; i < LogistikSimulator.postfach.size(); i++) {
-                Email m = LogistikSimulator.postfach.get(i);
-                p.setProperty("mail_"+i+"_abs", m.absender);
-                p.setProperty("mail_"+i+"_bet", m.betreff);
-                p.setProperty("mail_"+i+"_txt", m.text.replace("\n", "||")); 
-                p.setProperty("mail_"+i+"_typ", m.typ);
-                p.setProperty("mail_"+i+"_gel", String.valueOf(m.gelesen));
-                p.setProperty("mail_"+i+"_pName", m.person != null ? m.person.name : "");
-                p.setProperty("mail_"+i+"_start", String.valueOf(m.startTag));
-                p.setProperty("mail_"+i+"_end", String.valueOf(m.endTag));
-            }
-
-            FileOutputStream out = new FileOutputStream(dateiname);
-            p.store(out, "BOS Simulator Savegame");
-            out.close();
-            return true;
-        } catch (Exception e) { return false; }
     }
 
-    public static boolean laden(String dateiname) {
-        try {
+    public static boolean laden(String dateiPfad) {
+        File file = new File(dateiPfad);
+        if (!file.exists()) return false;
+
+        try (FileInputStream in = new FileInputStream(file)) {
             Properties p = new Properties();
-            FileInputStream in = new FileInputStream(dateiname);
             p.load(in);
-            in.close();
-
-            LogistikSimulator.budget = Integer.parseInt(p.getProperty("budget", "25000"));
-            LogistikSimulator.tag = Integer.parseInt(p.getProperty("tag", "1"));
-            LogistikSimulator.level = Integer.parseInt(p.getProperty("level", "1"));
-            LogistikSimulator.xp = Integer.parseInt(p.getProperty("xp", "0"));
-            LogistikSimulator.inGameSekunden = Integer.parseInt(p.getProperty("sekunden", String.valueOf(7 * 3600)));
-            LogistikSimulator.abgelehnteEinsaetzeHeute = Integer.parseInt(p.getProperty("abgelehnt_heute", "0")); 
-
-            LogistikSimulator.cfgKrankentransport = Boolean.parseBoolean(p.getProperty("cfg_ktp", "true"));
-            LogistikSimulator.cfgBeschaedigung = Boolean.parseBoolean(p.getProperty("cfg_dmg", "true"));
-            LogistikSimulator.cfgKrankheit = Boolean.parseBoolean(p.getProperty("cfg_sick", "true"));
-            LogistikSimulator.cfgAutoTransfer = Boolean.parseBoolean(p.getProperty("cfg_auto", "false"));
-            
-            LogistikSimulator.techWerkstatt = Boolean.parseBoolean(p.getProperty("tech_ws", "false"));
-            LogistikSimulator.techRuheraum = Boolean.parseBoolean(p.getProperty("tech_rh", "false"));
-            LogistikSimulator.techGrossabnehmer = Boolean.parseBoolean(p.getProperty("tech_ga", "false"));
-            LogistikSimulator.lehrerStufe = Integer.parseInt(p.getProperty("tech_lehrer", "0"));
-            
-            if (p.containsKey("tech_calltaker_stufe")) {
-                LogistikSimulator.calltakerStufe = Integer.parseInt(p.getProperty("tech_calltaker_stufe", "0"));
-            } else {
-                boolean oldBasic = Boolean.parseBoolean(p.getProperty("tech_calltaker", "false")); 
-                boolean oldErw = Boolean.parseBoolean(p.getProperty("tech_calltaker_erw", "false")); 
-                if(oldErw) LogistikSimulator.calltakerStufe = 2;
-                else if(oldBasic) LogistikSimulator.calltakerStufe = 1;
-                else LogistikSimulator.calltakerStufe = 0;
-            }
-
-            LogistikSimulator.techKlinikCrivitz = Boolean.parseBoolean(p.getProperty("tech_klinik_crivitz", "false")); 
-            LogistikSimulator.techKlinikLeezen = Boolean.parseBoolean(p.getProperty("tech_klinik_leezen", "false")); 
-            LogistikSimulator.techKlinikHagenow = Boolean.parseBoolean(p.getProperty("tech_klinik_hagenow", "false")); 
-
-            boolean eventAktiv = Boolean.parseBoolean(p.getProperty("event_aktiv", "false"));
-            if (eventAktiv) {
-                String eName = p.getProperty("event_name", "Unbekanntes Event");
-                String eDesc = p.getProperty("event_desc", "");
-                int eDauer = Integer.parseInt(p.getProperty("event_dauer", "1"));
-                double eCR1 = Double.parseDouble(p.getProperty("event_cR1", "1.0"));
-                double eCH1 = Double.parseDouble(p.getProperty("event_cH1", "1.0"));
-                double eGMult = Double.parseDouble(p.getProperty("event_gMult", "1.0"));
-                LogistikSimulator.aktuellesEvent = new Event(eName, eDesc, eDauer, eCR1, eCH1, eGMult);
-            } else {
-                LogistikSimulator.aktuellesEvent = null;
-            }
-
-            LogistikSimulator.vorlagenPool.clear();
-            int vorCount = Integer.parseInt(p.getProperty("vor_count", "0"));
-            for(int i = 0; i < vorCount; i++) {
-                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage(
-                    p.getProperty("vor_" + i + "_art", "FW"), p.getProperty("vor_" + i + "_sw", "X"), p.getProperty("vor_" + i + "_desc", ""),
-                    Integer.parseInt(p.getProperty("vor_" + i + "_rtw", "0")), Integer.parseInt(p.getProperty("vor_" + i + "_nef", "0")), Integer.parseInt(p.getProperty("vor_" + i + "_ktw", "0")),
-                    Integer.parseInt(p.getProperty("vor_" + i + "_hlf", "0")), Integer.parseInt(p.getProperty("vor_" + i + "_dlk", "0")), Integer.parseInt(p.getProperty("vor_" + i + "_elw", "0")),
-                    Boolean.parseBoolean(p.getProperty("vor_" + i + "_hN", "false")), Integer.parseInt(p.getProperty("vor_" + i + "_nP", "0")), p.getProperty("vor_" + i + "_nT", ""),
-                    Integer.parseInt(p.getProperty("vor_" + i + "_lvl", "1"))
-                ));
-            }
-
-            LogistikSimulator.tagesStatistik.clear();
-            int statCount = Integer.parseInt(p.getProperty("stat_count", "0"));
-            for(int i = 0; i < statCount; i++) {
-                String desc = p.getProperty("stat_" + i + "_desc", "Unbekannter Einsatz");
-                int exp = Integer.parseInt(p.getProperty("stat_" + i + "_xp", "0"));
-                
-                EinsatzVorlage foundV = null;
-                for(EinsatzVorlage v : LogistikSimulator.vorlagenPool) {
-                    if(v.beschreibung.equals(desc)) { foundV = v; break; }
-                }
-                if(foundV == null) foundV = new EinsatzVorlage("FW", "X", desc, 0,0,0,0,0,0, false, 0, "", 1);
-                
-                Einsatz ein = new Einsatz(foundV, "00:00");
-                ein.beschreibung = desc;
-                ein.xpBelohnung = exp;
-                LogistikSimulator.tagesStatistik.add(ein);
-            }
-
-            LogistikSimulator.customMaterials.clear();
-            LogistikSimulator.hauptlager.clear();
-            int matCount = Integer.parseInt(p.getProperty("mat_count", "0"));
-            for(int i = 0; i < matCount; i++) {
-                String name = p.getProperty("mat_" + i + "_name", "Unknown");
-                String fzStr = p.getProperty("mat_" + i + "_fz", "");
-                ArrayList<String> fz = fzStr.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(fzStr.split(",")));
-                String swStr = p.getProperty("mat_" + i + "_sw", "");
-                ArrayList<String> sw = swStr.isEmpty() ? new ArrayList<>() : new ArrayList<>(Arrays.asList(swStr.split(",")));
-                int max = Integer.parseInt(p.getProperty("mat_" + i + "_max", "0"));
-                int preis = Integer.parseInt(p.getProperty("mat_" + i + "_preis", "500"));
-                int menge = Integer.parseInt(p.getProperty("mat_" + i + "_menge", "10"));
-                int warn = Integer.parseInt(p.getProperty("mat_" + i + "_warn", "10")); 
-                
-                LogistikSimulator.customMaterials.add(new CustomMaterial(name, fz, max, sw, preis, menge, warn));
-                LogistikSimulator.hauptlager.put(name, Integer.parseInt(p.getProperty("lager_" + name, "0")));
-            }
 
             LogistikSimulator.wachen.clear();
-            int wachenCount = Integer.parseInt(p.getProperty("wachen_count", "0"));
-            for(int wIdx = 0; wIdx < wachenCount; wIdx++) {
-                String wName = p.getProperty("wache_" + wIdx + "_name", "Wache");
-                String wKennung = p.getProperty("wache_" + wIdx + "_kennung", "00");
-                Wache w = new Wache(wName, wKennung);
+            LogistikSimulator.aktiveVertraege.clear();
+            
+            LogistikSimulator.budget = Integer.parseInt(p.getProperty("budget", "25000"));
+            LogistikSimulator.xp = Integer.parseInt(p.getProperty("xp", "0"));
+            LogistikSimulator.level = Integer.parseInt(p.getProperty("level", "1"));
+            LogistikSimulator.tag = Integer.parseInt(p.getProperty("tag", "1"));
+            LogistikSimulator.inGameSekunden = Integer.parseInt(p.getProperty("inGameSekunden", "25200"));
+            LogistikSimulator.speed = Integer.parseInt(p.getProperty("speed", "1"));
+            
+            LogistikSimulator.aktuellerKredit = Integer.parseInt(p.getProperty("aktuellerKredit", "0"));
+            LogistikSimulator.taeglicheKreditRate = Integer.parseInt(p.getProperty("taeglicheKreditRate", "0"));
+
+            LogistikSimulator.techGrossabnehmer = Boolean.parseBoolean(p.getProperty("techGrossabnehmer", "false"));
+            LogistikSimulator.lehrerStufe = Integer.parseInt(p.getProperty("lehrerStufe", "0"));
+            LogistikSimulator.calltakerStufe = Integer.parseInt(p.getProperty("calltakerStufe", "0"));
+            LogistikSimulator.techKlinikCrivitz = Boolean.parseBoolean(p.getProperty("techKlinikCrivitz", "false"));
+            LogistikSimulator.techKlinikLeezen = Boolean.parseBoolean(p.getProperty("techKlinikLeezen", "false"));
+            LogistikSimulator.techKlinikHagenow = Boolean.parseBoolean(p.getProperty("techKlinikHagenow", "false"));
+
+            // Backup-Logik: Falls alte Spielstaende die globale Werkstatt/Ruheraum hatten
+            boolean legacyWerkstatt = Boolean.parseBoolean(p.getProperty("techWerkstatt", "false"));
+            boolean legacyRuheraum = Boolean.parseBoolean(p.getProperty("techRuheraum", "false"));
+
+            LogistikSimulator.cfgKrankentransport = Boolean.parseBoolean(p.getProperty("cfgKrankentransport", "true"));
+            LogistikSimulator.cfgBeschaedigung = Boolean.parseBoolean(p.getProperty("cfgBeschaedigung", "true"));
+            LogistikSimulator.cfgKrankheit = Boolean.parseBoolean(p.getProperty("cfgKrankheit", "true"));
+            LogistikSimulator.cfgAutoTransfer = Boolean.parseBoolean(p.getProperty("cfgAutoTransfer", "false"));
+            LogistikSimulator.cfgLogistikAktiv = Boolean.parseBoolean(p.getProperty("cfgLogistikAktiv", "true"));
+            
+            if (p.containsKey("miss_titel")) {
+                LogistikSimulator.aktuelleMission = new TagesMission(p.getProperty("miss_titel"), p.getProperty("miss_desc"), p.getProperty("miss_typ"), Integer.parseInt(p.getProperty("miss_ziel")), Integer.parseInt(p.getProperty("miss_geld")), Integer.parseInt(p.getProperty("miss_xp")));
+                LogistikSimulator.aktuelleMission.fortschritt = Integer.parseInt(p.getProperty("miss_fort", "0"));
+                LogistikSimulator.aktuelleMission.abgeschlossen = Boolean.parseBoolean(p.getProperty("miss_done", "false"));
+            }
+
+            int vCount = Integer.parseInt(p.getProperty("vertragsCount", "0"));
+            for(int i = 0; i < vCount; i++) {
+                Vertrag v = new Vertrag(p.getProperty("v_" + i + "_ag"), p.getProperty("v_" + i + "_desc"), p.getProperty("v_" + i + "_art"), Integer.parseInt(p.getProperty("v_" + i + "_ziel")), Integer.parseInt(p.getProperty("v_" + i + "_bel")), Integer.parseInt(p.getProperty("v_" + i + "_strafe")));
+                v.aktuelleMenge = Integer.parseInt(p.getProperty("v_" + i + "_akt", "0"));
+                LogistikSimulator.aktiveVertraege.add(v);
+            }
+
+            int wachenCount = Integer.parseInt(p.getProperty("wachenCount", "0"));
+            for (int i = 0; i < wachenCount; i++) {
+                Wache w = new Wache(p.getProperty("wache_" + i + "_name"), p.getProperty("wache_" + i + "_kennung"));
                 
-                w.fahrzeugCounter.put("HLF", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_hlf", "0")));
-                w.fahrzeugCounter.put("RTW", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_rtw", "0")));
-                w.fahrzeugCounter.put("ELW", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_elw", "0")));
-                w.fahrzeugCounter.put("DLK", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_dlk", "0")));
-                w.fahrzeugCounter.put("NEF", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_nef", "0")));
-                w.fahrzeugCounter.put("KTW", Integer.parseInt(p.getProperty("wache_" + wIdx + "_c_ktw", "0")));
-
-                for(CustomMaterial cm : LogistikSimulator.customMaterials) {
-                    w.material.put(cm.name, Integer.parseInt(p.getProperty("wache_" + wIdx + "_mat_" + cm.name, "0")));
+                int upgCount = Integer.parseInt(p.getProperty("wache_" + i + "_upgradeCount", "0"));
+                for(int u = 0; u < upgCount; u++) {
+                    String uid = p.getProperty("wache_" + i + "_upg_" + u + "_id");
+                    String uname = p.getProperty("wache_" + i + "_upg_" + u + "_name");
+                    String udesc = p.getProperty("wache_" + i + "_upg_" + u + "_desc");
+                    int ucost = Integer.parseInt(p.getProperty("wache_" + i + "_upg_" + u + "_cost", "0"));
+                    w.upgrades.add(new WachenAusbau(uid, uname, udesc, ucost));
                 }
 
-                int fzCount = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_count", "0"));
-                for(int fIdx = 0; fIdx < fzCount; fIdx++) {
-                    String kennung = p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_kennung", "Unbekannt");
-                    String typ = p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_typ", "RTW");
-                    Fahrzeug f = new Fahrzeug(kennung, typ);
-                    f.status = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_status", "1"));
-                    f.ausfallGrund = p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_ausfall", "");
-                    f.reparaturDauer = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_rep", "0"));
-                    f.anfahrtsZeit = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_anf", "0"));
-                    f.originalAnfahrt = Integer.parseInt(p.getProperty("wache_" + wIdx + "_fz_" + fIdx + "_origAnf", "0")); 
-                    w.fuhrpark.add(f);
-                }
-
-                int persCount = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_count", "0"));
-                for(int pIdx = 0; pIdx < persCount; pIdx++) {
-                    Personal pers = new Personal(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_name", "Unknown"), "");
+                int persCount = Integer.parseInt(p.getProperty("wache_" + i + "_persCount", "0"));
+                for (int j = 0; j < persCount; j++) {
+                    String prefix = "wache_" + i + "_pers_" + j;
+                    Personal pers = new Personal(p.getProperty(prefix + "_name"), "Anwaerter");
                     pers.qualifikationen.clear();
-                    String qualString = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_qual", "TM");
-                    if (!qualString.isEmpty()) {
-                        String[] parts = qualString.split(",");
-                        for(String part : parts) {
-                            pers.qualifikationen.add(part.trim());
-                        }
+                    String qualStr = p.getProperty(prefix + "_qual");
+                    if(qualStr != null && !qualStr.isEmpty()) {
+                        for(String q : qualStr.split(",")) pers.qualifikationen.add(q);
                     }
-                    pers.status = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_stat", "Bereit");
-                    pers.geplanterStatus = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planStat", "Bereit");
-                    pers.zugewiesenesFahrzeug = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_fz", "Keines");
-                    pers.geplantesFahrzeug = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_plan", pers.zugewiesenesFahrzeug);
+                    pers.status = p.getProperty(prefix + "_status");
+                    pers.schichtenMonat = Integer.parseInt(p.getProperty(prefix + "_schichten", "0"));
+                    pers.urlaubStart = Integer.parseInt(p.getProperty(prefix + "_uStart", "-1"));
+                    pers.urlaubEnd = Integer.parseInt(p.getProperty(prefix + "_uEnd", "-1"));
+                    pers.krankBis = Integer.parseInt(p.getProperty(prefix + "_kBis", "-1"));
+                    pers.zugewiesenesFahrzeug = p.getProperty(prefix + "_fzg", "Keines");
+                    pers.geplanterStatus = p.getProperty(prefix + "_gStat", "Bereit");
+                    pers.geplantesFahrzeug = p.getProperty(prefix + "_gFzg", "Keines");
                     
-                    pers.krankBis = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_kBis", "-1"));
-                    pers.urlaubStart = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_uStart", "-1"));
-                    pers.urlaubEnd = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_uEnd", "-1"));
+                    String[] akt = p.getProperty(prefix + "_planAkt", "").split(",");
+                    if(akt.length == 31) pers.planAktuellerMonat = akt;
+                    String[] nxt = p.getProperty(prefix + "_planNext", "").split(",");
+                    if(nxt.length == 31) pers.planNaechsterMonat = nxt;
                     
-                    pers.schichtenMonat = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_schichten", "0"));
-                    pers.lehrgangDauerSec = Integer.parseInt(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lDauer", "0"));
-                pers.lehrgangThema = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_lThema", "");
-                pers.praeferenzGesendet = Boolean.parseBoolean(p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_praef", "false"));
-                
-                // NEU: Laden der Monats-Plaene (31 Tage x 2)
-                String pAkt = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planAkt", "");
-                if (!pAkt.isEmpty()) {
-                    String[] parts = pAkt.split(",");
-                    for(int i = 0; i < Math.min(parts.length, 31); i++) pers.planAktuellerMonat[i] = parts[i];
+                    pers.eigenschaften.clear();
+                    int eigCount = Integer.parseInt(p.getProperty(prefix + "_eigCount", "0"));
+                    for(int x = 0; x < eigCount; x++) {
+                        String eName = p.getProperty(prefix + "_eig_" + x + "_n");
+                        String eDesc = p.getProperty(prefix + "_eig_" + x + "_d");
+                        String eTyp = p.getProperty(prefix + "_eig_" + x + "_t");
+                        double eVal = Double.parseDouble(p.getProperty(prefix + "_eig_" + x + "_e", "1.0"));
+                        pers.eigenschaften.add(new MitarbeiterEigenschaft(eName, eDesc, eTyp, eVal));
+                    }
+                    w.personalPool.add(pers);
                 }
                 
-                String pNaechst = p.getProperty("wache_" + wIdx + "_pers_" + pIdx + "_planNaechst", "");
-                if (!pNaechst.isEmpty()) {
-                    String[] parts = pNaechst.split(",");
-                    for(int i = 0; i < Math.min(parts.length, 31); i++) pers.planNaechsterMonat[i] = parts[i];
+                // Backup-Zuweisung fuer globale Upgrades
+                if (i == 0) {
+                    boolean hasW = false, hasR = false;
+                    for(WachenAusbau wa : w.upgrades) { if(wa.id.equals("werkstatt")) hasW = true; if(wa.id.equals("ruheraum")) hasR = true; }
+                    if(legacyWerkstatt && !hasW) w.upgrades.add(new WachenAusbau("werkstatt", "Lokale Werkstatt", "Reparaturen 50% guenstiger", 10000));
+                    if(legacyRuheraum && !hasR) w.upgrades.add(new WachenAusbau("ruheraum", "Lokaler Ruheraum", "Krankheitsrate sinkt", 15000));
                 }
                 
-                w.personalPool.add(pers);
+                LogistikSimulator.wachen.add(w);
             }
-            LogistikSimulator.wachen.add(w);
-            }
-
-            LogistikSimulator.postfach.clear();
-            int mCount = Integer.parseInt(p.getProperty("mail_count", "0"));
-            for(int i = 0; i < mCount; i++) {
-                String abs = p.getProperty("mail_"+i+"_abs", "");
-                String bet = p.getProperty("mail_"+i+"_bet", "");
-                String txt = p.getProperty("mail_"+i+"_txt", "").replace("||", "\n"); 
-                String typ = p.getProperty("mail_"+i+"_typ", "");
-                boolean gel = Boolean.parseBoolean(p.getProperty("mail_"+i+"_gel", "false"));
-                String pName = p.getProperty("mail_"+i+"_pName", "");
-                int start = Integer.parseInt(p.getProperty("mail_"+i+"_start", "-1"));
-                int end = Integer.parseInt(p.getProperty("mail_"+i+"_end", "-1"));
-                
-                Personal foundP = null;
-                for(Wache w : LogistikSimulator.wachen) {
-                    for(Personal pers : w.personalPool) {
-                        if(pers.name.equals(pName)) { foundP = pers; break; }
-                    }
-                    if(foundP != null) break;
-                }
-                
-                Email m = new Email(abs, bet, txt, typ, foundP, start, end);
-                m.gelesen = gel;
-                LogistikSimulator.postfach.add(m);
-            }
-
-            if (LogistikSimulator.vorlagenPool.isEmpty() || LogistikSimulator.customMaterials.isEmpty() || LogistikSimulator.wachen.isEmpty()) {
-                LogistikSimulator.initStandardDaten();
-            }
-
-            for(Wache w : LogistikSimulator.wachen) {
-                for(Fahrzeug f : w.fuhrpark) {
-                    if (f.status == 3 || f.status == 4) {
-                        f.status = 2; 
-                        f.aktuellerEinsatz = null;
-                        f.anfahrtsZeit = 0;
-                    }
-                    
-                    boolean persDa = LogistikSimulator.hatGenugPersonal(f);
-                    boolean matDa = true;
-                    if (LogistikSimulator.cfgLogistikAktiv) {
-                        for(CustomMaterial cm : LogistikSimulator.customMaterials) {
-                            if(w.material.getOrDefault(cm.name, 0) < 5) matDa = false;
-                        }
-                    }
-
-                    if (f.status == 6 && f.ausfallGrund.startsWith("Material")) {
-                        if (matDa && persDa) { f.status = 2; f.ausfallGrund = ""; }
-                    }
-                    
-                    if (f.status == 1 || f.status == 2) {
-                        if (!persDa) { f.status = 6; f.ausfallGrund = "Personal fehlt"; }
-                        else if (!matDa) { f.status = 6; f.ausfallGrund = "Material fehlt"; }
-                    }
-                }
-            }
-
             return true;
-        } catch (Exception e) { return false; }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }

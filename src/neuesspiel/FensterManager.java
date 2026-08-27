@@ -49,8 +49,8 @@ public class FensterManager {
     }
 
     public static void oeffnePersonalHauptmenu() {
-        JDialog d = createFramelessDialog("Personalwesen", 400, 300);
-        JPanel content = new JPanel(new GridLayout(5, 1, 10, 10));
+        JDialog d = createFramelessDialog("Personalwesen", 400, 350);
+        JPanel content = new JPanel(new GridLayout(6, 1, 10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35, 35, 35));
 
@@ -59,8 +59,9 @@ public class FensterManager {
         JButton b3 = new JButton("Personal einstellen (500 EURO)"); b3.addActionListener(e -> { d.dispose(); personalEinstellen(); });
         JButton b4 = new JButton("Personal weiterbilden"); b4.addActionListener(e -> { d.dispose(); oeffnePersonalWeiterbildung(); });
         JButton b5 = new JButton("Leihkraft anfordern (250 EURO)"); b5.addActionListener(e -> { d.dispose(); leihkraftAnfordern(); });
+        JButton b6 = new JButton("Personal umstationieren"); b6.addActionListener(e -> { d.dispose(); oeffnePersonalTransfer(); });
 
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5);
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
@@ -367,17 +368,12 @@ public class FensterManager {
             }
         });
 
-        // NEU: Schließen-Button erstellen und hinzufügen
         JButton btnClose = new JButton("Schliessen");
         btnClose.addActionListener(e -> d.dispose());
 
         pnlBtns.add(btnGenehmigen); pnlBtns.add(btnTM); pnlBtns.add(btnRS); pnlBtns.add(btnLehrgang); 
-        pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); 
-        pnlBtns.add(btnClose); // <--- Hier wird er unten rechts angehängt!
+        pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); pnlBtns.add(btnClose);
         
-        d.add(pnlBtns, BorderLayout.SOUTH);
-
-        pnlBtns.add(btnGenehmigen); pnlBtns.add(btnTM); pnlBtns.add(btnRS); pnlBtns.add(btnLehrgang); pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen);
         d.add(pnlBtns, BorderLayout.SOUTH);
 
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(list), new JScrollPane(txt));
@@ -522,15 +518,77 @@ public class FensterManager {
     }
     
     public static void oeffneWachenAusbau() {
-        JDialog d = createFramelessDialog("Wachen & Gebaeude", 600, 450);
-        JPanel content = new JPanel(new GridLayout(7, 1, 10, 10));
+        JDialog d = createFramelessDialog("Wachen & Gebaeude", 650, 500);
+        JPanel content = new JPanel(new BorderLayout(10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35, 35, 35));
         
-        JPanel p0 = new JPanel(new BorderLayout()); p0.setBackground(new Color(35,35,35));
-        JLabel lblWachenInfo = new JLabel("Neue Wache bauen (Aktuell: " + wachen.size() + " / Erlaubt: " + getMaxWachenErlaubt() + ")"); lblWachenInfo.setForeground(Color.WHITE);
-        JButton b0 = new JButton("Wache gruenden (10.000 EURO)");
-        b0.addActionListener(e -> {
+        // --- 1. OBERER BEREICH: LOKALE WACHEN-UPGRADES ---
+        JPanel pnlLokaleWache = new JPanel(new BorderLayout(5, 5));
+        pnlLokaleWache.setBackground(new Color(35, 35, 35));
+        pnlLokaleWache.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Lokale Wachen-Ausbauten", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
+        
+        JPanel pnlWahl = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        pnlWahl.setBackground(new Color(35, 35, 35));
+        JLabel lblWahl = new JLabel("Wache auswaehlen:"); lblWahl.setForeground(Color.WHITE);
+        JComboBox<String> cbWachen = new JComboBox<>();
+        for (Wache w : wachen) cbWachen.addItem(w.name);
+        pnlWahl.add(lblWahl); pnlWahl.add(cbWachen);
+        pnlLokaleWache.add(pnlWahl, BorderLayout.NORTH);
+        
+        JPanel pnlUpgrades = new JPanel(new GridLayout(3, 1, 5, 5));
+        pnlUpgrades.setBackground(new Color(35, 35, 35));
+        
+        JButton btnWerkstatt = new JButton("Lokale Werkstatt (10.000 EUR)");
+        JButton btnRuheraum = new JButton("Lokaler Ruheraum (15.000 EUR)");
+        JButton btnLogistik = new JButton("Logistik-Zentrum (12.500 EUR)");
+        
+        pnlUpgrades.add(btnWerkstatt); pnlUpgrades.add(btnRuheraum); pnlUpgrades.add(btnLogistik);
+        pnlLokaleWache.add(pnlUpgrades, BorderLayout.CENTER);
+        
+        Runnable updateLocalButtons = () -> {
+            int wIndex = cbWachen.getSelectedIndex();
+            if (wIndex == -1) return;
+            Wache target = wachen.get(wIndex);
+            
+            boolean hatW = false, hatR = false, hatL = false;
+            if (target.upgrades != null) {
+                for (WachenAusbau a : target.upgrades) {
+                    if (a.id.equals("werkstatt")) hatW = true;
+                    if (a.id.equals("ruheraum")) hatR = true;
+                    if (a.id.equals("logistik")) hatL = true;
+                }
+            }
+            
+            if (hatW) { btnWerkstatt.setText("Lokale Werkstatt (Gekauft)"); btnWerkstatt.setEnabled(false); }
+            else { btnWerkstatt.setText("Lokale Werkstatt (10.000 EUR)"); btnWerkstatt.setEnabled(true); }
+            
+            if (hatR) { btnRuheraum.setText("Lokaler Ruheraum (Gekauft)"); btnRuheraum.setEnabled(false); }
+            else { btnRuheraum.setText("Lokaler Ruheraum (15.000 EUR)"); btnRuheraum.setEnabled(true); }
+            
+            if (hatL) { btnLogistik.setText("Logistik-Zentrum (Gekauft)"); btnLogistik.setEnabled(false); }
+            else { btnLogistik.setText("Logistik-Zentrum (12.500 EUR)"); btnLogistik.setEnabled(true); }
+        };
+        updateLocalButtons.run();
+        cbWachen.addActionListener(e -> updateLocalButtons.run());
+        
+        btnWerkstatt.addActionListener(e -> {
+            if (budget >= 10000) { budget -= 10000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("werkstatt", "Lokale Werkstatt", "Reparaturen 50% guenstiger", 10000)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+        });
+        btnRuheraum.addActionListener(e -> {
+            if (budget >= 15000) { budget -= 15000; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("ruheraum", "Lokaler Ruheraum", "Krankheitsrate sinkt", 15000)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+        });
+        btnLogistik.addActionListener(e -> {
+            if (budget >= 12500) { budget -= 12500; wachen.get(cbWachen.getSelectedIndex()).upgrades.add(new WachenAusbau("logistik", "Logistik-Zentrum", "Mehr Lagerplatz", 12500)); updateLocalButtons.run(); uiAktualisieren(getUhrzeit()); }
+        });
+        
+        // --- 2. UNTERER BEREICH: GLOBALE LEITSTELLEN-UPGRADES ---
+        JPanel pnlGlobal = new JPanel(new GridLayout(5, 1, 5, 5));
+        pnlGlobal.setBackground(new Color(35, 35, 35));
+        pnlGlobal.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Zentrale (Leitstelle & Verwaltung)", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
+        
+        JButton btnGruenden = new JButton("Neue Wache gruenden (10.000 EURO) [" + wachen.size() + "/" + getMaxWachenErlaubt() + "]");
+        btnGruenden.addActionListener(e -> {
             if(wachen.size() >= getMaxWachenErlaubt()) { JOptionPane.showMessageDialog(d, "Dein Level ist zu niedrig fuer eine weitere Wache!"); return; }
             if(budget >= 10000) {
                 String name = JOptionPane.showInputDialog(d, "Name der neuen Wache:");
@@ -543,61 +601,38 @@ public class FensterManager {
                 }
             } else { JOptionPane.showMessageDialog(d, "Zu wenig Geld!"); }
         });
-        p0.add(lblWachenInfo, BorderLayout.CENTER); p0.add(b0, BorderLayout.EAST);
-
-        JPanel p1 = new JPanel(new BorderLayout()); p1.setBackground(new Color(35,35,35));
-        JLabel l1 = new JLabel("Eigene Werkstatt (Reparaturen 50% guenstiger)"); l1.setForeground(Color.WHITE); p1.add(l1, BorderLayout.CENTER);
-        JButton b1 = new JButton(techWerkstatt ? "Gekauft" : "Kaufen (10.000 EURO)"); b1.setEnabled(!techWerkstatt);
-        b1.addActionListener(e -> { if(budget >= 10000) { budget -= 10000; techWerkstatt = true; d.dispose(); uiAktualisieren(getUhrzeit()); } });
-        p1.add(b1, BorderLayout.EAST);
-
-        JPanel p2 = new JPanel(new BorderLayout()); p2.setBackground(new Color(35,35,35));
-        JLabel l2 = new JLabel("Ruheraum (Krankheitsrate sinkt um 50%)"); l2.setForeground(Color.WHITE); p2.add(l2, BorderLayout.CENTER);
-        JButton b2 = new JButton(techRuheraum ? "Gekauft" : "Kaufen (15.000 EURO)"); b2.setEnabled(!techRuheraum);
-        b2.addActionListener(e -> { if(budget >= 15000) { budget -= 15000; techRuheraum = true; d.dispose(); uiAktualisieren(getUhrzeit()); } });
-        p2.add(b2, BorderLayout.EAST);
-
-        JPanel p3 = new JPanel(new BorderLayout()); p3.setBackground(new Color(35,35,35));
-        JLabel l3 = new JLabel("Grossabnehmer (Lager-Einkaeufe 20% guenstiger)"); l3.setForeground(Color.WHITE); p3.add(l3, BorderLayout.CENTER);
-        JButton b3 = new JButton(techGrossabnehmer ? "Gekauft" : "Kaufen (20.000 EURO)"); b3.setEnabled(!techGrossabnehmer);
-        b3.addActionListener(e -> { if(budget >= 20000) { budget -= 20000; techGrossabnehmer = true; d.dispose(); uiAktualisieren(getUhrzeit()); } });
-        p3.add(b3, BorderLayout.EAST);
+        pnlGlobal.add(btnGruenden);
         
-        JPanel p4 = new JPanel(new BorderLayout()); p4.setBackground(new Color(35,35,35));
-        JLabel lblLehrer = new JLabel("Lehrer schulen (Lehrgaenge 10% schneller. Aktuell: Stufe " + lehrerStufe + "/5)"); lblLehrer.setForeground(Color.WHITE);
-        p4.add(lblLehrer, BorderLayout.CENTER);
+        JButton b3 = new JButton(techGrossabnehmer ? "Grossabnehmer (Gekauft)" : "Grossabnehmer (Rabatt im Lager) (20.000 EURO)"); b3.setEnabled(!techGrossabnehmer);
+        b3.addActionListener(e -> { if(budget >= 20000) { budget -= 20000; techGrossabnehmer = true; d.dispose(); uiAktualisieren(getUhrzeit()); } });
+        pnlGlobal.add(b3);
+        
         int nextLevelReq = (lehrerStufe + 1) * 2;
-        JButton b4 = new JButton(lehrerStufe >= 5 ? "Maximalstufe erreicht" : "Stufe " + (lehrerStufe+1) + " Kaufen (5000 EURO, ab Level " + nextLevelReq + ")");
+        JButton b4 = new JButton(lehrerStufe >= 5 ? "Lehrer Max. (Stufe 5)" : "Lehrer schulen Stufe " + (lehrerStufe+1) + " (5000 EURO, ab Lvl " + nextLevelReq + ")");
         b4.setEnabled(lehrerStufe < 5 && level >= nextLevelReq);
         b4.addActionListener(e -> { if(budget >= 5000) { budget -= 5000; lehrerStufe++; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
-        p4.add(b4, BorderLayout.EAST);
+        pnlGlobal.add(b4);
 
-        JPanel p5 = new JPanel(new BorderLayout()); p5.setBackground(new Color(35,35,35));
-        JLabel lblCalltaker = new JLabel(); lblCalltaker.setForeground(Color.WHITE);
         JButton b5 = new JButton();
-        if(calltakerStufe == 0) { lblCalltaker.setText("Calltaker (Basis: Dispo Lvl 1-2. Upgrade ab Lvl 30)"); b5.setText("Kaufen (30.000 EURO, ab Lvl 20)"); b5.setEnabled(level >= 20); } 
-        else if(calltakerStufe == 1) { lblCalltaker.setText("Calltaker (Basis: Dispo Lvl 1-2)"); b5.setText("Erweitern (20.000 EURO, ab Lvl 30)"); b5.setEnabled(level >= 30); } 
-        else { lblCalltaker.setText("Calltaker (Maximal: Dispo Lvl 1-4 & Auto-Klinik)"); b5.setText("Maximalstufe"); b5.setEnabled(false); }
+        if(calltakerStufe == 0) { b5.setText("Calltaker Einstellen (30.000 EURO, ab Lvl 20)"); b5.setEnabled(level >= 20); } 
+        else if(calltakerStufe == 1) { b5.setText("Calltaker Erweitern (20.000 EURO, ab Lvl 30)"); b5.setEnabled(level >= 30); } 
+        else { b5.setText("Calltaker Maximalstufe erreicht"); b5.setEnabled(false); }
         b5.addActionListener(e -> { int cost = calltakerStufe == 0 ? 30000 : 20000; if(budget >= cost) { budget -= cost; calltakerStufe++; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
-        p5.add(lblCalltaker, BorderLayout.CENTER); p5.add(b5, BorderLayout.EAST);
-
-        content.add(p0); content.add(p1); content.add(p2); content.add(p3); content.add(p4); content.add(p5);
+        pnlGlobal.add(b5);
         
         JPanel pnlKliniken = new JPanel(new GridLayout(1, 3, 5, 5)); pnlKliniken.setBackground(new Color(35,35,35));
-        pnlKliniken.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Krankenhaeuser (Zielorte fuer RTWs)", javax.swing.border.TitledBorder.DEFAULT_JUSTIFICATION, javax.swing.border.TitledBorder.DEFAULT_POSITION, null, Color.WHITE));
-        
-        JButton btnCrivitz = new JButton(techKlinikCrivitz ? "Crivitz (Gekauft)" : "Klinik Crivitz (5000 EURO)"); btnCrivitz.setEnabled(!techKlinikCrivitz && level >= 10);
+        JButton btnCrivitz = new JButton(techKlinikCrivitz ? "Crivitz (Gekauft)" : "Klinik Crivitz (5000)"); btnCrivitz.setEnabled(!techKlinikCrivitz && level >= 10);
         btnCrivitz.addActionListener(e -> { if(budget >= 5000) { budget -= 5000; techKlinikCrivitz = true; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
-        
-        JButton btnLeezen = new JButton(techKlinikLeezen ? "Leezen (Gekauft)" : "Klinik Leezen (10.000 EURO)"); btnLeezen.setEnabled(!techKlinikLeezen && level >= 20);
+        JButton btnLeezen = new JButton(techKlinikLeezen ? "Leezen (Gekauft)" : "Klinik Leezen (10000)"); btnLeezen.setEnabled(!techKlinikLeezen && level >= 20);
         btnLeezen.addActionListener(e -> { if(budget >= 10000) { budget -= 10000; techKlinikLeezen = true; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
-
-        JButton btnHagenow = new JButton(techKlinikHagenow ? "Hagenow (Gekauft)" : "Klinik Hagenow (20.000 EURO)"); btnHagenow.setEnabled(!techKlinikHagenow && level >= 30);
+        JButton btnHagenow = new JButton(techKlinikHagenow ? "Hagenow (Gekauft)" : "Klinik Hagenow (20000)"); btnHagenow.setEnabled(!techKlinikHagenow && level >= 30);
         btnHagenow.addActionListener(e -> { if(budget >= 20000) { budget -= 20000; techKlinikHagenow = true; d.dispose(); oeffneWachenAusbau(); uiAktualisieren(getUhrzeit()); } });
-        
         pnlKliniken.add(btnCrivitz); pnlKliniken.add(btnLeezen); pnlKliniken.add(btnHagenow);
-        content.add(pnlKliniken);
+        pnlGlobal.add(pnlKliniken);
 
+        content.add(pnlLokaleWache, BorderLayout.NORTH);
+        content.add(pnlGlobal, BorderLayout.CENTER);
+        
         d.add(content, BorderLayout.CENTER);
         d.setVisible(true);
     }
@@ -1150,7 +1185,7 @@ public class FensterManager {
                         for (Fahrzeug f : gefundene) { 
                             int baseTime = 30; 
                             for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { baseTime = 60; break; } } }
-                            f.status = 3; f.anfahrtsZeit = baseTime * multiplier; f.aktuellerEinsatz = ein; 
+                            f.status = 3; f.anfahrtsZeit = (int)(baseTime * multiplier * getSpeedMultiplier(f)); f.aktuellerEinsatz = ein; 
                         } 
                     } 
                     uiAktualisieren(getUhrzeit()); d.dispose();
@@ -1190,4 +1225,82 @@ public class FensterManager {
         d.add(btnPanel, BorderLayout.SOUTH); d.setVisible(true);
     }
     
+    public static void oeffnePersonalTransfer() {
+        if(wachen.size() < 2) { JOptionPane.showMessageDialog(frame, "Du brauchst mindestens zwei Wachen fuer einen Transfer!"); return; }
+        
+        JDialog d = createFramelessDialog("Personal transferieren", 450, 300);
+        JPanel content = new JPanel(new GridLayout(4, 2, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35,35,35));
+
+        JComboBox<String> cbPers = new JComboBox<>();
+        ArrayList<Personal> pList = new ArrayList<>();
+        ArrayList<Wache> wList = new ArrayList<>(); // Merkt sich, von welcher Wache er kommt
+        
+        for(Wache w : wachen) {
+            for(Personal p : w.personalPool) {
+                pList.add(p);
+                wList.add(w);
+                cbPers.addItem(p.name + " (" + w.name + ")");
+            }
+        }
+
+        JComboBox<String> cbZiel = new JComboBox<>();
+        for(Wache w : wachen) cbZiel.addItem(w.name);
+
+        JComboBox<String> cbArt = new JComboBox<>(new String[]{"Dauerhaft (Versetzung)", "Temporaer (Bis Tagesabschluss)"});
+
+        JButton btnTransfer = new JButton("Transferieren");
+        btnTransfer.addActionListener(e -> {
+            int pIndex = cbPers.getSelectedIndex();
+            int zielIndex = cbZiel.getSelectedIndex();
+            if(pIndex == -1 || zielIndex == -1) return;
+
+            Personal p = pList.get(pIndex);
+            Wache alteWache = wList.get(pIndex);
+            Wache zielWache = wachen.get(zielIndex);
+
+            if(alteWache == zielWache) {
+                JOptionPane.showMessageDialog(d, "Die Person arbeitet bereits auf dieser Wache!"); return;
+            }
+            if(p.status.equals("Lehrgang")) {
+                JOptionPane.showMessageDialog(d, "Mitarbeiter ist auf Lehrgang und kann nicht transferiert werden!"); return;
+            }
+
+            // Von alter Wache entfernen und zu neuer hinzufuegen
+            alteWache.personalPool.remove(p);
+            zielWache.personalPool.add(p);
+            
+            // Fahrzeugzuweisung zuruecksetzen (Das Auto bleibt ja auf der alten Wache)
+            p.zugewiesenesFahrzeug = "Keines";
+            p.geplantesFahrzeug = "Keines";
+
+            // Pruefen, ob temporaer
+            if(cbArt.getSelectedIndex() == 1) { 
+                // Temporaer: In die Gedächtnis-Liste eintragen
+                if(!LogistikSimulator.verliehenesPersonal.containsKey(p)) {
+                    LogistikSimulator.verliehenesPersonal.put(p, alteWache);
+                }
+            } else { 
+                // Dauerhaft: Falls er temporaer war, ist er jetzt fest dort
+                LogistikSimulator.verliehenesPersonal.remove(p);
+            }
+
+            JOptionPane.showMessageDialog(d, p.name + " wurde erfolgreich nach " + zielWache.name + " umstationiert.\nAchtung: Bitte teile die Person im Schichtplan neu einem Fahrzeug zu!");
+            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+            d.dispose();
+        });
+
+        JLabel l1 = new JLabel("Mitarbeiter waehlen:"); l1.setForeground(Color.WHITE);
+        JLabel l2 = new JLabel("Ziel-Wache:"); l2.setForeground(Color.WHITE);
+        JLabel l3 = new JLabel("Art des Transfers:"); l3.setForeground(Color.WHITE);
+
+        content.add(l1); content.add(cbPers);
+        content.add(l2); content.add(cbZiel);
+        content.add(l3); content.add(cbArt);
+        content.add(new JLabel("")); content.add(btnTransfer);
+
+        d.add(content, BorderLayout.CENTER);
+        d.setVisible(true);
+    }
 }
