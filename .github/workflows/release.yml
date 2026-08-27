@@ -20,7 +20,7 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '8' # Falls du z.B. noch Java 8 nutzt, mache hier eine '8' draus.
+          java-version: '26' # Falls du z.B. noch Java 8 nutzt, mache hier eine '8' draus.
 
       - name: 🔨 JAR-Datei bauen (mit NetBeans Ant)
         run: ant -f build.xml clean jar
