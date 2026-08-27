@@ -7,11 +7,6 @@ import java.util.ArrayList;
 
 public class SpeicherManager {
 
-    // NEU: Diese Methode sucht den sicheren Windows-Benutzerordner (C:\Users\DeinName\)
-    public static String getSicherenSpeicherPfad() {
-        return System.getProperty("user.home") + java.io.File.separator + "FeuerwehrVerwaltung_Savegame.properties";
-    }
-
     private static void setSafe(Properties p, String key, String val) {
         if (key != null) {
             p.setProperty(key, val != null ? val : "");
@@ -39,11 +34,9 @@ public class SpeicherManager {
 
     public static void speichern(String dateiPfad) {
         System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
+        System.out.println("Speichere in Pfad: " + dateiPfad);
         
-        // HIER DER TRICK: Wir ignorieren den uebergebenen Pfad und nutzen unseren sicheren Pfad!
-        String echterPfad = getSicherenSpeicherPfad();
-        
-        try (FileOutputStream out = new FileOutputStream(echterPfad);
+        try (FileOutputStream out = new FileOutputStream(dateiPfad);
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
              
             Properties p = new Properties();
@@ -225,20 +218,30 @@ public class SpeicherManager {
                         setSafe(p, prefix + "_gStat", pers.geplanterStatus);
                         setSafe(p, prefix + "_gFzg", pers.geplantesFahrzeug);
                         
-                        // FIX: Fehlende Eigenschaften mit abspeichern!
                         setSafe(p, prefix + "_praef", String.valueOf(pers.praeferenzGesendet));
                         setSafe(p, prefix + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
                         setSafe(p, prefix + "_lThema", pers.lehrgangThema != null ? pers.lehrgangThema : "");
                         
-                        // FIX: Umwandlung für den Plan absichern, damit null-Werte nicht crashen
-                        if (pers.planAktuellerMonat != null) {
-                            for(int d=0; d<31; d++) if(pers.planAktuellerMonat[d] == null) pers.planAktuellerMonat[d] = "Frei";
-                            setSafe(p, prefix + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                        // FIX: Extrem sicheres Speichern des Schichtplans (fuellt immer auf exakt 31 Tage auf!)
+                        String[] sAkt = new String[31];
+                        for(int d=0; d<31; d++) {
+                            if (pers.planAktuellerMonat != null && d < pers.planAktuellerMonat.length && pers.planAktuellerMonat[d] != null) {
+                                sAkt[d] = pers.planAktuellerMonat[d];
+                            } else {
+                                sAkt[d] = "Frei";
+                            }
                         }
-                        if (pers.planNaechsterMonat != null) {
-                            for(int d=0; d<31; d++) if(pers.planNaechsterMonat[d] == null) pers.planNaechsterMonat[d] = "Frei";
-                            setSafe(p, prefix + "_planNext", String.join(",", pers.planNaechsterMonat));
+                        setSafe(p, prefix + "_planAkt", String.join(",", sAkt));
+                        
+                        String[] sNxt = new String[31];
+                        for(int d=0; d<31; d++) {
+                            if (pers.planNaechsterMonat != null && d < pers.planNaechsterMonat.length && pers.planNaechsterMonat[d] != null) {
+                                sNxt[d] = pers.planNaechsterMonat[d];
+                            } else {
+                                sNxt[d] = "Frei";
+                            }
                         }
+                        setSafe(p, prefix + "_planNext", String.join(",", sNxt));
                         
                         if (pers.eigenschaften != null) {
                             setSafe(p, prefix + "_eigCount", String.valueOf(pers.eigenschaften.size()));
@@ -259,12 +262,9 @@ public class SpeicherManager {
                 }
             }
 
-            for (String key : p.stringPropertyNames()) {
-                System.out.println("SCHREIBE: " + key + " = " + p.getProperty(key));
-            }
-            System.out.println("=== [DEBUG] SPEICHER-VORGANG BEENDET ===\n");
-
             p.store(writer, "Logistik Simulator Savegame");
+            System.out.println("=== [DEBUG] SPEICHER-VORGANG BEENDET ===\n");
+            
         } catch (Exception e) {
             System.out.println("!!! FEHLER BEIM SPEICHERN: " + e.getMessage());
             e.printStackTrace();
@@ -273,11 +273,10 @@ public class SpeicherManager {
     }
 
     public static boolean laden(String dateiPfad) {
-        String echterPfad = getSicherenSpeicherPfad();
-        File file = new File(echterPfad);
+        File file = new File(dateiPfad);
         
         if (!file.exists()) {
-            System.out.println("[DEBUG] Keine Savegame Datei unter " + echterPfad + " gefunden.");
+            System.out.println("[DEBUG] Keine Savegame Datei unter " + dateiPfad + " gefunden.");
             return false;
         }
 
@@ -288,10 +287,6 @@ public class SpeicherManager {
             p.load(reader);
 
             System.out.println("\n=== [DEBUG] LADE-VORGANG GESTARTET ===");
-            for (String key : p.stringPropertyNames()) {
-                System.out.println("GELADEN: " + key + " = " + p.getProperty(key));
-            }
-            System.out.println("=== [DEBUG] LADE-VORGANG BEENDET ===\n");
 
             LogistikSimulator.wachen.clear();
             LogistikSimulator.aktiveVertraege.clear();
@@ -440,7 +435,7 @@ public class SpeicherManager {
                     pers.qualifikationen.clear();
                     String qualStr = p.getProperty(prefix + "_qual", "");
                     if(!qualStr.isEmpty()) {
-                        for(String q : qualStr.split(",")) pers.qualifikationen.add(q);
+                        for(String q : qualStr.split(",")) if(!q.trim().isEmpty()) pers.qualifikationen.add(q.trim());
                     }
                     pers.status = p.getProperty(prefix + "_status", "Frei");
                     pers.schichtenMonat = parseIntSafe(p.getProperty(prefix + "_schichten"), 0);
@@ -451,39 +446,38 @@ public class SpeicherManager {
                     pers.geplanterStatus = p.getProperty(prefix + "_gStat", "Bereit");
                     pers.geplantesFahrzeug = p.getProperty(prefix + "_gFzg", "Keines");
                     
-                    // FIX: Die zuvor fehlenden Variablen hier laden!
                     pers.praeferenzGesendet = parseBoolSafe(p.getProperty(prefix + "_praef"), false);
                     pers.lehrgangDauerSec = parseIntSafe(p.getProperty(prefix + "_lDauer"), 0);
                     pers.lehrgangThema = p.getProperty(prefix + "_lThema", "");
                     
-                    // FIX: split mit "-1" rettet den Schichtplan, auch wenn das Array mit "Frei" / leer am Ende aufhört
+                    // FIX: Kugelsicheres Laden des Dienstplans (ignoriert fehlerhafte Längen komplett)
                     String planAktStr = p.getProperty(prefix + "_planAkt", "");
+                    pers.planAktuellerMonat = new String[31];
                     if(!planAktStr.isEmpty()) {
                         String[] akt = planAktStr.split(",", -1);
-                        if(akt.length == 31) {
-                            for(int d=0; d<31; d++) if(akt[d].equals("null") || akt[d].isEmpty()) akt[d] = "Frei";
-                            pers.planAktuellerMonat = akt; 
-                        } else {
-                            pers.planAktuellerMonat = new String[31];
-                            for(int d=0; d<31; d++) pers.planAktuellerMonat[d] = "Frei";
+                        for(int d=0; d<31; d++) {
+                            if(d < akt.length && akt[d] != null && !akt[d].isEmpty() && !akt[d].equals("null")) {
+                                pers.planAktuellerMonat[d] = akt[d];
+                            } else {
+                                pers.planAktuellerMonat[d] = "Frei";
+                            }
                         }
                     } else {
-                        pers.planAktuellerMonat = new String[31];
                         for(int d=0; d<31; d++) pers.planAktuellerMonat[d] = "Frei";
                     }
                     
                     String planNextStr = p.getProperty(prefix + "_planNext", "");
+                    pers.planNaechsterMonat = new String[31];
                     if(!planNextStr.isEmpty()) {
                         String[] nxt = planNextStr.split(",", -1);
-                        if(nxt.length == 31) {
-                            for(int d=0; d<31; d++) if(nxt[d].equals("null") || nxt[d].isEmpty()) nxt[d] = "Frei";
-                            pers.planNaechsterMonat = nxt; 
-                        } else {
-                            pers.planNaechsterMonat = new String[31];
-                            for(int d=0; d<31; d++) pers.planNaechsterMonat[d] = "Frei";
+                        for(int d=0; d<31; d++) {
+                            if(d < nxt.length && nxt[d] != null && !nxt[d].isEmpty() && !nxt[d].equals("null")) {
+                                pers.planNaechsterMonat[d] = nxt[d];
+                            } else {
+                                pers.planNaechsterMonat[d] = "Frei";
+                            }
                         }
                     } else {
-                        pers.planNaechsterMonat = new String[31];
                         for(int d=0; d<31; d++) pers.planNaechsterMonat[d] = "Frei";
                     }
                     
@@ -538,6 +532,7 @@ public class SpeicherManager {
                 LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
             }
             
+            System.out.println("=== [DEBUG] LADE-VORGANG ERFOLGREICH BEENDET ===\n");
             return true;
         } catch (Exception e) {
             System.out.println("!!! FEHLER BEIM LADEN: " + e.getMessage());
