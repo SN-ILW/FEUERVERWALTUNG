@@ -121,7 +121,8 @@ public class LogistikSimulator {
             UIManager.put("TableHeader.foreground", Color.WHITE);
         } catch (Exception e) {}
         
-        if (!SpeicherManager.laden("")) initStandardDaten();
+        if (!new File("savegame.properties").exists()) initStandardDaten();
+        else if (!SpeicherManager.laden("savegame.properties")) initStandardDaten();
         
         frame = new JFrame("FeuerwehrVerwaltung");
         frame.setUndecorated(true);
