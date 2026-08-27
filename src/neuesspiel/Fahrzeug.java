@@ -20,8 +20,10 @@ public class Fahrzeug {
         else if(typ.equals("KTW")){ reqRS=2; }
         else if(typ.equals("NEF")){ reqNA=1; reqNFS=1; }
         else if(typ.equals("HLF")){ reqGF=1; reqMA=1; reqTF=2; reqTM=2; }
-        else if(typ.equals("DLK")){ reqGF=1; reqMA=1; reqTM=1; }
+        else if(typ.equals("DLK")){ reqTF=1; reqMA=1; }
         else if(typ.equals("ELW")){ reqEL=1; reqFüAs=1; }
+        else if(typ.equals("TLF")){ reqTF=1; reqMA=1; }
+        else if(typ.equals("MTW")){ reqTM=1; }
     }
     
     public void tick(int speed, String uhrzeit) {

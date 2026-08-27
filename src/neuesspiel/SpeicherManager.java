@@ -40,7 +40,6 @@ public class SpeicherManager {
             p.setProperty("volStatus6", String.valueOf(LogistikSimulator.volStatus6));
             p.setProperty("volStatus7", String.valueOf(LogistikSimulator.volStatus7));
 
-            // Tagesmission
             if (LogistikSimulator.aktuelleMission != null) {
                 p.setProperty("miss_titel", LogistikSimulator.aktuelleMission.titel);
                 p.setProperty("miss_desc", LogistikSimulator.aktuelleMission.beschreibung);
@@ -52,7 +51,6 @@ public class SpeicherManager {
                 p.setProperty("miss_done", String.valueOf(LogistikSimulator.aktuelleMission.abgeschlossen));
             }
 
-            // Vertraege
             p.setProperty("vertragsCount", String.valueOf(LogistikSimulator.aktiveVertraege.size()));
             for(int i = 0; i < LogistikSimulator.aktiveVertraege.size(); i++) {
                 Vertrag v = LogistikSimulator.aktiveVertraege.get(i);
@@ -64,6 +62,28 @@ public class SpeicherManager {
                 p.setProperty("v_" + i + "_bel", String.valueOf(v.belohnungProTag));
                 p.setProperty("v_" + i + "_strafe", String.valueOf(v.strafeBeiFehlschlag));
             }
+            
+            // NEU: Vorlagen Speichern
+            p.setProperty("vorlagenCount", String.valueOf(LogistikSimulator.vorlagenPool.size()));
+            for(int i = 0; i < LogistikSimulator.vorlagenPool.size(); i++) {
+                EinsatzVorlage v = LogistikSimulator.vorlagenPool.get(i);
+                String prefix = "vorlage_" + i;
+                p.setProperty(prefix + "_art", v.art);
+                p.setProperty(prefix + "_stichwort", v.stichwort);
+                p.setProperty(prefix + "_desc", v.beschreibung);
+                p.setProperty(prefix + "_rtw", String.valueOf(v.reqRTW));
+                p.setProperty(prefix + "_nef", String.valueOf(v.reqNEF));
+                p.setProperty(prefix + "_ktw", String.valueOf(v.reqKTW));
+                p.setProperty(prefix + "_hlf", String.valueOf(v.reqHLF));
+                p.setProperty(prefix + "_dlk", String.valueOf(v.reqDLK));
+                p.setProperty(prefix + "_elw", String.valueOf(v.reqELW));
+                p.setProperty(prefix + "_tlf", String.valueOf(v.reqTLF));
+                p.setProperty(prefix + "_mtw", String.valueOf(v.reqMTW));
+                p.setProperty(prefix + "_hatNach", String.valueOf(v.hatNachforderung));
+                p.setProperty(prefix + "_nachProz", String.valueOf(v.nachforderungProzent));
+                p.setProperty(prefix + "_nachTyp", v.nachforderungTyp);
+                p.setProperty(prefix + "_minLvl", String.valueOf(v.minLevel));
+            }
 
             p.setProperty("wachenCount", String.valueOf(LogistikSimulator.wachen.size()));
             for (int i = 0; i < LogistikSimulator.wachen.size(); i++) {
@@ -71,7 +91,6 @@ public class SpeicherManager {
                 p.setProperty("wache_" + i + "_name", w.name);
                 p.setProperty("wache_" + i + "_kennung", w.kennung);
                 
-                // Lokale Upgrades speichern
                 p.setProperty("wache_" + i + "_upgradeCount", String.valueOf(w.upgrades.size()));
                 for(int u = 0; u < w.upgrades.size(); u++) {
                     WachenAusbau wa = w.upgrades.get(u);
@@ -99,7 +118,6 @@ public class SpeicherManager {
                     p.setProperty(prefix + "_planAkt", String.join(",", pers.planAktuellerMonat));
                     p.setProperty(prefix + "_planNext", String.join(",", pers.planNaechsterMonat));
                     
-                    // RPG Eigenschaften speichern
                     p.setProperty(prefix + "_eigCount", String.valueOf(pers.eigenschaften.size()));
                     for(int x = 0; x < pers.eigenschaften.size(); x++) {
                         MitarbeiterEigenschaft eig = pers.eigenschaften.get(x);
@@ -145,7 +163,6 @@ public class SpeicherManager {
             LogistikSimulator.techKlinikLeezen = Boolean.parseBoolean(p.getProperty("techKlinikLeezen", "false"));
             LogistikSimulator.techKlinikHagenow = Boolean.parseBoolean(p.getProperty("techKlinikHagenow", "false"));
 
-            // Backup-Logik: Falls alte Spielstaende die globale Werkstatt/Ruheraum hatten
             boolean legacyWerkstatt = Boolean.parseBoolean(p.getProperty("techWerkstatt", "false"));
             boolean legacyRuheraum = Boolean.parseBoolean(p.getProperty("techRuheraum", "false"));
 
@@ -166,6 +183,33 @@ public class SpeicherManager {
                 Vertrag v = new Vertrag(p.getProperty("v_" + i + "_ag"), p.getProperty("v_" + i + "_desc"), p.getProperty("v_" + i + "_art"), Integer.parseInt(p.getProperty("v_" + i + "_ziel")), Integer.parseInt(p.getProperty("v_" + i + "_bel")), Integer.parseInt(p.getProperty("v_" + i + "_strafe")));
                 v.aktuelleMenge = Integer.parseInt(p.getProperty("v_" + i + "_akt", "0"));
                 LogistikSimulator.aktiveVertraege.add(v);
+            }
+            
+            // NEU: Vorlagen Laden
+            if (p.containsKey("vorlagenCount")) {
+                LogistikSimulator.vorlagenPool.clear();
+                int vorlagenCount = Integer.parseInt(p.getProperty("vorlagenCount"));
+                for(int i = 0; i < vorlagenCount; i++) {
+                    String prefix = "vorlage_" + i;
+                    EinsatzVorlage v = new EinsatzVorlage(
+                        p.getProperty(prefix + "_art"),
+                        p.getProperty(prefix + "_stichwort"),
+                        p.getProperty(prefix + "_desc"),
+                        Integer.parseInt(p.getProperty(prefix + "_rtw", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_nef", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_ktw", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_hlf", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_dlk", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_elw", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_tlf", "0")),
+                        Integer.parseInt(p.getProperty(prefix + "_mtw", "0")),
+                        Boolean.parseBoolean(p.getProperty(prefix + "_hatNach", "false")),
+                        Integer.parseInt(p.getProperty(prefix + "_nachProz", "0")),
+                        p.getProperty(prefix + "_nachTyp", ""),
+                        Integer.parseInt(p.getProperty(prefix + "_minLvl", "1"))
+                    );
+                    LogistikSimulator.vorlagenPool.add(v);
+                }
             }
 
             int wachenCount = Integer.parseInt(p.getProperty("wachenCount", "0"));
@@ -216,7 +260,6 @@ public class SpeicherManager {
                     w.personalPool.add(pers);
                 }
                 
-                // Backup-Zuweisung fuer globale Upgrades
                 if (i == 0) {
                     boolean hasW = false, hasR = false;
                     for(WachenAusbau wa : w.upgrades) { if(wa.id.equals("werkstatt")) hasW = true; if(wa.id.equals("ruheraum")) hasR = true; }

@@ -10,7 +10,6 @@ public class Wache {
     public ArrayList<Personal> personalPool;
     public HashMap<String, Integer> material;
     
-    // NEU: Hier speichert die Wache ihre eigenen, lokalen Gebaeude!
     public ArrayList<WachenAusbau> upgrades; 
 
     public Wache(String name, String kennung) {
@@ -19,7 +18,7 @@ public class Wache {
         this.fuhrpark = new ArrayList<>();
         this.personalPool = new ArrayList<>();
         this.material = new HashMap<>();
-        this.upgrades = new ArrayList<>(); // NEU: Initialisierung der Liste
+        this.upgrades = new ArrayList<>(); 
     }
 
     public void addFahrzeug(Fahrzeug f) {
@@ -42,6 +41,8 @@ public class Wache {
             case "RTW": return "83";
             case "KTW": return "85";
             case "NEF": return "82";
+            case "TLF": return "23";
+            case "MTW": return "19";
             default: return "00";
         }
     }
