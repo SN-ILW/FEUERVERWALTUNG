@@ -335,8 +335,22 @@ public class FensterManager {
             if (mail.person != null) {
                 mail.person.urlaubStart = mail.startTag; mail.person.urlaubEnd = mail.endTag;
                 mail.person.geplanterStatus = "Bereit";
+                
+                // NEU: Trägt den Urlaub sofort fest in den Dienstplan ein!
+                for (int t = mail.startTag; t <= mail.endTag; t++) {
+                    java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
+                    java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
+                    int dIndex = date.getDayOfMonth() - 1;
+                    
+                    if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) {
+                        mail.person.planAktuellerMonat[dIndex] = "Urlaub";
+                    } else {
+                        mail.person.planNaechsterMonat[dIndex] = "Urlaub";
+                    }
+                }
+                
                 mail.typ = "Info"; mail.betreff = "[Genehmigt] " + mail.betreff;
-                JOptionPane.showMessageDialog(d, "Urlaub eingetragen!");
+                JOptionPane.showMessageDialog(d, "Urlaub eingetragen und im Dienstplan vermerkt!");
                 uiAktualisieren(getUhrzeit()); d.dispose(); oeffnePostfach();
             }
         });
@@ -350,6 +364,19 @@ public class FensterManager {
                         int dauer = 2 + (int)(Math.random() * 4);
                         mail.person.krankBis = tag + dauer;
                         if (tag == mail.person.krankBis - dauer) { mail.person.status = "Krank"; mail.person.zugewiesenesFahrzeug = "Keines"; }
+                        
+                        // NEU: Trägt die Krankmeldung aus Frust in den Dienstplan ein
+                        for (int t = tag + 1; t <= tag + dauer; t++) {
+                            java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
+                            java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
+                            int dIndex = date.getDayOfMonth() - 1;
+                            if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) {
+                                mail.person.planAktuellerMonat[dIndex] = "Krank";
+                            } else {
+                                mail.person.planNaechsterMonat[dIndex] = "Krank";
+                            }
+                        }
+
                         postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer));
                         JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Hoffen wir mal, dass das keine Konsequenzen hat...", "Info", JOptionPane.INFORMATION_MESSAGE);
                     }

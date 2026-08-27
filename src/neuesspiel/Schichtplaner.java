@@ -18,18 +18,18 @@ public class Schichtplaner {
     private static DefaultTableModel tableModel;
     private static JTable table;
     private static JPanel pnlFahrzeugBoxen;
-    private static JScrollPane scrollBoxen; // NEU: Als globale Variable, um den Titel zu aendern
+    private static JScrollPane scrollBoxen; 
     
     private static JTable rowHeaderTable;
     private static DefaultTableModel rowHeaderModel;
     
-    private static int ausgewaehlterTagIndex = 0; // NEU: Merkt sich, welcher Tag gerade unten links angezeigt wird
+    private static int ausgewaehlterTagIndex = 0; 
 
     public static void oeffneSchichtplan() {
         if (wachen.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Wachen vorhanden!"); return; }
         aktuelleWache = wachen.get(0);
         zeigeAktuellenMonat = true;
-        ausgewaehlterTagIndex = 0; // Beim Oeffnen immer Tag 1 anzeigen
+        ausgewaehlterTagIndex = 0; 
 
         JDialog d = new JDialog(frame, "Dienstplan", true);
         d.setUndecorated(true);
@@ -38,7 +38,6 @@ public class Schichtplaner {
         d.setLayout(new BorderLayout());
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        // --- CUSTOM TITLE BAR ---
         JPanel titleBar = new JPanel(new BorderLayout());
         titleBar.setBackground(new Color(20, 20, 20));
         titleBar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
@@ -54,7 +53,6 @@ public class Schichtplaner {
         });
         d.add(titleBar, BorderLayout.NORTH);
 
-        // --- OBERE LEISTE ---
         JPanel topMenu = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         topMenu.setBackground(new Color(25, 25, 25));
 
@@ -68,7 +66,6 @@ public class Schichtplaner {
         topMenu.add(lblMonat); topMenu.add(Box.createHorizontalStrut(20));
         topMenu.add(btnAktuell); topMenu.add(btnFolge); topMenu.add(btnCopy);
 
-        // --- LINKE LEISTE (Stempel & Akkordeon) ---
         JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
         leftPanel.setPreferredSize(new Dimension(300, 0));
         leftPanel.setBackground(new Color(30, 30, 30));
@@ -85,7 +82,7 @@ public class Schichtplaner {
         
         DefaultListModel<String> stempelModel = new DefaultListModel<>();
         stempelModel.addElement("Frei"); 
-        stempelModel.addElement("Bereitschaft"); // <-- HIER EINFUEGEN
+        stempelModel.addElement("Bereitschaft");
         stempelModel.addElement("Urlaub"); 
         stempelModel.addElement("Krank"); 
         stempelModel.addElement("Lehrgang");
@@ -131,7 +128,6 @@ public class Schichtplaner {
         pnlListenWrapper.add(scrollBoxen, BorderLayout.SOUTH);
         leftPanel.add(pnlListenWrapper, BorderLayout.CENTER);
 
-        // --- TABELLE UND ROWHEADER (Fixierte Spalten) ---
         tableModel = new DefaultTableModel(0, 0) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
@@ -142,7 +138,6 @@ public class Schichtplaner {
         table.getTableHeader().setForeground(Color.WHITE);
         table.getTableHeader().setReorderingAllowed(false);
         
-        // NEU: Klick auf Tabellen-Kopf (Tage) aendert die Anzeige unten links
         table.getTableHeader().addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -165,7 +160,6 @@ public class Schichtplaner {
         rowHeaderTable.getTableHeader().setForeground(Color.WHITE);
         rowHeaderTable.getTableHeader().setReorderingAllowed(false);
         
-        // NEU: Weiße Leer-Spalte fixen durch exakte Breiten-Verriegelung
         rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(150);
         rowHeaderTable.getColumnModel().getColumn(0).setMinWidth(150);
         rowHeaderTable.getColumnModel().getColumn(0).setMaxWidth(150);
@@ -174,7 +168,7 @@ public class Schichtplaner {
         rowHeaderTable.getColumnModel().getColumn(1).setMinWidth(200);
         rowHeaderTable.getColumnModel().getColumn(1).setMaxWidth(200);
         
-        rowHeaderTable.setPreferredScrollableViewportSize(new Dimension(350, 0)); // Exakt 150 + 200
+        rowHeaderTable.setPreferredScrollableViewportSize(new Dimension(350, 0));
         
         rowHeaderTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -191,33 +185,27 @@ public class Schichtplaner {
                 if (val.equals("Krank")) { c.setBackground(new Color(231, 76, 60)); c.setForeground(Color.WHITE); }
                 else if (val.equals("Urlaub")) { c.setBackground(new Color(243, 156, 18)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Lehrgang")) { c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); }
-                else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); } // <-- NEU
+                else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Frei")) { c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); }
                 else { c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); }
                 return c;
             }
         });
 
-        // "Mal-Werkzeug" (Stempel-Listener)
-MouseAdapter stampAdapter = new MouseAdapter() {
+        MouseAdapter stampAdapter = new MouseAdapter() {
             private void paintCell(MouseEvent e, boolean isClick) {
                 int row = table.rowAtPoint(e.getPoint());
                 int col = table.columnAtPoint(e.getPoint());
                 if (row >= 0 && col >= 0) {
-                    ausgewaehlterTagIndex = col; // Angeklickter Tag wird sofort zur Info unten links
+                    ausgewaehlterTagIndex = col;
 
-                    // --- NEUE SPERRE FÜR VERGANGENE TAGE ---
                     int heutigerTagIndex = LogistikSimulator.getCurrentDate().getDayOfMonth() - 1;
-                    
-                    // Wenn wir im aktuellen Monat sind UND die Spalte VOR dem heutigen Tag liegt
                     if (zeigeAktuellenMonat && col < heutigerTagIndex) {
-                        // Fehlermeldung nur beim echten Klicken anzeigen (nicht beim Draggen/Malen)
                         if (isClick) {
-                            JOptionPane.showMessageDialog(table, "Vergangene Schichten können rückwirkend nicht mehr geändert werden!", "Tag gesperrt", JOptionPane.WARNING_MESSAGE);
+                            JOptionPane.showMessageDialog(table, "Vergangene Schichten koennen rueckwirkend nicht mehr geaendert werden!", "Tag gesperrt", JOptionPane.WARNING_MESSAGE);
                         }
-                        return; // Bricht das Stempeln sofort ab!
+                        return;
                     }
-                    // ---------------------------------------
 
                     String werkzeug = SwingUtilities.isRightMouseButton(e) ? "Frei" : stempelListe.getSelectedValue();
                     if(werkzeug != null) {
@@ -227,8 +215,8 @@ MouseAdapter stampAdapter = new MouseAdapter() {
                 }
             }
             
-            @Override public void mousePressed(MouseEvent e) { paintCell(e, true); }  // true = Ist ein Klick
-            @Override public void mouseDragged(MouseEvent e) { paintCell(e, false); } // false = Ist nur ein Ziehen
+            @Override public void mousePressed(MouseEvent e) { paintCell(e, true); }
+            @Override public void mouseDragged(MouseEvent e) { paintCell(e, false); }
         };
         table.addMouseListener(stampAdapter);
         table.addMouseMotionListener(stampAdapter);
@@ -237,14 +225,12 @@ MouseAdapter stampAdapter = new MouseAdapter() {
         scrollPane.setRowHeaderView(rowHeaderTable);
         scrollPane.setCorner(JScrollPane.UPPER_LEFT_CORNER, rowHeaderTable.getTableHeader());
 
-        // --- UNTERE LEISTE ---
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         bottomPanel.setBackground(new Color(25, 25, 25));
         JButton btnClose = createBtn("Abbrechen", new Color(192, 57, 43));
         JButton btnSave = createBtn("Speichern & Schliessen", new Color(39, 174, 96));
         bottomPanel.add(btnClose); bottomPanel.add(btnSave);
 
-        // --- HAUPT-LAYOUT ---
         JPanel centerContainer = new JPanel(new BorderLayout());
         centerContainer.add(topMenu, BorderLayout.NORTH);
         centerContainer.add(scrollPane, BorderLayout.CENTER);
@@ -253,13 +239,12 @@ MouseAdapter stampAdapter = new MouseAdapter() {
         d.add(centerContainer, BorderLayout.CENTER);
         d.add(bottomPanel, BorderLayout.SOUTH);
 
-        // --- FUNKTIONEN ---
         cbWachen.addActionListener(e -> {
             saveTableData();
             aktuelleWache = wachen.get(cbWachen.getSelectedIndex());
             stempelModel.clear();
             stempelModel.addElement("Frei"); 
-            stempelModel.addElement("Bereitschaft"); // <-- UND HIER EINFUEGEN
+            stempelModel.addElement("Bereitschaft");
             stempelModel.addElement("Urlaub"); 
             stempelModel.addElement("Krank"); 
             stempelModel.addElement("Lehrgang");
@@ -280,7 +265,7 @@ MouseAdapter stampAdapter = new MouseAdapter() {
         });
 
         btnClose.addActionListener(e -> d.dispose());
-btnSave.addActionListener(e -> {
+        btnSave.addActionListener(e -> {
             saveTableData();
             
             if (zeigeAktuellenMonat) {
@@ -299,14 +284,12 @@ btnSave.addActionListener(e -> {
                         String alterStatus = p.status;
                         String altesFz = p.zugewiesenesFahrzeug;
                         
-                        // Pruefen, woher die Person kommt
                         if (!neuerPlan.equals("Frei") && !neuerPlan.equals("Bereitschaft") && !neuerPlan.equals(altesFz)) {
                             if (alterStatus.equals("Frei")) {
                                 fzMitFreiemPersonal.add(neuerPlan);
                             }
                         }
                         
-                        // Live-Status ueberschreiben
                         if (neuerPlan.equals("Frei")) {
                             p.status = "Frei";
                             p.zugewiesenesFahrzeug = "Keines";
@@ -331,7 +314,6 @@ btnSave.addActionListener(e -> {
                         } else {
                             if (f.status == 6 && f.ausfallGrund.equals("Personal fehlt")) {
                                 f.ausfallGrund = "Personalwechsel";
-                                // Kam jemand aus dem "Frei"? Dann 60s, ansonsten (Bereitschaft/Umsetzen) 30s
                                 f.reparaturDauer = fzMitFreiemPersonal.contains(f.funkrufname) ? 60 : 30;
                             }
                         }
@@ -355,7 +337,6 @@ btnSave.addActionListener(e -> {
         if (!zeigeAktuellenMonat) cDate = cDate.plusMonths(1);
         int tageImMonat = cDate.lengthOfMonth();
         
-        // Verhindert Absturz, falls man von einem 31-Tage-Monat auf einen 30-Tage-Monat wechselt
         if (ausgewaehlterTagIndex >= tageImMonat) {
             ausgewaehlterTagIndex = tageImMonat - 1;
         }
@@ -403,7 +384,6 @@ btnSave.addActionListener(e -> {
         
         pnlFahrzeugBoxen.removeAll();
         
-        // NEU: Ueberschrift passt sich dem ausgewaehlten Tag an
         scrollBoxen.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Einteilung Tag " + (ausgewaehlterTagIndex + 1), javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14), Color.WHITE));
 
         for (Fahrzeug f : aktuelleWache.fuhrpark) {
@@ -412,7 +392,6 @@ btnSave.addActionListener(e -> {
             
             for (int i = 0; i < aktuelleWache.personalPool.size(); i++) {
                 if (tableModel.getColumnCount() > ausgewaehlterTagIndex) {
-                    // Prueft die Zuweisung fuer genau DEN ausgewaehlten Tag
                     String assignment = (String) tableModel.getValueAt(i, ausgewaehlterTagIndex); 
                     if (assignment != null && assignment.equals(f.funkrufname)) {
                         besatzung.add(aktuelleWache.personalPool.get(i));

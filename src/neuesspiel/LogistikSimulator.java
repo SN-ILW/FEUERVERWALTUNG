@@ -385,7 +385,11 @@ public class LogistikSimulator {
                             p.lehrgangDauerSec -= speed;
                             if (p.lehrgangDauerSec <= 0) {
                                 p.status = "Frei";
-                                p.qualifikationen.add(p.lehrgangThema);
+                                // FIX: Doppelte Eintraege verhindern
+                                p.qualifikationen.remove("Anwaerter");
+                                if (!p.qualifikationen.contains(p.lehrgangThema)) {
+                                    p.qualifikationen.add(p.lehrgangThema);
+                                }
                                 postfach.add(new Email("Leitstelle", "Lehrgang bestanden", "Mitarbeiter " + p.name + " ist zurueck und hat den Lehrgang ("+p.lehrgangThema+") erfolgreich beendet.", "Info", p, -1, -1));
                                 p.lehrgangDauerSec = 0;
                             }
@@ -660,7 +664,6 @@ public class LogistikSimulator {
         }
 
         for(Wache w : wachen) {
-            // NEU: Anzeige der Wachen-Stufe und Max. Fahrzeuge!
             fms.append("<b style='color:#ffffff;'>=== ").append(w.name).append(" (Stufe ").append(w.stufe).append(") [").append(w.fuhrpark.size()).append("/").append(getFahrzeugLimit(w.stufe)).append("] ===</b><br>");
             for(Fahrzeug f : w.fuhrpark) {
                 String color = "#ffffff";
@@ -854,7 +857,6 @@ public class LogistikSimulator {
         return null;
     }
     
-    // NEU: Die Methode zur Berechnung der Stellplaetze pro Level
     public static int getFahrzeugLimit(int wachenStufe) {
         if(wachenStufe == 1) return 3;
         if(wachenStufe == 2) return 6;
@@ -863,7 +865,6 @@ public class LogistikSimulator {
     }
 
     public static void kaufFahrzeug(Wache w, String typ, int preis) {
-        // NEU: Platz-Check vor dem Kauf!
         if(w.fuhrpark.size() >= getFahrzeugLimit(w.stufe)) {
             JOptionPane.showMessageDialog(frame, "Die Wache ist voll! (Stufe " + w.stufe + " erlaubt max. " + getFahrzeugLimit(w.stufe) + " Fahrzeuge).\nBitte baue die Wache unter 'Wachen & Gebaeude' aus!", "Fehler", JOptionPane.ERROR_MESSAGE);
             return;
@@ -874,7 +875,7 @@ public class LogistikSimulator {
             Fahrzeug f = new Fahrzeug(w.generiereFunkrufname(typ), typ);
             w.addFahrzeug(f);
             f.status = 6; f.ausfallGrund = "Personal fehlt";
-            SpeicherManager.speichern("savegame.properties"); // NEU: Direkt speichern
+            SpeicherManager.speichern("savegame.properties");
             uiAktualisieren(getUhrzeit());
         } else {
             JOptionPane.showMessageDialog(frame, "Nicht genug Budget!", "Fehler", JOptionPane.ERROR_MESSAGE);
@@ -999,16 +1000,24 @@ public class LogistikSimulator {
                 target.personalPool.add(potenziell);
                 budget -= 500;
                 
+                // FIX: Vorwissen wird sofort aktiviert und schickt nur noch eine Info-Mail!
                 if (Math.random() > 0.6) {
                     String[] vorwissen = {"TM", "RS", "GF"};
                     String w = vorwissen[(int)(Math.random() * vorwissen.length)];
-                    postfach.add(MailGenerator.generiereVorwissen(potenziell, tag, w));
+                    
+                    potenziell.qualifikationen.remove("Anwaerter"); // Kein Anwärter mehr
+                    if (!potenziell.qualifikationen.contains(w)) {
+                        potenziell.qualifikationen.add(w); // Qualifikation sicher eintragen
+                    }
+                    
+                    // Schicke reine Info-Mail!
+                    postfach.add(new Email("Personalwesen", "[Vorwissen] " + potenziell.name, "Info", "Dein neuer Mitarbeiter " + potenziell.name + " bringt bereits die Qualifikation " + w + " mit und ist sofort voll einsatzfaehig!", potenziell, tag, tag));
                 }
                 
                 StringBuilder traitText = new StringBuilder();
                 for(MitarbeiterEigenschaft e : potenziell.eigenschaften) traitText.append("\n- ").append(e.name).append(" (").append(e.beschreibung).append(")");
                 
-                JOptionPane.showMessageDialog(frame, neu + " wurde als Anwaerter auf " + target.name + " eingestellt!\n\nBesondere Eigenschaften:" + traitText.toString());
+                JOptionPane.showMessageDialog(frame, neu + " wurde auf " + target.name + " eingestellt!\n\nBesondere Eigenschaften:" + traitText.toString());
                 SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit());
             }
         } else { JOptionPane.showMessageDialog(frame, "Zu wenig Budget (500 EURO benoetigt)!", "Fehler", JOptionPane.ERROR_MESSAGE); }
@@ -1162,6 +1171,19 @@ public class LogistikSimulator {
                     if (Math.random() < chance) {
                         int dauer = 2 + (int)(Math.random() * 5);
                         p.krankBis = tag + dauer; 
+                        
+                        // NEU: Krankheit sofort in den Dienstplan eintragen
+                        for (int t = tag + 1; t <= tag + dauer; t++) {
+                            java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
+                            java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
+                            int dIndex = date.getDayOfMonth() - 1;
+                            if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) {
+                                p.planAktuellerMonat[dIndex] = "Krank";
+                            } else {
+                                p.planNaechsterMonat[dIndex] = "Krank";
+                            }
+                        }
+                        
                         postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
                     }
                 }
@@ -1172,10 +1194,19 @@ public class LogistikSimulator {
                     postfach.add(MailGenerator.generiereUrlaubsantrag(p, tag + startExtra, tag + startExtra + dauer));
                 }
                 
+                // FIX: Automatische Uebernahme von Anwaertern nach ihrer ersten Schicht
                 if (p.qualifikationen.contains("Anwaerter") && p.schichtenMonat >= 1 && !p.praeferenzGesendet) {
                     p.praeferenzGesendet = true;
-                    String praef = Math.random() > 0.5 ? "Feuerwehr" : "Rettungsdienst";
-                    postfach.add(MailGenerator.generiereAnwaerterWahl(p, tag, praef));
+                    
+                    p.qualifikationen.remove("Anwaerter"); // Kein Anwärter mehr!
+                    String neueQual = (Math.random() < 0.5) ? "TM" : "RS";
+                    
+                    if (!p.qualifikationen.contains(neueQual)) {
+                        p.qualifikationen.add(neueQual); // Zuteilung TM oder RS
+                    }
+                    
+                    // Reine Info Mail ins Postfach legen
+                    postfach.add(new Email("Ausbildungsleitung", "[Uebernahme] " + p.name, "Info", "Gute Neuigkeiten! " + p.name + " hat die Probe-Schichten bestanden und wurde soeben automatisch als " + neueQual + " in den festen Dienst uebernommen.", p, tag, tag));
                 }
                 
                 if (p.schichtenMonat >= 5 && Math.random() < 0.05 && p.urlaubStart == -1 && p.krankBis == -1 && !p.status.equals("Lehrgang") && !p.qualifikationen.contains("Anwaerter")) {
@@ -1314,6 +1345,7 @@ public class LogistikSimulator {
         return r;
     }
 
+    // ACHTUNG: Hier prüft er bereits mit '.contains()', das ist exakt richtig!
     public static boolean personErfuellt(Personal p, String req) {
         if(p.qualifikationen.contains(req)) return true;
         if(req.equals("RS") && (p.qualifikationen.contains("NFS") || p.qualifikationen.contains("NA"))) return true;
