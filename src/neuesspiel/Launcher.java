@@ -9,7 +9,7 @@ import java.net.URL;
 public class Launcher {
 
     // --- HIER DEINE DATEN EINTRAGEN ---
-    public static final String CURRENT_VERSION = "v20"; // Für den Test eine ältere Version eintragen
+    public static final String CURRENT_VERSION = "v24"; // Für den Test eine ältere Version eintragen
     public static final String GITHUB_REPO = "SN-ILW/FEUERVERWALTUNG"; 
     public static final String EXE_NAME = "FeuerwehrVerwaltung.exe";
     // ----------------------------------
