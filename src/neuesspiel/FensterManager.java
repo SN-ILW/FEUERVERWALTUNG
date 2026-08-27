@@ -348,11 +348,35 @@ public class FensterManager {
             }
         });
 
-        btnAblehnen.addActionListener(e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex();
-            Email mail = postfach.get(idx);
-            mail.typ = "Info"; mail.betreff = "[Abgelehnt] " + mail.betreff;
-            uiAktualisieren(getUhrzeit()); d.dispose(); oeffnePostfach();
+btnAblehnen.addActionListener(e -> {
+            int idx = list.getSelectedIndex();
+            if(idx != -1) { 
+                Email mail = postfach.get(idx); 
+                
+                // NEU: 2.5% Chance auf "Frust-Krankmeldung", wenn Urlaub abgelehnt wird
+                if (mail.typ.equals("Urlaub") && cfgKrankheit) {
+                    if (Math.random() < 0.025) {
+                        int dauer = 2 + (int)(Math.random() * 4); // 2 bis 5 Tage "krank"
+                        mail.person.krankBis = tag + dauer;
+                        
+                        // Sofortiges Update im Schichtplan (wenn die Ablehnung heute passiert)
+                        if (tag == mail.person.krankBis - dauer) {
+                            mail.person.status = "Krank";
+                            mail.person.zugewiesenesFahrzeug = "Keines";
+                        }
+                        
+                        // Wir schicken die E-Mail heimlich in den Posteingang, 
+                        // der Spieler sieht sie erst, wenn er das Postfach schliesst und wieder oeffnet oder aktualisiert
+                        postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer));
+                        JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Hoffen wir mal, dass das keine Konsequenzen hat...", "Info", JOptionPane.INFORMATION_MESSAGE);
+                    }
+                }
+                
+                mail.typ = "Info"; 
+                listModel.set(idx, "[Abgelehnt] " + mail.betreff + " - von: " + mail.absender); 
+                btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); 
+                uiAktualisieren(getUhrzeit()); 
+            }
         });
 
 btnLoeschen.addActionListener(e -> {

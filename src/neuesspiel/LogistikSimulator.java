@@ -962,12 +962,22 @@ boolean hasWarnings = false;
                     p.zugewiesenesFahrzeug = planHeute;
                 }
                 
-                if (p.schichtenMonat > 15 && cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
-                    double chance = techRuheraum ? 0.05 : 0.10;
-                    if (Math.random() < chance) {
-                        int dauer = 2 + (int)(Math.random() * 5);
-                        p.krankBis = tag + dauer; 
-                        postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
+      // NEU: Krankheitsrisiko steigt mit Anzahl der Schichten
+                if (cfgKrankheit && p.krankBis == -1 && p.urlaubStart == -1 && !p.status.equals("Lehrgang")) {
+                    double baseChance = 0.0;
+                    
+                    // Ab 10 Schichten beginnt das Risiko (1% pro Schicht drueber)
+                    if (p.schichtenMonat > 10) {
+                        baseChance = (p.schichtenMonat - 10) * 0.01; 
+                        
+                        // Wenn der Ruheraum gebaut ist, halbiert sich das Risiko
+                        if (techRuheraum) baseChance = baseChance / 2.0;
+                        
+                        if (Math.random() < baseChance) {
+                            int dauer = 2 + (int)(Math.random() * 5);
+                            p.krankBis = tag + dauer; 
+                            postfach.add(MailGenerator.generiereKrankmeldung(p, tag + 1, tag + dauer));
+                        }
                     }
                 }
                 
