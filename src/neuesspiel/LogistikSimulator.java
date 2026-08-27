@@ -17,6 +17,21 @@ public class LogistikSimulator {
     public static JPanel notrufPanel;
     public static JEditorPane fmsBoard;
     
+    //hotkeys
+    public static int hotkeyPause = java.awt.event.KeyEvent.VK_SPACE;
+    public static int hotkeyPlay = java.awt.event.KeyEvent.VK_1;
+    public static int hotkeyFast = java.awt.event.KeyEvent.VK_2;
+    public static int hotkeyDisp = java.awt.event.KeyEvent.VK_D;
+    public static int hotkeyDienstplan = java.awt.event.KeyEvent.VK_F1;
+    public static int hotkeyPostfach = java.awt.event.KeyEvent.VK_M;
+    public static int hotkeyFuhrpark = java.awt.event.KeyEvent.VK_F;
+    public static int hotkeyEinsatzErsteller = java.awt.event.KeyEvent.VK_F2;
+    public static int hotkeyEinsatzEditor = java.awt.event.KeyEvent.VK_F3;
+    public static int hotkeyPersonalEinstellen = java.awt.event.KeyEvent.VK_P;
+    
+    
+    
+    
     public static TagesMission aktuelleMission = null; 
     public static JButton btnPostfach, btnTagBeenden;
     public static int aktuellerKredit = 0;
@@ -294,6 +309,44 @@ public class LogistikSimulator {
         
         frame.setVisible(true);
 
+        
+        KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
+            if (e.getID() == java.awt.event.KeyEvent.KEY_PRESSED) {
+                
+                // 1. PRIORITÄT: Fängt jeden Tastendruck ab, wenn das Zuweisen-Fenster offen ist!
+                if (FensterManager.hotkeyPopup != null) {
+                    FensterManager.currentHotkeySetter.accept(e.getKeyCode());
+                    FensterManager.currentHotkeyBtn.setText(java.awt.event.KeyEvent.getKeyText(e.getKeyCode()));
+                    FensterManager.hotkeyPopup.dispose();
+                    FensterManager.hotkeyPopup = null;
+                    return true; // Tastendruck schlucken
+                }
+
+                // 2. PRIORITÄT: Hotkeys nur erlauben, wenn keine anderen Menüs/Fenster offen sind!
+                Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
+                if (activeWindow != frame) return false;
+
+                // 3. PRIORITÄT: Ignorieren, wenn wir in einem Textfeld tippen
+                Component focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
+                if (focus instanceof JTextField || focus instanceof JTextArea || focus instanceof JEditorPane) return false; 
+                
+                // Hotkeys ausführen
+                int code = e.getKeyCode();
+                if (code == hotkeyPause) btnPause.doClick();
+                else if (code == hotkeyPlay) btnPlay.doClick();
+                else if (code == hotkeyFast) btnFastForward.doClick();
+                else if (code == hotkeyDisp && aktuellerNotruf != null) FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
+                else if (code == hotkeyDienstplan) Schichtplaner.oeffneSchichtplan();
+                else if (code == hotkeyPostfach) FensterManager.oeffnePostfach();
+                else if (code == hotkeyFuhrpark) FensterManager.oeffneFuhrparkHauptmenu();
+                else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
+                else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
+                else if (code == hotkeyPersonalEinstellen) personalEinstellen();
+            }
+            return false;
+        });
+        
+        
         new Timer(1000, e -> {
             if (speed > 0) {
                 inGameSekunden += (speed * 10);

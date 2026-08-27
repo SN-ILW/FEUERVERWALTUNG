@@ -14,6 +14,16 @@ import static neuesspiel.LogistikSimulator.*;
 
 public class FensterManager {
 
+    
+    //hotkeys
+    public static JDialog hotkeyPopup = null;
+    public static java.util.function.IntConsumer currentHotkeySetter = null;
+    public static JButton currentHotkeyBtn = null;
+    
+    
+    
+    
+    
     private static JDialog createFramelessDialog(String title, int width, int height) {
         JDialog d = new JDialog(frame, title, true);
         d.setUndecorated(true);
@@ -805,56 +815,140 @@ public class FensterManager {
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
-    public static void oeffneEinstellungen() {
-        JDialog d = createFramelessDialog("Spieleinstellungen", 500, 450); 
-        JPanel content = new JPanel(new GridLayout(10, 1, 5, 5)); 
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35, 35, 35));
+public static void oeffneEinstellungen() {
+        JDialog d = createFramelessDialog("Spieleinstellungen", 500, 480);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setBackground(new Color(45, 45, 45)); tabs.setForeground(Color.WHITE);
+
+        // --- TAB 1: ALLGEMEINES & SOUND ---
+        JPanel pnlAllgemein = new JPanel(new GridLayout(9, 1, 5, 5)); 
+        pnlAllgemein.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlAllgemein.setBackground(new Color(35, 35, 35));
 
         JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", LogistikSimulator.cfgKrankentransport);
         JCheckBox cbDmg = new JCheckBox("Beschaedigte Fahrzeuge erlauben", LogistikSimulator.cfgBeschaedigung);
         JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", LogistikSimulator.cfgKrankheit);
         JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer);
         JCheckBox cbLogistik = new JCheckBox("Lager & Logistik System aktivieren", LogistikSimulator.cfgLogistikAktiv);
-        
         JCheckBox[] topBoxes = {cbKtp, cbDmg, cbSick, cbAuto, cbLogistik};
-        for (JCheckBox box : topBoxes) {
-            box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false);
-            content.add(box);
-        }
+        for (JCheckBox box : topBoxes) { box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false); pnlAllgemein.add(box); }
 
         JPanel pnlS1 = new JPanel(new BorderLayout(10, 0)); pnlS1.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundNotruf = new JCheckBox("Sound: Neuer Notruf", LogistikSimulator.cfgSoundNotruf); cbSoundNotruf.setForeground(Color.WHITE); cbSoundNotruf.setBackground(new Color(35, 35, 35));
         JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf); slNotruf.setBackground(new Color(35, 35, 35));
-        pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER); content.add(pnlS1);
+        pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER); pnlAllgemein.add(pnlS1);
 
         JPanel pnlS2 = new JPanel(new BorderLayout(10, 0)); pnlS2.setBackground(new Color(35, 35, 35));
-        JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6 (Defekt)", LogistikSimulator.cfgSoundStatus6); cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35));
+        JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6", LogistikSimulator.cfgSoundStatus6); cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35));
         JSlider slStatus6 = new JSlider(0, 100, LogistikSimulator.volStatus6); slStatus6.setBackground(new Color(35, 35, 35));
-        pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER); content.add(pnlS2);
+        pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER); pnlAllgemein.add(pnlS2);
 
         JPanel pnlS3 = new JPanel(new BorderLayout(10, 0)); pnlS3.setBackground(new Color(35, 35, 35));
-        JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7 (Warten)", LogistikSimulator.cfgSoundStatus7); cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35));
+        JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7", LogistikSimulator.cfgSoundStatus7); cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35));
         JSlider slStatus7 = new JSlider(0, 100, LogistikSimulator.volStatus7); slStatus7.setBackground(new Color(35, 35, 35));
-        pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER); content.add(pnlS3);
-        
+        pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER); pnlAllgemein.add(pnlS3);
+
+        tabs.addTab("Allgemein", pnlAllgemein);
+
+        // --- TAB 2: HOTKEYS (jetzt mit Scrollbar, weil es 10 Stück sind!) ---
+        JPanel pnlHotkeys = new JPanel(new GridLayout(10, 2, 10, 10)); // 10 Zeilen
+        pnlHotkeys.setBorder(BorderFactory.createEmptyBorder(10,20,10,20)); pnlHotkeys.setBackground(new Color(35, 35, 35));
+
+        JLabel lHk1 = new JLabel("Spiel Pausieren:", SwingConstants.RIGHT); lHk1.setForeground(Color.WHITE);
+        JButton btnHk1 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPause));
+        btnHk1.addActionListener(e -> assignHotkey(btnHk1, code -> LogistikSimulator.hotkeyPause = code));
+        pnlHotkeys.add(lHk1); pnlHotkeys.add(btnHk1);
+
+        JLabel lHk2 = new JLabel("Normale Geschwindigkeit:", SwingConstants.RIGHT); lHk2.setForeground(Color.WHITE);
+        JButton btnHk2 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPlay));
+        btnHk2.addActionListener(e -> assignHotkey(btnHk2, code -> LogistikSimulator.hotkeyPlay = code));
+        pnlHotkeys.add(lHk2); pnlHotkeys.add(btnHk2);
+
+        JLabel lHk3 = new JLabel("Schneller Vorlauf:", SwingConstants.RIGHT); lHk3.setForeground(Color.WHITE);
+        JButton btnHk3 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFast));
+        btnHk3.addActionListener(e -> assignHotkey(btnHk3, code -> LogistikSimulator.hotkeyFast = code));
+        pnlHotkeys.add(lHk3); pnlHotkeys.add(btnHk3);
+
+        JLabel lHk4 = new JLabel("Notruf Disponieren:", SwingConstants.RIGHT); lHk4.setForeground(Color.WHITE);
+        JButton btnHk4 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDisp));
+        btnHk4.addActionListener(e -> assignHotkey(btnHk4, code -> LogistikSimulator.hotkeyDisp = code));
+        pnlHotkeys.add(lHk4); pnlHotkeys.add(btnHk4);
+
+        JLabel lHk5 = new JLabel("Dienstplan oeffnen:", SwingConstants.RIGHT); lHk5.setForeground(Color.WHITE);
+        JButton btnHk5 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDienstplan));
+        btnHk5.addActionListener(e -> assignHotkey(btnHk5, code -> LogistikSimulator.hotkeyDienstplan = code));
+        pnlHotkeys.add(lHk5); pnlHotkeys.add(btnHk5);
+
+        JLabel lHk6 = new JLabel("Postfach oeffnen:", SwingConstants.RIGHT); lHk6.setForeground(Color.WHITE);
+        JButton btnHk6 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPostfach));
+        btnHk6.addActionListener(e -> assignHotkey(btnHk6, code -> LogistikSimulator.hotkeyPostfach = code));
+        pnlHotkeys.add(lHk6); pnlHotkeys.add(btnHk6);
+
+        JLabel lHk7 = new JLabel("Fuhrpark oeffnen:", SwingConstants.RIGHT); lHk7.setForeground(Color.WHITE);
+        JButton btnHk7 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFuhrpark));
+        btnHk7.addActionListener(e -> assignHotkey(btnHk7, code -> LogistikSimulator.hotkeyFuhrpark = code));
+        pnlHotkeys.add(lHk7); pnlHotkeys.add(btnHk7);
+
+        JLabel lHk8 = new JLabel("Einsatz-Ersteller:", SwingConstants.RIGHT); lHk8.setForeground(Color.WHITE);
+        JButton btnHk8 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyEinsatzErsteller));
+        btnHk8.addActionListener(e -> assignHotkey(btnHk8, code -> LogistikSimulator.hotkeyEinsatzErsteller = code));
+        pnlHotkeys.add(lHk8); pnlHotkeys.add(btnHk8);
+
+        JLabel lHk9 = new JLabel("Einsatz-Editor:", SwingConstants.RIGHT); lHk9.setForeground(Color.WHITE);
+        JButton btnHk9 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyEinsatzEditor));
+        btnHk9.addActionListener(e -> assignHotkey(btnHk9, code -> LogistikSimulator.hotkeyEinsatzEditor = code));
+        pnlHotkeys.add(lHk9); pnlHotkeys.add(btnHk9);
+
+        JLabel lHk10 = new JLabel("Personal einstellen:", SwingConstants.RIGHT); lHk10.setForeground(Color.WHITE);
+        JButton btnHk10 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPersonalEinstellen));
+        btnHk10.addActionListener(e -> assignHotkey(btnHk10, code -> LogistikSimulator.hotkeyPersonalEinstellen = code));
+        pnlHotkeys.add(lHk10); pnlHotkeys.add(btnHk10);
+
+        JScrollPane scrollHotkeys = new JScrollPane(pnlHotkeys);
+        scrollHotkeys.setBorder(BorderFactory.createEmptyBorder());
+        scrollHotkeys.getVerticalScrollBar().setUnitIncrement(16);
+        tabs.addTab("Tastatur-Kürzel", scrollHotkeys);
+
+        // --- BUTTONS UNTEN ---
+        JPanel pnlBottom = new JPanel(new GridLayout(2, 1, 5, 5)); pnlBottom.setBackground(new Color(35, 35, 35)); pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
         JButton btnReset = new JButton("Spielstand zuruecksetzen"); btnReset.setBackground(new Color(192, 57, 43)); btnReset.setForeground(Color.WHITE);
         btnReset.addActionListener(e -> {
             String wahl = JOptionPane.showInputDialog(d, "ACHTUNG: Dies setzt den Spielstand zurueck!\nZum Bestaetigen bitte exakt 'LOESCHEN' eingeben:");
             if(wahl != null && wahl.equals("LOESCHEN")) { new java.io.File("savegame.properties").delete(); LogistikSimulator.initStandardDaten(); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); JOptionPane.showMessageDialog(d, "Spielstand wurde erfolgreich zurueckgesetzt!"); d.dispose(); }
         });
-
         JButton btnSave = new JButton("Speichern & Schliessen");
         btnSave.addActionListener(e -> {
-            LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected();
-            LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
+            LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected(); LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected(); LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected(); LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
             LogistikSimulator.volNotruf = slNotruf.getValue(); LogistikSimulator.volStatus6 = slStatus6.getValue(); LogistikSimulator.volStatus7 = slStatus7.getValue();
             SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); d.dispose();
         });
+        pnlBottom.add(btnReset); pnlBottom.add(btnSave);
 
-        content.add(btnReset); content.add(btnSave);
-        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+        d.add(tabs, BorderLayout.CENTER); d.add(pnlBottom, BorderLayout.SOUTH); d.setVisible(true);
+    }
+
+    private static void assignHotkey(JButton btn, java.util.function.IntConsumer setter) {
+        currentHotkeyBtn = btn;
+        currentHotkeySetter = setter;
+        
+        hotkeyPopup = new JDialog(LogistikSimulator.frame, "Hotkey festlegen", true);
+        hotkeyPopup.setUndecorated(true); 
+        hotkeyPopup.setSize(350, 80); 
+        hotkeyPopup.setLocationRelativeTo(LogistikSimulator.frame);
+        hotkeyPopup.getContentPane().setBackground(new Color(231, 76, 60));
+        
+        JLabel lbl = new JLabel("Bitte drücke JETZT die neue Taste...", SwingConstants.CENTER);
+        lbl.setForeground(Color.WHITE); 
+        lbl.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        hotkeyPopup.add(lbl);
+        
+        hotkeyPopup.addWindowListener(new WindowAdapter() {
+            @Override public void windowClosed(WindowEvent e) {
+                hotkeyPopup = null;
+            }
+        });
+        
+        hotkeyPopup.setVisible(true);
     }
 
     public static void oeffneFuhrpark() {
