@@ -7,6 +7,19 @@ import java.util.ArrayList;
 
 public class SpeicherManager {
 
+    // NEU: Sucht extrem zuverlässig den Windows Dokumente-Ordner!
+    public static String getDokumentePfad() {
+        String userHome = System.getProperty("user.home");
+        File docs = new File(userHome, "Documents");
+        if (!docs.exists()) {
+            docs = new File(userHome, "Dokumente"); // Fallback fuer deutsches Windows
+            if (!docs.exists()) {
+                docs = new File(userHome); // Letzter Ausweg: Direkt im Benutzerordner
+            }
+        }
+        return docs.getAbsolutePath() + java.io.File.separator + "FeuerwehrVerwaltung_Savegame.properties";
+    }
+
     private static void setSafe(Properties p, String key, String val) {
         if (key != null) {
             p.setProperty(key, val != null ? val : "");
@@ -33,10 +46,11 @@ public class SpeicherManager {
     }
 
     public static void speichern(String dateiPfad) {
+        String echterPfad = getDokumentePfad();
         System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
-        System.out.println("Speichere in Pfad: " + dateiPfad);
+        System.out.println("Speichere FEST in Dokumente-Ordner: " + echterPfad);
         
-        try (FileOutputStream out = new FileOutputStream(dateiPfad);
+        try (FileOutputStream out = new FileOutputStream(echterPfad);
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
              
             Properties p = new Properties();
@@ -222,7 +236,6 @@ public class SpeicherManager {
                         setSafe(p, prefix + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
                         setSafe(p, prefix + "_lThema", pers.lehrgangThema != null ? pers.lehrgangThema : "");
                         
-                        // FIX: Extrem sicheres Speichern des Schichtplans (fuellt immer auf exakt 31 Tage auf!)
                         String[] sAkt = new String[31];
                         for(int d=0; d<31; d++) {
                             if (pers.planAktuellerMonat != null && d < pers.planAktuellerMonat.length && pers.planAktuellerMonat[d] != null) {
@@ -273,10 +286,19 @@ public class SpeicherManager {
     }
 
     public static boolean laden(String dateiPfad) {
-        File file = new File(dateiPfad);
+        String echterPfad = getDokumentePfad();
+        File file = new File(echterPfad);
+        
+        // NEU: Wenn der Import-Button gedrueckt wird, nimmt er natuerlich die ausgewaehlte Datei
+        if (dateiPfad != null && (dateiPfad.contains(":\\") || dateiPfad.contains(":/")) && !dateiPfad.equals(echterPfad)) {
+            file = new File(dateiPfad);
+            System.out.println("[DEBUG] Manueller Import geladen von: " + dateiPfad);
+        } else {
+            System.out.println("[DEBUG] Lade automatisch aus Dokumente: " + echterPfad);
+        }
         
         if (!file.exists()) {
-            System.out.println("[DEBUG] Keine Savegame Datei unter " + dateiPfad + " gefunden.");
+            System.out.println("[DEBUG] Keine Savegame Datei unter " + file.getAbsolutePath() + " gefunden.");
             return false;
         }
 
@@ -450,7 +472,6 @@ public class SpeicherManager {
                     pers.lehrgangDauerSec = parseIntSafe(p.getProperty(prefix + "_lDauer"), 0);
                     pers.lehrgangThema = p.getProperty(prefix + "_lThema", "");
                     
-                    // FIX: Kugelsicheres Laden des Dienstplans (ignoriert fehlerhafte Längen komplett)
                     String planAktStr = p.getProperty(prefix + "_planAkt", "");
                     pers.planAktuellerMonat = new String[31];
                     if(!planAktStr.isEmpty()) {
