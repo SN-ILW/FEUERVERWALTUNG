@@ -149,21 +149,47 @@ public class FensterManager {
     }
 
     public static void oeffneSystemHauptmenu() {
-        JDialog d = createFramelessDialog("System & Editor", 400, 450);
-        JPanel content = new JPanel(new GridLayout(8, 1, 10, 10));
+        JDialog d = createFramelessDialog("System & Editor", 400, 500); 
+        JPanel content = new JPanel(new GridLayout(9, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
         JButton b1 = new JButton("Spieleinstellungen"); b1.addActionListener(e -> { d.dispose(); oeffneEinstellungen(); });
         JButton b2 = new JButton("Spiel Speichern"); b2.addActionListener(e -> { d.dispose(); SpeicherManager.speichern("savegame.properties"); JOptionPane.showMessageDialog(frame, "Spiel gespeichert!"); });
-        JButton b3 = new JButton("Spiel Laden"); b3.addActionListener(e -> { d.dispose(); SpeicherManager.laden("savegame.properties"); JOptionPane.showMessageDialog(frame, "Spielstand geladen!"); uiAktualisieren(getUhrzeit()); });
+        
+        JButton b3 = new JButton("Spiel Laden (Standard)"); 
+        b3.addActionListener(e -> { 
+            d.dispose(); 
+            if(SpeicherManager.laden("savegame.properties")) {
+                JOptionPane.showMessageDialog(frame, "Spielstand geladen!"); 
+                uiAktualisieren(getUhrzeit()); 
+            }
+        });
+        
+        JButton btnLoadCustom = new JButton("Spielstand importieren / auswaehlen");
+        btnLoadCustom.setBackground(new Color(41, 128, 185)); btnLoadCustom.setForeground(Color.WHITE);
+        btnLoadCustom.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser(System.getProperty("user.dir"));
+            chooser.setDialogTitle("Savegame auswaehlen");
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Properties Dateien (*.properties)", "properties"));
+            
+            if (chooser.showOpenDialog(d) == JFileChooser.APPROVE_OPTION) {
+                d.dispose();
+                java.io.File file = chooser.getSelectedFile();
+                if (SpeicherManager.laden(file.getAbsolutePath())) {
+                    JOptionPane.showMessageDialog(frame, "Spielstand erfolgreich importiert!");
+                    uiAktualisieren(getUhrzeit());
+                }
+            }
+        });
+
         JButton b4 = new JButton("Einsatz-Vorlage erstellen"); b4.addActionListener(e -> { d.dispose(); oeffneEinsatzErsteller(); });
         JButton b5 = new JButton("Einsatz-Vorlage bearbeiten"); b5.addActionListener(e -> { d.dispose(); oeffneEinsatzBearbeiter(); });
         JButton b6 = new JButton("Material-Vorlage erstellen"); b6.addActionListener(e -> { d.dispose(); oeffneMaterialErsteller(); });
         JButton b7 = new JButton("Material-Vorlage bearbeiten"); b7.addActionListener(e -> { d.dispose(); oeffneMaterialBearbeiter(); });
         JButton btnVertragEditor = new JButton("Vertrags-Editor"); btnVertragEditor.addActionListener(e -> { d.dispose(); oeffneVertragsEditor(); });
         
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(btnVertragEditor);
+        content.add(b1); content.add(b2); content.add(b3); content.add(btnLoadCustom); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(btnVertragEditor);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
@@ -336,7 +362,6 @@ public class FensterManager {
                 mail.person.urlaubStart = mail.startTag; mail.person.urlaubEnd = mail.endTag;
                 mail.person.geplanterStatus = "Bereit";
                 
-                // NEU: Trägt den Urlaub sofort fest in den Dienstplan ein!
                 for (int t = mail.startTag; t <= mail.endTag; t++) {
                     java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
                     java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
@@ -365,7 +390,6 @@ public class FensterManager {
                         mail.person.krankBis = tag + dauer;
                         if (tag == mail.person.krankBis - dauer) { mail.person.status = "Krank"; mail.person.zugewiesenesFahrzeug = "Keines"; }
                         
-                        // NEU: Trägt die Krankmeldung aus Frust in den Dienstplan ein
                         for (int t = tag + 1; t <= tag + dauer; t++) {
                             java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
                             java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
@@ -589,7 +613,7 @@ public class FensterManager {
             Wache target = wachen.get(wIndex);
             
             int stufe = target.stufe;
-            int nextCost = stufe == 1 ? 25000 : (stufe == 2 ? 50000 : (stufe == 3 ? 100000 : 0));
+            int nextCost = stufe == 1 ? 10000 : (stufe == 2 ? 20000 : (stufe == 3 ? 50000 : 0));
             if(stufe < 4) {
                 btnStufe.setText("Wache auf Stufe " + (stufe+1) + " ausbauen (" + nextCost + " EUR)");
                 btnStufe.setEnabled(true);
@@ -625,7 +649,7 @@ public class FensterManager {
         
         btnStufe.addActionListener(e -> {
             Wache target = wachen.get(cbWachen.getSelectedIndex());
-            int nextCost = target.stufe == 1 ? 25000 : (target.stufe == 2 ? 50000 : 100000);
+            int nextCost = target.stufe == 1 ? 10000 : (target.stufe == 2 ? 20000 : 50000);
             if (budget >= nextCost) {
                 budget -= nextCost;
                 target.stufe++;
@@ -943,7 +967,6 @@ public class FensterManager {
             if(wahl != null && wahl.equals("LOESCHEN")) { new java.io.File("savegame.properties").delete(); LogistikSimulator.initStandardDaten(); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); JOptionPane.showMessageDialog(d, "Spielstand wurde erfolgreich zurueckgesetzt!"); d.dispose(); }
         });
         
-        // --- HIER IST DER REPARIERTE BUTTON! ---
         JButton btnSave = LogistikSimulator.createStyledButton("Speichern & Schliessen", new Color(39, 174, 96));
         btnSave.addActionListener(e -> {
             LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected(); LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
@@ -990,9 +1013,10 @@ public class FensterManager {
         JLabel l = new JLabel("Fuer welche Wache?"); l.setForeground(Color.WHITE); content.add(l);
         JComboBox<String> cbWachen = new JComboBox<>(); for(Wache w : wachen) cbWachen.addItem(w.name); content.add(cbWachen);
 
-        JButton b1 = new JButton("ELW kaufen (1500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 2500));
-        JButton b2 = new JButton("HLF kaufen (3000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 2000));
-        JButton b3 = new JButton("DLK kaufen (5000 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 2500));
+        // FIX: Die Preise auf dem Button stimmen jetzt mit den abgebuchten Preisen in der Logik ueberein!
+        JButton b1 = new JButton("ELW kaufen (2500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 2500));
+        JButton b2 = new JButton("HLF kaufen (2000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 2000));
+        JButton b3 = new JButton("DLK kaufen (2500 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 2500));
         JButton b4 = new JButton("RTW kaufen (2000 EURO)"); b4.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "RTW", 2000));
         JButton b5 = new JButton("NEF kaufen (2500 EURO)"); b5.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "NEF", 2500));
         JButton b6 = new JButton("KTW kaufen (1000 EURO)"); b6.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "KTW", 1000));
