@@ -23,7 +23,7 @@ jobs:
           java-version: '26' # Korrekt auf deine installierte Version 26 gesetzt!
 
       - name: 🔨 JAR-Datei bauen (mit NetBeans Ant)
-        run: ant -f build.xml clean jar
+        run: ant -Dplatforms.JDK_26.home=$env:JAVA_HOME -f build.xml clean jar
 
       - name: 🚀 Launch4j herunterladen
         run: |
