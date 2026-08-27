@@ -225,8 +225,20 @@ public class SpeicherManager {
                         setSafe(p, prefix + "_gStat", pers.geplanterStatus);
                         setSafe(p, prefix + "_gFzg", pers.geplantesFahrzeug);
                         
-                        setSafe(p, prefix + "_planAkt", pers.planAktuellerMonat != null ? String.join(",", pers.planAktuellerMonat) : "");
-                        setSafe(p, prefix + "_planNext", pers.planNaechsterMonat != null ? String.join(",", pers.planNaechsterMonat) : "");
+                        // FIX: Fehlende Eigenschaften mit abspeichern!
+                        setSafe(p, prefix + "_praef", String.valueOf(pers.praeferenzGesendet));
+                        setSafe(p, prefix + "_lDauer", String.valueOf(pers.lehrgangDauerSec));
+                        setSafe(p, prefix + "_lThema", pers.lehrgangThema != null ? pers.lehrgangThema : "");
+                        
+                        // FIX: Umwandlung für den Plan absichern, damit null-Werte nicht crashen
+                        if (pers.planAktuellerMonat != null) {
+                            for(int d=0; d<31; d++) if(pers.planAktuellerMonat[d] == null) pers.planAktuellerMonat[d] = "Frei";
+                            setSafe(p, prefix + "_planAkt", String.join(",", pers.planAktuellerMonat));
+                        }
+                        if (pers.planNaechsterMonat != null) {
+                            for(int d=0; d<31; d++) if(pers.planNaechsterMonat[d] == null) pers.planNaechsterMonat[d] = "Frei";
+                            setSafe(p, prefix + "_planNext", String.join(",", pers.planNaechsterMonat));
+                        }
                         
                         if (pers.eigenschaften != null) {
                             setSafe(p, prefix + "_eigCount", String.valueOf(pers.eigenschaften.size()));
@@ -402,7 +414,7 @@ public class SpeicherManager {
                     w.fuhrpark.add(fzg);
                 }
                 
-                LogistikSimulator.sortiereFuhrpark(w); // NEU: Autos beim Laden ordnen!
+                LogistikSimulator.sortiereFuhrpark(w); 
                 
                 int wMatCount = parseIntSafe(p.getProperty("wache_" + i + "_matCount"), 0);
                 for(int m = 0; m < wMatCount; m++) {
@@ -423,6 +435,7 @@ public class SpeicherManager {
                 int persCount = parseIntSafe(p.getProperty("wache_" + i + "_persCount"), 0);
                 for (int j = 0; j < persCount; j++) {
                     String prefix = "wache_" + i + "_pers_" + j;
+                    
                     Personal pers = new Personal(p.getProperty(prefix + "_name", "Unbekannt"), "Anwaerter");
                     pers.qualifikationen.clear();
                     String qualStr = p.getProperty(prefix + "_qual", "");
@@ -438,11 +451,41 @@ public class SpeicherManager {
                     pers.geplanterStatus = p.getProperty(prefix + "_gStat", "Bereit");
                     pers.geplantesFahrzeug = p.getProperty(prefix + "_gFzg", "Keines");
                     
-                    String[] akt = p.getProperty(prefix + "_planAkt", "").split(",");
-                    if(akt.length == 31) pers.planAktuellerMonat = akt; else pers.planAktuellerMonat = new String[31];
+                    // FIX: Die zuvor fehlenden Variablen hier laden!
+                    pers.praeferenzGesendet = parseBoolSafe(p.getProperty(prefix + "_praef"), false);
+                    pers.lehrgangDauerSec = parseIntSafe(p.getProperty(prefix + "_lDauer"), 0);
+                    pers.lehrgangThema = p.getProperty(prefix + "_lThema", "");
                     
-                    String[] nxt = p.getProperty(prefix + "_planNext", "").split(",");
-                    if(nxt.length == 31) pers.planNaechsterMonat = nxt; else pers.planNaechsterMonat = new String[31];
+                    // FIX: split mit "-1" rettet den Schichtplan, auch wenn das Array mit "Frei" / leer am Ende aufhört
+                    String planAktStr = p.getProperty(prefix + "_planAkt", "");
+                    if(!planAktStr.isEmpty()) {
+                        String[] akt = planAktStr.split(",", -1);
+                        if(akt.length == 31) {
+                            for(int d=0; d<31; d++) if(akt[d].equals("null") || akt[d].isEmpty()) akt[d] = "Frei";
+                            pers.planAktuellerMonat = akt; 
+                        } else {
+                            pers.planAktuellerMonat = new String[31];
+                            for(int d=0; d<31; d++) pers.planAktuellerMonat[d] = "Frei";
+                        }
+                    } else {
+                        pers.planAktuellerMonat = new String[31];
+                        for(int d=0; d<31; d++) pers.planAktuellerMonat[d] = "Frei";
+                    }
+                    
+                    String planNextStr = p.getProperty(prefix + "_planNext", "");
+                    if(!planNextStr.isEmpty()) {
+                        String[] nxt = planNextStr.split(",", -1);
+                        if(nxt.length == 31) {
+                            for(int d=0; d<31; d++) if(nxt[d].equals("null") || nxt[d].isEmpty()) nxt[d] = "Frei";
+                            pers.planNaechsterMonat = nxt; 
+                        } else {
+                            pers.planNaechsterMonat = new String[31];
+                            for(int d=0; d<31; d++) pers.planNaechsterMonat[d] = "Frei";
+                        }
+                    } else {
+                        pers.planNaechsterMonat = new String[31];
+                        for(int d=0; d<31; d++) pers.planNaechsterMonat[d] = "Frei";
+                    }
                     
                     pers.eigenschaften.clear();
                     int eigCount = parseIntSafe(p.getProperty(prefix + "_eigCount"), 0);
