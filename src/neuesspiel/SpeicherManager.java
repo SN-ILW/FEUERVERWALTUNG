@@ -63,7 +63,6 @@ public class SpeicherManager {
                 p.setProperty("v_" + i + "_strafe", String.valueOf(v.strafeBeiFehlschlag));
             }
             
-            // NEU: Vorlagen Speichern
             p.setProperty("vorlagenCount", String.valueOf(LogistikSimulator.vorlagenPool.size()));
             for(int i = 0; i < LogistikSimulator.vorlagenPool.size(); i++) {
                 EinsatzVorlage v = LogistikSimulator.vorlagenPool.get(i);
@@ -84,12 +83,39 @@ public class SpeicherManager {
                 p.setProperty(prefix + "_nachTyp", v.nachforderungTyp);
                 p.setProperty(prefix + "_minLvl", String.valueOf(v.minLevel));
             }
+            
+            p.setProperty("matDefCount", String.valueOf(LogistikSimulator.customMaterials.size()));
+            for(int i=0; i<LogistikSimulator.customMaterials.size(); i++) {
+                CustomMaterial cm = LogistikSimulator.customMaterials.get(i);
+                p.setProperty("matDef_" + i + "_name", cm.name);
+                p.setProperty("matDef_" + i + "_fz", String.join(",", cm.fahrzeuge));
+                p.setProperty("matDef_" + i + "_verb", String.valueOf(cm.maxVerbrauch));
+                p.setProperty("matDef_" + i + "_preis", String.valueOf(cm.preis));
+                p.setProperty("matDef_" + i + "_menge", String.valueOf(cm.bestellMenge));
+                p.setProperty("matDef_" + i + "_warn", String.valueOf(cm.warnSchwelle));
+            }
+            
+            p.setProperty("hlCount", String.valueOf(LogistikSimulator.hauptlager.size()));
+            int hlIdx = 0;
+            for (String mName : LogistikSimulator.hauptlager.keySet()) {
+                p.setProperty("hl_" + hlIdx + "_name", mName);
+                p.setProperty("hl_" + hlIdx + "_anz", String.valueOf(LogistikSimulator.hauptlager.get(mName)));
+                hlIdx++;
+            }
 
             p.setProperty("wachenCount", String.valueOf(LogistikSimulator.wachen.size()));
             for (int i = 0; i < LogistikSimulator.wachen.size(); i++) {
                 Wache w = LogistikSimulator.wachen.get(i);
                 p.setProperty("wache_" + i + "_name", w.name);
                 p.setProperty("wache_" + i + "_kennung", w.kennung);
+                
+                p.setProperty("wache_" + i + "_matCount", String.valueOf(w.material.size()));
+                int wMatIdx = 0;
+                for (String mName : w.material.keySet()) {
+                    p.setProperty("wache_" + i + "_mat_" + wMatIdx + "_name", mName);
+                    p.setProperty("wache_" + i + "_mat_" + wMatIdx + "_anz", String.valueOf(w.material.get(mName)));
+                    wMatIdx++;
+                }
                 
                 p.setProperty("wache_" + i + "_upgradeCount", String.valueOf(w.upgrades.size()));
                 for(int u = 0; u < w.upgrades.size(); u++) {
@@ -145,6 +171,9 @@ public class SpeicherManager {
 
             LogistikSimulator.wachen.clear();
             LogistikSimulator.aktiveVertraege.clear();
+            LogistikSimulator.vorlagenPool.clear();
+            LogistikSimulator.customMaterials.clear();
+            LogistikSimulator.hauptlager.clear();
             
             LogistikSimulator.budget = Integer.parseInt(p.getProperty("budget", "25000"));
             LogistikSimulator.xp = Integer.parseInt(p.getProperty("xp", "0"));
@@ -173,21 +202,19 @@ public class SpeicherManager {
             LogistikSimulator.cfgLogistikAktiv = Boolean.parseBoolean(p.getProperty("cfgLogistikAktiv", "true"));
             
             if (p.containsKey("miss_titel")) {
-                LogistikSimulator.aktuelleMission = new TagesMission(p.getProperty("miss_titel"), p.getProperty("miss_desc"), p.getProperty("miss_typ"), Integer.parseInt(p.getProperty("miss_ziel")), Integer.parseInt(p.getProperty("miss_geld")), Integer.parseInt(p.getProperty("miss_xp")));
+                LogistikSimulator.aktuelleMission = new TagesMission(p.getProperty("miss_titel"), p.getProperty("miss_desc"), p.getProperty("miss_typ"), Integer.parseInt(p.getProperty("miss_ziel", "1")), Integer.parseInt(p.getProperty("miss_geld", "0")), Integer.parseInt(p.getProperty("miss_xp", "0")));
                 LogistikSimulator.aktuelleMission.fortschritt = Integer.parseInt(p.getProperty("miss_fort", "0"));
                 LogistikSimulator.aktuelleMission.abgeschlossen = Boolean.parseBoolean(p.getProperty("miss_done", "false"));
             }
 
             int vCount = Integer.parseInt(p.getProperty("vertragsCount", "0"));
             for(int i = 0; i < vCount; i++) {
-                Vertrag v = new Vertrag(p.getProperty("v_" + i + "_ag"), p.getProperty("v_" + i + "_desc"), p.getProperty("v_" + i + "_art"), Integer.parseInt(p.getProperty("v_" + i + "_ziel")), Integer.parseInt(p.getProperty("v_" + i + "_bel")), Integer.parseInt(p.getProperty("v_" + i + "_strafe")));
+                Vertrag v = new Vertrag(p.getProperty("v_" + i + "_ag"), p.getProperty("v_" + i + "_desc"), p.getProperty("v_" + i + "_art"), Integer.parseInt(p.getProperty("v_" + i + "_ziel", "1")), Integer.parseInt(p.getProperty("v_" + i + "_bel", "0")), Integer.parseInt(p.getProperty("v_" + i + "_strafe", "0")));
                 v.aktuelleMenge = Integer.parseInt(p.getProperty("v_" + i + "_akt", "0"));
                 LogistikSimulator.aktiveVertraege.add(v);
             }
             
-            // NEU: Vorlagen Laden
             if (p.containsKey("vorlagenCount")) {
-                LogistikSimulator.vorlagenPool.clear();
                 int vorlagenCount = Integer.parseInt(p.getProperty("vorlagenCount"));
                 for(int i = 0; i < vorlagenCount; i++) {
                     String prefix = "vorlage_" + i;
@@ -212,9 +239,36 @@ public class SpeicherManager {
                 }
             }
 
+            int matDefCount = Integer.parseInt(p.getProperty("matDefCount", "0"));
+            for(int i=0; i<matDefCount; i++) {
+                String n = p.getProperty("matDef_" + i + "_name");
+                String fzStr = p.getProperty("matDef_" + i + "_fz", "");
+                ArrayList<String> fzList = new ArrayList<>();
+                if(!fzStr.isEmpty()) for(String s : fzStr.split(",")) fzList.add(s);
+                int verb = Integer.parseInt(p.getProperty("matDef_" + i + "_verb", "1"));
+                int preis = Integer.parseInt(p.getProperty("matDef_" + i + "_preis", "100"));
+                int menge = Integer.parseInt(p.getProperty("matDef_" + i + "_menge", "10"));
+                int warn = Integer.parseInt(p.getProperty("matDef_" + i + "_warn", "5"));
+                LogistikSimulator.customMaterials.add(new CustomMaterial(n, fzList, verb, new ArrayList<>(), preis, menge, warn));
+            }
+            
+            int hlCount = Integer.parseInt(p.getProperty("hlCount", "0"));
+            for(int i=0; i<hlCount; i++) {
+                String n = p.getProperty("hl_" + i + "_name");
+                int anz = Integer.parseInt(p.getProperty("hl_" + i + "_anz", "0"));
+                LogistikSimulator.hauptlager.put(n, anz);
+            }
+
             int wachenCount = Integer.parseInt(p.getProperty("wachenCount", "0"));
             for (int i = 0; i < wachenCount; i++) {
                 Wache w = new Wache(p.getProperty("wache_" + i + "_name"), p.getProperty("wache_" + i + "_kennung"));
+                
+                int wMatCount = Integer.parseInt(p.getProperty("wache_" + i + "_matCount", "0"));
+                for(int m = 0; m < wMatCount; m++) {
+                    String n = p.getProperty("wache_" + i + "_mat_" + m + "_name");
+                    int anz = Integer.parseInt(p.getProperty("wache_" + i + "_mat_" + m + "_anz", "0"));
+                    w.material.put(n, anz);
+                }
                 
                 int upgCount = Integer.parseInt(p.getProperty("wache_" + i + "_upgradeCount", "0"));
                 for(int u = 0; u < upgCount; u++) {
@@ -269,6 +323,32 @@ public class SpeicherManager {
                 
                 LogistikSimulator.wachen.add(w);
             }
+            
+            // --- RETTUNGSSCHIRM FUER ALTE SPIELSTAENDE ---
+            if (LogistikSimulator.customMaterials.isEmpty()) {
+                LogistikSimulator.customMaterials.add(new CustomMaterial("Verbandsmaterial", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
+                LogistikSimulator.customMaterials.add(new CustomMaterial("Medikamente", new ArrayList<>(java.util.Arrays.asList("RTW", "NEF")), 3, new ArrayList<>(), 1000, 20, 5));
+                LogistikSimulator.customMaterials.add(new CustomMaterial("Sauerstoff O²", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "NEF", "HLF")), 1, new ArrayList<>(), 800, 10, 5));
+                LogistikSimulator.customMaterials.add(new CustomMaterial("PA-Gerät", new ArrayList<>(java.util.Arrays.asList("HLF", "DLK")), 2, new ArrayList<>(), 1500, 10, 5));
+                LogistikSimulator.customMaterials.add(new CustomMaterial("Schaummittel", new ArrayList<>(java.util.Arrays.asList("HLF")), 5, new ArrayList<>(), 2000, 5, 2));
+                LogistikSimulator.customMaterials.add(new CustomMaterial("Ölbindemittel", new ArrayList<>(java.util.Arrays.asList("HLF")), 2, new ArrayList<>(), 400, 20, 10));
+                
+                for(CustomMaterial cm : LogistikSimulator.customMaterials) {
+                    LogistikSimulator.hauptlager.put(cm.name, 100);
+                    for(Wache w : LogistikSimulator.wachen) w.material.put(cm.name, 50);
+                }
+            }
+
+            if (LogistikSimulator.vorlagenPool.isEmpty()) {
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("FW", "H1", "Tueröffnung", 0, 0, 0, 1, 0, 0, 0, 0, false, 0, "", 1));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Schnittverletzung", 1, 0, 0, 0, 0, 0, 0, 0, false, 0, "", 1));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("FW", "F3", "BMA Einkaufszentrum", 0, 0, 0, 2, 1, 1, 0, 0, true, 30, "RTW", 3));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("FW", "F2", "Wohnungsbrand", 1, 0, 0, 2, 1, 0, 0, 0, true, 50, "NEF", 2));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R2N1", "Verkehrsunfall (THL)", 2, 1, 0, 1, 0, 0, 0, 0, true, 20, "ELW & HLF", 4));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("KTP", "KTP", "Krankentransport", 0, 0, 1, 0, 0, 0, 0, 0, false, 0, "", 1));
+                LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
+            }
+            
             return true;
         } catch (Exception e) {
             e.printStackTrace();
