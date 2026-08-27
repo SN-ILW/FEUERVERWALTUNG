@@ -1,12 +1,13 @@
 package neuesspiel;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.ArrayList;
 
 public class SpeicherManager {
 
-    // KUGELSICHERE HILFSMETHODEN: Verhindern Abstuerze durch leere Werte (NullPointerExceptions)
+    // KUGELSICHERE HILFSMETHODEN
     private static void setSafe(Properties p, String key, String val) {
         if (key != null) {
             p.setProperty(key, val != null ? val : "");
@@ -33,7 +34,10 @@ public class SpeicherManager {
     }
 
     public static void speichern(String dateiPfad) {
-        try (FileOutputStream out = new FileOutputStream(dateiPfad)) {
+        System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
+        try (FileOutputStream out = new FileOutputStream(dateiPfad);
+             OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
+             
             Properties p = new Properties();
             
             setSafe(p, "budget", String.valueOf(LogistikSimulator.budget));
@@ -139,6 +143,25 @@ public class SpeicherManager {
                 setSafe(p, "wache_" + i + "_name", w.name);
                 setSafe(p, "wache_" + i + "_kennung", w.kennung);
                 
+                // Fuhrpark (Fahrzeuge) speichern
+                if (w.fuhrpark != null) {
+                    setSafe(p, "wache_" + i + "_fzgCount", String.valueOf(w.fuhrpark.size()));
+                    for (int f = 0; f < w.fuhrpark.size(); f++) {
+                        Fahrzeug fzg = w.fuhrpark.get(f);
+                        if (fzg == null) continue;
+                        String fPfx = "wache_" + i + "_fzg_" + f;
+                        setSafe(p, fPfx + "_funk", fzg.funkrufname);
+                        setSafe(p, fPfx + "_typ", fzg.typ);
+                        setSafe(p, fPfx + "_status", String.valueOf(fzg.status));
+                        setSafe(p, fPfx + "_km", String.valueOf(fzg.kilometer));
+                        setSafe(p, fPfx + "_tuev", String.valueOf(fzg.naechsteInspektion));
+                        setSafe(p, fPfx + "_grund", fzg.ausfallGrund);
+                        setSafe(p, fPfx + "_repDauer", String.valueOf(fzg.reparaturDauer));
+                    }
+                } else {
+                    setSafe(p, "wache_" + i + "_fzgCount", "0");
+                }
+                
                 if (w.material != null) {
                     setSafe(p, "wache_" + i + "_matCount", String.valueOf(w.material.size()));
                     int wMatIdx = 0;
@@ -204,8 +227,14 @@ public class SpeicherManager {
                 }
             }
 
-            p.store(out, "Logistik Simulator Savegame");
+            for (String key : p.stringPropertyNames()) {
+                System.out.println("SCHREIBE: " + key + " = " + p.getProperty(key));
+            }
+            System.out.println("=== [DEBUG] SPEICHER-VORGANG BEENDET ===\n");
+
+            p.store(writer, "Logistik Simulator Savegame");
         } catch (Exception e) {
+            System.out.println("!!! FEHLER BEIM SPEICHERN: " + e.getMessage());
             e.printStackTrace();
             javax.swing.JOptionPane.showMessageDialog(null, "Achtung: Fehler beim Speichern aufgetreten!\n" + e.getMessage(), "Speicherfehler", javax.swing.JOptionPane.ERROR_MESSAGE);
         }
@@ -213,11 +242,22 @@ public class SpeicherManager {
 
     public static boolean laden(String dateiPfad) {
         File file = new File(dateiPfad);
-        if (!file.exists()) return false;
+        if (!file.exists()) {
+            System.out.println("[DEBUG] Keine Savegame Datei gefunden.");
+            return false;
+        }
 
-        try (FileInputStream in = new FileInputStream(file)) {
+        try (FileInputStream in = new FileInputStream(file);
+             InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
+             
             Properties p = new Properties();
-            p.load(in);
+            p.load(reader);
+
+            System.out.println("\n=== [DEBUG] LADE-VORGANG GESTARTET ===");
+            for (String key : p.stringPropertyNames()) {
+                System.out.println("GELADEN: " + key + " = " + p.getProperty(key));
+            }
+            System.out.println("=== [DEBUG] LADE-VORGANG BEENDET ===\n");
 
             LogistikSimulator.wachen.clear();
             LogistikSimulator.aktiveVertraege.clear();
@@ -313,6 +353,21 @@ public class SpeicherManager {
             for (int i = 0; i < wachenCount; i++) {
                 Wache w = new Wache(p.getProperty("wache_" + i + "_name", "Wache"), p.getProperty("wache_" + i + "_kennung", "00"));
                 
+                // Fuhrpark (Fahrzeuge) laden -> KORREKTUR: km und tuev sind Integer!
+                int fzgCount = parseIntSafe(p.getProperty("wache_" + i + "_fzgCount"), 0);
+                for(int f = 0; f < fzgCount; f++) {
+                    String fPfx = "wache_" + i + "_fzg_" + f;
+                    String funk = p.getProperty(fPfx + "_funk", "Unbekannt");
+                    String typ = p.getProperty(fPfx + "_typ", "RTW");
+                    Fahrzeug fzg = new Fahrzeug(funk, typ);
+                    fzg.status = parseIntSafe(p.getProperty(fPfx + "_status"), 6);
+                    fzg.kilometer = parseIntSafe(p.getProperty(fPfx + "_km"), 0);
+                    fzg.naechsteInspektion = parseIntSafe(p.getProperty(fPfx + "_tuev"), 1000);
+                    fzg.ausfallGrund = p.getProperty(fPfx + "_grund", "");
+                    fzg.reparaturDauer = parseIntSafe(p.getProperty(fPfx + "_repDauer"), 0);
+                    w.fuhrpark.add(fzg);
+                }
+                
                 int wMatCount = parseIntSafe(p.getProperty("wache_" + i + "_matCount"), 0);
                 for(int m = 0; m < wMatCount; m++) {
                     String n = p.getProperty("wache_" + i + "_mat_" + m + "_name", "Unbekannt");
@@ -365,7 +420,6 @@ public class SpeicherManager {
                     w.personalPool.add(pers);
                 }
                 
-                // Fallback: Alte globale Upgrades in Wache 1 uebertragen
                 if (i == 0) {
                     boolean hasW = false, hasR = false;
                     for(WachenAusbau wa : w.upgrades) { if(wa.id.equals("werkstatt")) hasW = true; if(wa.id.equals("ruheraum")) hasR = true; }
@@ -376,7 +430,11 @@ public class SpeicherManager {
                 LogistikSimulator.wachen.add(w);
             }
             
-            // --- RETTUNGSSCHIRM (FALLBACKS) ---
+            if (LogistikSimulator.wachen.isEmpty()) {
+                System.out.println("[DEBUG] Keine Wachen gefunden. Generiere Standard-Daten!");
+                return false; 
+            }
+
             if (LogistikSimulator.customMaterials.isEmpty()) {
                 LogistikSimulator.customMaterials.add(new CustomMaterial("Verbandsmaterial", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
                 LogistikSimulator.customMaterials.add(new CustomMaterial("Medikamente", new ArrayList<>(java.util.Arrays.asList("RTW", "NEF")), 3, new ArrayList<>(), 1000, 20, 5));
@@ -403,6 +461,7 @@ public class SpeicherManager {
             
             return true;
         } catch (Exception e) {
+            System.out.println("!!! FEHLER BEIM LADEN: " + e.getMessage());
             e.printStackTrace();
             javax.swing.JOptionPane.showMessageDialog(null, "Achtung: Fehler beim Laden des Spielstands!\n" + e.getMessage(), "Ladefehler", javax.swing.JOptionPane.ERROR_MESSAGE);
             return false;

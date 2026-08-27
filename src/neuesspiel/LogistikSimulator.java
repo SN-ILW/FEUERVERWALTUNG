@@ -48,7 +48,6 @@ public class LogistikSimulator {
     
     public static int abgelehnteEinsaetzeHeute = 0;
 
-    // Alte globale techWerkstatt und techRuheraum wurden hier entfernt!
     public static boolean techGrossabnehmer = false;
     public static int lehrerStufe = 0; 
     public static int calltakerStufe = 0;
@@ -474,7 +473,6 @@ public class LogistikSimulator {
                     }
                 }
 
-                if (btnLog != null) btnLog.setVisible(cfgLogistikAktiv); 
                 uiAktualisieren(uhrzeit);
             }
         }).start();
@@ -546,6 +544,11 @@ public class LogistikSimulator {
     }
 
     public static void uiAktualisieren(String zeit) {
+        // NEU: Logistik Button hier verstecken, so reagiert er ohne Verzoegerung!
+        if (btnLog != null) {
+            btnLog.setVisible(cfgLogistikAktiv);
+        }
+
         String rushHourText = isRushHour() ? " | RUSH-HOUR (Verkehr blockiert)" : "";
         String eventText = aktuellesEvent != null ? " | EVENT: " + aktuellesEvent.name : "";
         topUhrzeitLabel.setText(getDatumUndUhrzeit() + " " + zeit + " Uhr" + rushHourText + eventText + " | Leitstelle & Logistik");
@@ -684,6 +687,8 @@ public class LogistikSimulator {
         int missingHLF = aktuellerNotruf.vorlage.reqHLF - sucheFahrzeuge("HLF", aktuellerNotruf.vorlage.reqHLF, null);
         int missingDLK = aktuellerNotruf.vorlage.reqDLK - sucheFahrzeuge("DLK", aktuellerNotruf.vorlage.reqDLK, null);
         int missingNEF = aktuellerNotruf.vorlage.reqNEF - sucheFahrzeuge("NEF", aktuellerNotruf.vorlage.reqNEF, null);
+        int missingTLF = aktuellerNotruf.vorlage.reqTLF - sucheFahrzeuge("TLF", aktuellerNotruf.vorlage.reqTLF, null); 
+        int missingMTW = aktuellerNotruf.vorlage.reqMTW - sucheFahrzeuge("MTW", aktuellerNotruf.vorlage.reqMTW, null); 
         
         int reqKTW = aktuellerNotruf.vorlage.reqKTW;
         int reqRTW = aktuellerNotruf.vorlage.reqRTW;
@@ -694,7 +699,7 @@ public class LogistikSimulator {
         int foundRTW = sucheFahrzeuge("RTW", neededRTW, null);
         int missingFinalRTW = neededRTW - foundRTW;
         
-        int totalMissing = Math.max(0, missingELW) + Math.max(0, missingHLF) + Math.max(0, missingDLK) + Math.max(0, missingFinalRTW) + Math.max(0, missingNEF);
+        int totalMissing = Math.max(0, missingELW) + Math.max(0, missingHLF) + Math.max(0, missingDLK) + Math.max(0, missingFinalRTW) + Math.max(0, missingNEF) + Math.max(0, missingTLF) + Math.max(0, missingMTW); 
 
         boolean matsDa = true;
         if (cfgLogistikAktiv) {
@@ -733,6 +738,8 @@ public class LogistikSimulator {
         sucheFahrzeuge("HLF", aktuellerNotruf.vorlage.reqHLF, fzListe);
         sucheFahrzeuge("DLK", aktuellerNotruf.vorlage.reqDLK, fzListe);
         sucheFahrzeuge("NEF", aktuellerNotruf.vorlage.reqNEF, fzListe);
+        sucheFahrzeuge("TLF", aktuellerNotruf.vorlage.reqTLF, fzListe); 
+        sucheFahrzeuge("MTW", aktuellerNotruf.vorlage.reqMTW, fzListe); 
         
         int assignedKTW = sucheFahrzeuge("KTW", reqKTW, fzListe);
         sucheFahrzeuge("RTW", reqRTW + (reqKTW - assignedKTW), fzListe); 
@@ -1261,7 +1268,6 @@ public class LogistikSimulator {
         Fahrzeug f1 = new Fahrzeug(w.generiereFunkrufname("HLF"), "HLF"); w.addFahrzeug(f1);
         Fahrzeug f2 = new Fahrzeug(w.generiereFunkrufname("RTW"), "RTW"); w.addFahrzeug(f2);
 
-        // Vorlagen mit den neuen Nullen (0, 0) fuer reqTLF und reqMTW
         vorlagenPool.add(new EinsatzVorlage("FW", "H1", "Tueröffnung", 0, 0, 0, 1, 0, 0, 0, 0, false, 0, "", 1));
         vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Schnittverletzung", 1, 0, 0, 0, 0, 0, 0, 0, false, 0, "", 1));
         vorlagenPool.add(new EinsatzVorlage("FW", "F3", "BMA Einkaufszentrum", 0, 0, 0, 2, 1, 1, 0, 0, true, 30, "RTW", 3));
