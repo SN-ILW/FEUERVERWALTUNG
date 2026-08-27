@@ -1555,7 +1555,7 @@ public class FensterManager {
                 JOptionPane.showMessageDialog(d, "Nicht genug Material (" + ein.reqMaterial.keySet().iterator().next() + ") auf den Wachen!", "Material fehlt", JOptionPane.ERROR_MESSAGE);
                 return;
             }
-
+//test
             // Wenn wir hier ankommen: ALARM!
             int xpBel = 0;
             int multiplier = isRushHour() ? 3 : 1;
