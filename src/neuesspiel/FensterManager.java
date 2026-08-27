@@ -984,9 +984,9 @@ public class FensterManager {
         JLabel l = new JLabel("Fuer welche Wache?"); l.setForeground(Color.WHITE); content.add(l);
         JComboBox<String> cbWachen = new JComboBox<>(); for(Wache w : wachen) cbWachen.addItem(w.name); content.add(cbWachen);
 
-        JButton b1 = new JButton("ELW kaufen (1500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 1500));
-        JButton b2 = new JButton("HLF kaufen (3000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 3000));
-        JButton b3 = new JButton("DLK kaufen (5000 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 5000));
+        JButton b1 = new JButton("ELW kaufen (1500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 2500));
+        JButton b2 = new JButton("HLF kaufen (3000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 2000));
+        JButton b3 = new JButton("DLK kaufen (5000 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 2500));
         JButton b4 = new JButton("RTW kaufen (2000 EURO)"); b4.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "RTW", 2000));
         JButton b5 = new JButton("NEF kaufen (2500 EURO)"); b5.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "NEF", 2500));
         JButton b6 = new JButton("KTW kaufen (1000 EURO)"); b6.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "KTW", 1000));
