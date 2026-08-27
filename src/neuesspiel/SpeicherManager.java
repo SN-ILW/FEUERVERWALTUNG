@@ -17,6 +17,9 @@ public class SpeicherManager {
             p.setProperty("sekunden", String.valueOf(LogistikSimulator.inGameSekunden));
             p.setProperty("abgelehnt_heute", String.valueOf(LogistikSimulator.abgelehnteEinsaetzeHeute)); 
             
+            p.setProperty("aktuellerKredit", String.valueOf(LogistikSimulator.aktuellerKredit));
+            p.setProperty("taeglicheKreditRate", String.valueOf(LogistikSimulator.taeglicheKreditRate));
+            
             p.setProperty("cfgSoundNotruf", String.valueOf(LogistikSimulator.cfgSoundNotruf));
             p.setProperty("cfgSoundStatus6", String.valueOf(LogistikSimulator.cfgSoundStatus6));
             p.setProperty("cfgSoundStatus7", String.valueOf(LogistikSimulator.cfgSoundStatus7));
@@ -175,6 +178,9 @@ public class SpeicherManager {
             LogistikSimulator.cfgSoundNotruf = Boolean.parseBoolean(p.getProperty("cfgSoundNotruf", "true"));
             LogistikSimulator.cfgSoundStatus6 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus6", "true"));
             LogistikSimulator.cfgSoundStatus7 = Boolean.parseBoolean(p.getProperty("cfgSoundStatus7", "true"));
+            
+            LogistikSimulator.aktuellerKredit = Integer.parseInt(p.getProperty("aktuellerKredit", "0"));
+            LogistikSimulator.taeglicheKreditRate = Integer.parseInt(p.getProperty("taeglicheKreditRate", "0"));
             
             LogistikSimulator.volNotruf = Integer.parseInt(p.getProperty("volNotruf", "100"));
             LogistikSimulator.volStatus6 = Integer.parseInt(p.getProperty("volStatus6", "100"));

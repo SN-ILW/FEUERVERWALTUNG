@@ -17,6 +17,9 @@ public class LogistikSimulator {
     public static JPanel notrufPanel;
     public static JEditorPane fmsBoard;
     
+    public static int aktuellerKredit = 0;
+    public static int taeglicheKreditRate = 0;
+    
     public static JButton btnPostfach, btnTagBeenden;
 
     public static int budget = 25000;
@@ -274,7 +277,24 @@ public class LogistikSimulator {
         
         pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
         pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
-        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(new JLabel("")); pnlBottom.add(btnTagBeenden);
+        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); new JLabel(""); pnlBottom.add(btnTagBeenden);
+        
+       // NEU: Der Bank-Button
+        JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
+        btnBank.setForeground(Color.BLACK);
+        btnBank.addActionListener(e -> FensterManager.oeffneBank());
+
+        pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
+        pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
+        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
+        
+        btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
+        btnTagBeenden.setEnabled(false);
+
+        // ...
+
+        // Und unten beim Hinzufuegen (pnlBottom.add) ersetzt du das 'new JLabel("")' durch 'btnBank':
+        pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
         
         frame.add(pnlTop, BorderLayout.NORTH);
         frame.add(pnlCenter, BorderLayout.CENTER);
@@ -878,8 +898,22 @@ boolean hasWarnings = false;
             budget += 1000;
         }
 
-        StringBuilder sb = new StringBuilder();
+     StringBuilder sb = new StringBuilder();
         sb.append("=== TAGESABSCHLUSS TAG ").append(tag).append(" ===\n\n");
+        
+        // --- NEU: KREDIT-ABBUCHUNG ---
+        if (aktuellerKredit > 0) {
+            int abzug = Math.min(taeglicheKreditRate, aktuellerKredit);
+            budget -= abzug;
+            aktuellerKredit -= abzug;
+            if (aktuellerKredit <= 0) {
+                taeglicheKreditRate = 0;
+                sb.append("🏦 Kredit wurde heute vollstaendig abbezahlt!\n\n");
+            } else {
+                sb.append("🏦 Kreditrate bezahlt: -").append(abzug).append(" EUR (Restschulden: ").append(aktuellerKredit).append(" EUR)\n\n");
+            }
+        }
+        // -----------------------------
         
         if (aktuellesEvent != null) {
             aktuellesEvent.dauerTage--;

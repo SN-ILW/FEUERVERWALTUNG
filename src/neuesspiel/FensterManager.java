@@ -409,6 +409,76 @@ btnLoeschen.addActionListener(e -> {
         d.setVisible(true);
     }
 
+    public static void oeffneBank() {
+        JDialog d = new JDialog(LogistikSimulator.frame, "Bank & Finanzen", true);
+        d.setSize(450, 350);
+        d.setLayout(new GridLayout(6, 1, 10, 10));
+        d.setLocationRelativeTo(LogistikSimulator.frame);
+        d.getContentPane().setBackground(new Color(35, 35, 35));
+
+        JLabel lblInfo = new JLabel("Aktuelle Schulden: " + LogistikSimulator.aktuellerKredit + " EUR", SwingConstants.CENTER);
+        lblInfo.setForeground(Color.WHITE);
+        lblInfo.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        d.add(lblInfo);
+
+        JButton btnKredit1 = LogistikSimulator.createStyledButton("Kleinkredit (10.000 EUR) - Ab Level 5", new Color(41, 128, 185));
+        JButton btnKredit2 = LogistikSimulator.createStyledButton("Mittelstand (50.000 EUR) - Ab Level 15", new Color(39, 174, 96));
+        JButton btnKredit3 = LogistikSimulator.createStyledButton("Grosskredit (100.000 EUR) - Ab Level 25", new Color(192, 57, 43));
+        
+        // Level-Sperren
+        if (LogistikSimulator.level < 5) btnKredit1.setEnabled(false);
+        if (LogistikSimulator.level < 15) btnKredit2.setEnabled(false);
+        if (LogistikSimulator.level < 25) btnKredit3.setEnabled(false);
+
+        // Man darf immer nur EINEN Kredit gleichzeitig haben
+        if (LogistikSimulator.aktuellerKredit > 0) {
+            btnKredit1.setEnabled(false); btnKredit2.setEnabled(false); btnKredit3.setEnabled(false);
+            lblInfo.setText(lblInfo.getText() + " (Tilgung: " + LogistikSimulator.taeglicheKreditRate + " / Tag)");
+        }
+
+        java.awt.event.ActionListener listener = e -> {
+            int betrag = 0; int rate = 0;
+            if(e.getSource() == btnKredit1) { betrag = 10000; rate = 500; }
+            if(e.getSource() == btnKredit2) { betrag = 50000; rate = 1500; }
+            if(e.getSource() == btnKredit3) { betrag = 100000; rate = 2500; }
+            
+            int wahl = JOptionPane.showConfirmDialog(d, "Kredit ueber " + betrag + " EUR aufnehmen?\nDie Bank berechnet 10% Zinsen.\nEs werden taeglich automatisch " + rate + " EUR abgebucht.", "Vertrag unterschreiben", JOptionPane.YES_NO_OPTION);
+            if(wahl == JOptionPane.YES_OPTION) {
+                LogistikSimulator.budget += betrag;
+                LogistikSimulator.aktuellerKredit = betrag + (betrag / 10); // 10% Zinsen aufschlagen
+                LogistikSimulator.taeglicheKreditRate = rate;
+                SpeicherManager.speichern("savegame.properties");
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                d.dispose();
+            }
+        };
+        
+        btnKredit1.addActionListener(listener); btnKredit2.addActionListener(listener); btnKredit3.addActionListener(listener);
+        d.add(btnKredit1); d.add(btnKredit2); d.add(btnKredit3);
+        
+        JButton btnSondertilgung = LogistikSimulator.createStyledButton("Sofort-Tilgung (Alles abbezahlen)", new Color(243, 156, 18));
+        btnSondertilgung.setForeground(Color.BLACK);
+        if (LogistikSimulator.aktuellerKredit <= 0) btnSondertilgung.setEnabled(false);
+        
+        btnSondertilgung.addActionListener(e -> {
+             if (LogistikSimulator.budget >= LogistikSimulator.aktuellerKredit) {
+                 LogistikSimulator.budget -= LogistikSimulator.aktuellerKredit;
+                 LogistikSimulator.aktuellerKredit = 0;
+                 LogistikSimulator.taeglicheKreditRate = 0;
+                 JOptionPane.showMessageDialog(d, "Kredit vollstaendig abbezahlt!");
+                 SpeicherManager.speichern("savegame.properties");
+                 LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                 d.dispose();
+             } else {
+                 JOptionPane.showMessageDialog(d, "Du hast nicht genug Geld fuer eine Kompletttilgung!");
+             }
+        });
+        d.add(new JLabel("")); // Platzhalter
+        d.add(btnSondertilgung);
+
+        d.setVisible(true);
+    }
+    
     public static void oeffneWachenAusbau() {
         JDialog d = new JDialog(frame, "Wachen & Gebaeude", true);
         d.setSize(600, 450);
