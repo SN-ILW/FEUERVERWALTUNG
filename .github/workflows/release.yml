@@ -1,10 +1,8 @@
 name: Auto-Release EXE
 
-# Das Skript startet, wenn du auf GitHub einen Knopf drückst (Run workflow)
 on:
   workflow_dispatch:
 
-# GitHub braucht die Erlaubnis, neue Dateien bei dir hochzuladen (für das Release)
 permissions:
   contents: write
 
@@ -20,11 +18,11 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '26' # Korrekt auf deine installierte Version 26 gesetzt!
+          java-version: '26'
 
       - name: 🔨 JAR-Datei bauen (mit NetBeans Ant)
         run: ant -Dplatforms.JDK_26.home="%JAVA_HOME%" -f build.xml clean jar
-        shell: cmd # HIER GEFIXT: Wir zwingen GitHub, die klassische CMD zu nutzen!
+        shell: cmd
 
       - name: 🚀 Launch4j herunterladen
         run: |
@@ -33,7 +31,6 @@ jobs:
         shell: cmd
         
       - name: 📦 EXE mit Launch4j erstellen
-        # WICHTIG: Die launch4j-config.xml muss zwingend in deinem GitHub-Repository liegen!
         run: launch4j\launch4jc.exe launch4j-config.xml
         shell: cmd
 
