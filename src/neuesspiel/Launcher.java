@@ -2,6 +2,7 @@ package neuesspiel;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -26,7 +27,7 @@ public class Launcher {
         JFrame frame = new JFrame("FEUERWEHR-VERWALTUNGS-SPIEL");
         frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 360); // Ein bisschen hoeher gemacht fuer den vierten Button
+        frame.setSize(400, 360); 
         frame.setLocationRelativeTo(null); 
         frame.setLayout(new BorderLayout());
         
@@ -45,16 +46,12 @@ public class Launcher {
         topPanel.add(lblVersion);
         frame.add(topPanel, BorderLayout.NORTH);
 
-        // HIER ANGEPASST: 4 Zeilen statt 3
         JPanel centerPanel = new JPanel(new GridLayout(4, 1, 10, 15));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
         centerPanel.setBackground(new Color(35, 35, 35));
 
         JButton btnStart = createStyledButton("Verwaltung oeffnen", new Color(39, 174, 96));
-        
-        // --- DER NEUE BUTTON ---
-        JButton btnFuehrung = createStyledButton("Fuehrungskraft (Demnaechst)", new Color(243, 156, 18)); 
-        
+        JButton btnFuehrung = createStyledButton("!!BETA!! Fuehrungskraft spielen !!BETA!!", new Color(243, 156, 18)); 
         JButton btnUpdate = createStyledButton("Update suchen", new Color(41, 128, 185));
         JButton btnExit = createStyledButton("Beenden", new Color(192, 57, 43));
 
@@ -63,8 +60,9 @@ public class Launcher {
             LogistikSimulator.main(new String[]{}); 
         });
         
+        // HIER NEU: Oeffnet das Fahrzeug-Auswahl Fenster!
         btnFuehrung.addActionListener(e -> {
-            JOptionPane.showMessageDialog(frame, "Der Modus 'Fuehrungskraft' befindet sich aktuell noch in Entwicklung!\nSchau beim naechsten Update nochmal vorbei.", "In Entwicklung", JOptionPane.INFORMATION_MESSAGE);
+            oeffneFahrzeugAuswahl(frame);
         });
 
         btnUpdate.addActionListener(e -> checkForUpdates(frame));
@@ -72,7 +70,7 @@ public class Launcher {
         btnExit.addActionListener(e -> System.exit(0));
 
         centerPanel.add(btnStart);
-        centerPanel.add(btnFuehrung); // Button ins Raster eingepasst
+        centerPanel.add(btnFuehrung); 
         centerPanel.add(btnUpdate);
         centerPanel.add(btnExit);
         
@@ -90,6 +88,75 @@ public class Launcher {
         return btn;
     }
 
+    // --- NEUES FENSTER FUER DIE FAHRZEUGAUSWAHL ---
+    private static void oeffneFahrzeugAuswahl(JFrame parentFrame) {
+        JDialog d = new JDialog(parentFrame, "Fahrzeug waehlen", true);
+        d.setUndecorated(true);
+        d.setSize(350, 250);
+        d.setLocationRelativeTo(parentFrame);
+        d.setLayout(new BorderLayout());
+
+        JPanel titleBar = new JPanel(new BorderLayout());
+        titleBar.setBackground(new Color(20, 20, 20));
+        titleBar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
+        JLabel lblTitle = new JLabel(" Fahrzeug auswaehlen");
+        lblTitle.setForeground(Color.WHITE);
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        titleBar.add(lblTitle, BorderLayout.WEST);
+
+        JButton btnClose = new JButton("X");
+        btnClose.setBackground(new Color(192, 57, 43));
+        btnClose.setForeground(Color.WHITE);
+        btnClose.setFocusPainted(false);
+        btnClose.setBorder(BorderFactory.createEmptyBorder(3, 10, 3, 10));
+        btnClose.addActionListener(e -> d.dispose());
+        titleBar.add(btnClose, BorderLayout.EAST);
+
+        final Point[] dragPoint = new Point[1];
+        titleBar.addMouseListener(new MouseAdapter() { public void mousePressed(MouseEvent e) { dragPoint[0] = e.getPoint(); }});
+        titleBar.addMouseMotionListener(new MouseMotionAdapter() {
+            public void mouseDragged(MouseEvent e) { d.setLocation(d.getLocation().x + e.getX() - dragPoint[0].x, d.getLocation().y + e.getY() - dragPoint[0].y); }
+        });
+
+        d.add(titleBar, BorderLayout.NORTH);
+
+        JPanel content = new JPanel(new GridLayout(3, 1, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
+        content.setBackground(new Color(35, 35, 35));
+
+        JButton btnHLF = createStyledButton("!!BETA!! HLF (Gruppenfuehrer) !!BETA!!", new Color(192, 57, 43)); // Rot fuer Feuerwehr
+        JButton btnELW = createStyledButton("ELW (Einsatzleiter)", new Color(142, 68, 173)); // Lila/Blau fuer Einsatzleitung
+        JButton btnZurueck = createStyledButton("Zurueck", new Color(100, 100, 100));
+
+        btnHLF.addActionListener(e -> {
+            d.dispose(); 
+            parentFrame.dispose(); 
+            
+            // NEU: Lade den Spielstand heimlich im Hintergrund, falls noch nicht passiert!
+            if (LogistikSimulator.wachen.isEmpty()) {
+                if (!SpeicherManager.laden(SpeicherManager.getDokumentePfad())) {
+                    LogistikSimulator.initStandardDaten(); // Falls kein Savegame existiert, mach ein neues
+                }
+            }
+            
+            WachalltagSimulator.starten(); 
+        });
+
+        btnELW.addActionListener(e -> {
+            JOptionPane.showMessageDialog(d, "Der ELW-Modus wird geladen...\n(Dieses Feature ist in Entwicklung!)", "Modus: ELW", JOptionPane.INFORMATION_MESSAGE);
+            // Spaeter kommt hier der Startbefehl fuer das ELW-Fenster rein
+        });
+
+        btnZurueck.addActionListener(e -> d.dispose());
+
+        content.add(btnHLF);
+        content.add(btnELW);
+        content.add(btnZurueck);
+
+        d.add(content, BorderLayout.CENTER);
+        d.setVisible(true);
+    }
+
     private static void checkForUpdates(JFrame parentFrame) {
         try {
             URL url = new URL("https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest");
@@ -99,7 +166,6 @@ public class Launcher {
             conn.setRequestProperty("User-Agent", "Mozilla/5.0");
 
             if (conn.getResponseCode() == 200) {
-                // Den gesamten Text von GitHub einlesen (egal ob eine Zeile oder 100 Zeilen)
                 BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
                 StringBuilder jsonBuilder = new StringBuilder();
                 String line;
@@ -112,7 +178,6 @@ public class Launcher {
                 String latestVersion = "";
                 String downloadUrl = "";
 
-                // 1. Exaktes Auslesen der Version (tag_name)
                 int tagKey = json.indexOf("\"tag_name\"");
                 if (tagKey != -1) {
                     int valStart = json.indexOf("\"", json.indexOf(":", tagKey));
@@ -122,7 +187,6 @@ public class Launcher {
                     }
                 }
                 
-                // 2. Exaktes Auslesen des .exe Download-Links
                 int dlKey = json.indexOf("\"browser_download_url\"");
                 while (dlKey != -1) {
                     int valStart = json.indexOf("\"", json.indexOf(":", dlKey));
@@ -131,7 +195,7 @@ public class Launcher {
                         String foundUrl = json.substring(valStart + 1, valEnd);
                         if (foundUrl.endsWith(".exe")) {
                             downloadUrl = foundUrl;
-                            break; // Den richtigen Link gefunden!
+                            break; 
                         }
                     }
                     dlKey = json.indexOf("\"browser_download_url\"", valEnd);
@@ -231,7 +295,6 @@ public class Launcher {
                 in.close();
                 conn.disconnect();
                 
-                // DER NEUE SPIONAGE-CHECK
                 File checkFile = new File("update.exe");
                 if (checkFile.exists() && checkFile.length() < 100000) { 
                     StringBuilder errorContent = new StringBuilder();
@@ -269,7 +332,6 @@ public class Launcher {
             String os = System.getProperty("os.name").toLowerCase();
 
             if (os.contains("win")) {
-                // 1. Die Batch-Datei erstellen (macht die eigentliche Arbeit)
                 File batFile = new File("update.bat");
                 FileWriter fwBat = new FileWriter(batFile);
                 fwBat.write("@echo off\n");
@@ -278,20 +340,17 @@ public class Launcher {
                 fwBat.write("del /f /q \"" + EXE_NAME + "\"\n"); 
                 fwBat.write("move /y \"update.exe\" \"" + EXE_NAME + "\"\n"); 
                 fwBat.write("start \"\" \"" + EXE_NAME + "\"\n"); 
-                fwBat.write("del /f /q \"update.vbs\"\n"); // Löscht das Hilfs-Skript
-                fwBat.write("(goto) 2>nul & del \"%~f0\"\n"); // Löscht sich selbst
+                fwBat.write("del /f /q \"update.vbs\"\n"); 
+                fwBat.write("(goto) 2>nul & del \"%~f0\"\n"); 
                 fwBat.close();
 
-                // 2. Das VBScript erstellen (versteckt das Konsolenfenster)
                 File vbsFile = new File("update.vbs");
                 FileWriter fwVbs = new FileWriter(vbsFile);
                 fwVbs.write("Set WshShell = CreateObject(\"WScript.Shell\")\n");
-                // Die '0' am Ende ist der magische Befehl für "komplett unsichtbar"
                 fwVbs.write("WshShell.Run chr(34) & \"update.bat\" & Chr(34), 0\n"); 
                 fwVbs.write("Set WshShell = Nothing\n");
                 fwVbs.close();
 
-                // 3. Das unsichtbare VBScript starten
                 Runtime.getRuntime().exec("wscript update.vbs");
                 System.exit(0);
             }
