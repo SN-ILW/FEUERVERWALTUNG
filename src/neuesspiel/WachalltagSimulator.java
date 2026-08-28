@@ -7,17 +7,22 @@ import java.util.ArrayList;
 public class WachalltagSimulator {
 
     private static JFrame f;
-    private static JFrame wacheFrame; // Das Fenster fuer die Bereitschaftszeit
-    private static JComboBox<PersonalItem> cbMA, cbME, cbATF, cbATM, cbWTF, cbWTM, cbSTF, cbSTM;
+    public static JFrame wacheFrame; 
+    private static JComboBox<PersonalItem> cbMA, cbGF, cbATF, cbATM, cbWTF, cbWTM;
     private static ArrayList<PersonalItem> auswahlListe;
     
-    // Wach-Variablen
-    private static int currentHour = 7;
-    private static int currentMinute = 0;
+    // Die Staffel-Besatzung (6 Personen: MA, GF, ATF, ATM, WTF, WTM)
+    private static Personal[] besatzung = new Personal[6];
+    private static boolean schichtLaeuft = false;
+    
+    // Wach-Variablen (jetzt public, damit der Einsatz die Zeit weiterlaufen lassen kann!)
+    public static int currentHour = 6;
+    public static int currentMinute = 30;
+    
     private static int alarmStunde = 0;
     private static int alarmMinute = 0;
-    private static JLabel lblClock;
-    private static JTextArea txtAktivitaet;
+    public static JLabel lblClock;
+    public static JTextArea txtAktivitaet;
     private static JButton btnSpulen;
     private static Timer clockTimer;
 
@@ -29,28 +34,25 @@ public class WachalltagSimulator {
     }
 
     public static void starten() {
-        f = new JFrame("Wachalltag - 06:30 Uhr Schichteinteilung");
+        f = new JFrame(schichtLaeuft ? "Personal-Einteilung aendern" : "Wachalltag - 06:30 Uhr Schichteinteilung");
         f.setUndecorated(true);
         f.setExtendedState(JFrame.MAXIMIZED_BOTH);
         f.setLayout(new BorderLayout());
         f.getContentPane().setBackground(new Color(35, 35, 35));
 
+        // Test-Mitarbeiter falls Pool leer
         if (!LogistikSimulator.wachen.isEmpty()) {
             Wache w1 = LogistikSimulator.wachen.get(0);
-            if (w1.personalPool.size() < 12) {
+            if (w1.personalPool.size() < 6) {
                 w1.personalPool.clear();
                 w1.personalPool.add(erstelleTestMitarbeiter("Mueller (EL)", "EL", "Frei"));
                 w1.personalPool.add(erstelleTestMitarbeiter("Schmidt (GF)", "GF", "Frei"));
                 w1.personalPool.add(erstelleTestMitarbeiter("Becker (MA)", "MA", "Frei"));
-                w1.personalPool.add(erstelleTestMitarbeiter("Wagner (MA)", "MA", "Urlaub")); 
                 w1.personalPool.add(erstelleTestMitarbeiter("Hoffmann (TF)", "TF", "Frei"));
                 w1.personalPool.add(erstelleTestMitarbeiter("Schulz (TF)", "TF", "Frei"));
-                w1.personalPool.add(erstelleTestMitarbeiter("Koch (TF)", "TF", "Krank")); 
                 w1.personalPool.add(erstelleTestMitarbeiter("Bauer (TM)", "TM", "Frei"));
                 w1.personalPool.add(erstelleTestMitarbeiter("Richter (TM)", "TM", "Frei"));
                 w1.personalPool.add(erstelleTestMitarbeiter("Wolf (TM)", "TM", "Frei"));
-                w1.personalPool.add(erstelleTestMitarbeiter("Schroeder (TM)", "TM", "Frei"));
-                w1.personalPool.add(erstelleTestMitarbeiter("Neumann (TM)", "TM", "Frei"));
             }
         }
 
@@ -58,16 +60,20 @@ public class WachalltagSimulator {
         titleBar.setBackground(new Color(20, 20, 20));
         titleBar.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
         
-        JLabel lblTitle = new JLabel(" SCHICHTBEGINN 06:30 UHR - EINTEILUNG 1-HLF-1");
+        JLabel lblTitle = new JLabel(schichtLaeuft ? " BESATZUNG VON 1-HLF-1 AENDERN" : " SCHICHTBEGINN 06:30 UHR - EINTEILUNG STAFFEL (1/5)");
         lblTitle.setForeground(new Color(241, 196, 15));
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
         titleBar.add(lblTitle, BorderLayout.WEST);
 
-        JButton btnClose = new JButton("Abbrechen");
+        JButton btnClose = new JButton(schichtLaeuft ? "Zurueck zur Wache" : "Abbrechen");
         btnClose.setBackground(new Color(192, 57, 43));
         btnClose.setForeground(Color.WHITE);
         btnClose.setFocusPainted(false);
-        btnClose.addActionListener(e -> { f.dispose(); Launcher.main(new String[]{}); });
+        btnClose.addActionListener(e -> { 
+            f.dispose(); 
+            if(schichtLaeuft) wacheFrame.setVisible(true); 
+            else Launcher.main(new String[]{}); 
+        });
         titleBar.add(btnClose, BorderLayout.EAST);
         f.add(titleBar, BorderLayout.NORTH);
 
@@ -87,46 +93,35 @@ public class WachalltagSimulator {
         centerPnl.setBackground(new Color(35, 35, 35));
         centerPnl.setBorder(BorderFactory.createEmptyBorder(20, 100, 20, 100));
 
-        JPanel grid = new JPanel(new GridLayout(5, 2, 20, 15));
+        JPanel grid = new JPanel(new GridLayout(3, 2, 20, 15)); // 3 Zeilen, 2 Spalten fuer Staffel
         grid.setBackground(new Color(45, 45, 45));
-        grid.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY, 2), " HLF 20 - Sitzordnung (1/8/9) ", javax.swing.border.TitledBorder.CENTER, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 18), Color.WHITE));
+        grid.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY, 2), " HLF 20 - Staffel-Besatzung ", javax.swing.border.TitledBorder.CENTER, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 18), Color.WHITE));
 
-        cbMA = createColoredComboBox(personalArray);
-        cbME = createColoredComboBox(personalArray);
-        cbATF = createColoredComboBox(personalArray);
-        cbATM = createColoredComboBox(personalArray);
-        cbWTF = createColoredComboBox(personalArray);
-        cbWTM = createColoredComboBox(personalArray);
-        cbSTF = createColoredComboBox(personalArray);
-        cbSTM = createColoredComboBox(personalArray);
+        // AUTO-FILL LOGIK (Sucht automatisch verfuegbares Personal)
+        ArrayList<Personal> bereitsEingeteilt = new ArrayList<>();
+        if (!schichtLaeuft && !LogistikSimulator.wachen.isEmpty()) {
+            ArrayList<Personal> pool = LogistikSimulator.wachen.get(0).personalPool;
+            besatzung[0] = findeFreiesPersonal("MA", pool, bereitsEingeteilt);
+            besatzung[1] = findeFreiesPersonal("GF", pool, bereitsEingeteilt);
+            besatzung[2] = findeFreiesPersonal("TF", pool, bereitsEingeteilt);
+            besatzung[3] = findeFreiesPersonal("TM", pool, bereitsEingeteilt);
+            besatzung[4] = findeFreiesPersonal("TF", pool, bereitsEingeteilt);
+            besatzung[5] = findeFreiesPersonal("TM", pool, bereitsEingeteilt);
+        }
 
-        JPanel pnlGF = new JPanel(new BorderLayout(5, 5));
-        pnlGF.setBackground(new Color(45, 45, 45));
-        pnlGF.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        JLabel lGFTitle = new JLabel("Gruppenfuehrer (GF)");
-        lGFTitle.setForeground(Color.WHITE);
-        lGFTitle.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        
-        JLabel lGFValue = new JLabel(" DU (Spieler)");
-        lGFValue.setOpaque(true);
-        lGFValue.setBackground(new Color(39, 174, 96)); 
-        lGFValue.setForeground(Color.WHITE);
-        lGFValue.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        lGFValue.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
-        
-        pnlGF.add(lGFTitle, BorderLayout.NORTH);
-        pnlGF.add(lGFValue, BorderLayout.CENTER);
+        cbMA = createColoredComboBox(personalArray); setCbSelection(cbMA, besatzung[0]);
+        cbGF = createColoredComboBox(personalArray); setCbSelection(cbGF, besatzung[1]);
+        cbATF = createColoredComboBox(personalArray); setCbSelection(cbATF, besatzung[2]);
+        cbATM = createColoredComboBox(personalArray); setCbSelection(cbATM, besatzung[3]);
+        cbWTF = createColoredComboBox(personalArray); setCbSelection(cbWTF, besatzung[4]);
+        cbWTM = createColoredComboBox(personalArray); setCbSelection(cbWTM, besatzung[5]);
 
-        grid.add(pnlGF); 
         grid.add(createSeatPanel("Maschinist (MA)", cbMA));
-        grid.add(createSeatPanel("Melder (ME)", cbME));
-        grid.add(new JLabel("")); 
+        grid.add(createSeatPanel("Gruppenfuehrer (GF)", cbGF));
         grid.add(createSeatPanel("A-Truppfuehrer (ATF)", cbATF));
         grid.add(createSeatPanel("A-Truppmann (ATM)", cbATM));
         grid.add(createSeatPanel("W-Truppfuehrer (WTF)", cbWTF));
         grid.add(createSeatPanel("W-Truppmann (WTM)", cbWTM));
-        grid.add(createSeatPanel("S-Truppfuehrer (STF)", cbSTF));
-        grid.add(createSeatPanel("S-Truppmann (STM)", cbSTM));
 
         centerPnl.add(grid, BorderLayout.CENTER);
         f.add(centerPnl, BorderLayout.CENTER);
@@ -135,7 +130,7 @@ public class WachalltagSimulator {
         bottomPnl.setBackground(new Color(35, 35, 35));
         bottomPnl.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JButton btnStart = new JButton("07:00 Uhr - Dienstantritt");
+        JButton btnStart = new JButton(schichtLaeuft ? "Aenderungen speichern & Fortsetzen" : "07:00 Uhr - Dienstantritt");
         btnStart.setBackground(new Color(39, 174, 96));
         btnStart.setForeground(Color.WHITE);
         btnStart.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -146,6 +141,16 @@ public class WachalltagSimulator {
         f.add(bottomPnl, BorderLayout.SOUTH);
 
         f.setVisible(true);
+    }
+
+    private static Personal findeFreiesPersonal(String req, ArrayList<Personal> pool, ArrayList<Personal> ignorieren) {
+        for (Personal p : pool) {
+            if (p.status.equals("Frei") && !ignorieren.contains(p) && LogistikSimulator.personErfuellt(p, req)) {
+                ignorieren.add(p);
+                return p;
+            }
+        }
+        return null;
     }
 
     private static JComboBox<PersonalItem> createColoredComboBox(PersonalItem[] items) {
@@ -170,6 +175,16 @@ public class WachalltagSimulator {
         return cb;
     }
 
+    private static void setCbSelection(JComboBox<PersonalItem> cb, Personal p) {
+        if (p == null) return;
+        for (int i = 0; i < cb.getItemCount(); i++) {
+            if (cb.getItemAt(i).p == p) {
+                cb.setSelectedIndex(i);
+                break;
+            }
+        }
+    }
+
     private static Personal erstelleTestMitarbeiter(String name, String quali, String status) {
         Personal p = new Personal(name, "Anwaerter");
         p.qualifikationen.clear(); p.qualifikationen.add(quali); p.status = status;
@@ -190,18 +205,25 @@ public class WachalltagSimulator {
     }
 
     private static void pruefeEinteilung() {
-        // (Zur Vereinfachung des Codes beim Testen habe ich die harte Quali-Prufung kurz entschaerft, 
-        // damit du beim Testen schneller durchkommst)
+        besatzung[0] = ((PersonalItem)cbMA.getSelectedItem()).p;
+        besatzung[1] = ((PersonalItem)cbGF.getSelectedItem()).p;
+        besatzung[2] = ((PersonalItem)cbATF.getSelectedItem()).p;
+        besatzung[3] = ((PersonalItem)cbATM.getSelectedItem()).p;
+        besatzung[4] = ((PersonalItem)cbWTF.getSelectedItem()).p;
+        besatzung[5] = ((PersonalItem)cbWTM.getSelectedItem()).p;
+
         f.dispose();
         
-        currentHour = 7;
-        currentMinute = 0;
-        starteWachSchicht();
+        if (!schichtLaeuft) {
+            schichtLaeuft = true;
+            currentHour = 7;
+            currentMinute = 0;
+            starteWachSchicht();
+        } else {
+            wacheFrame.setVisible(true);
+            txtAktivitaet.append("\n[" + String.format("%02d:%02d", currentHour, currentMinute) + "] HLF-Fahrzeugeinteilung wurde manuell geaendert.\n");
+        }
     }
-
-    // =========================================================================================
-    // DIE WACHSCHICHT - ZENTRALE STEUERUNG!
-    // =========================================================================================
     
     private static void starteWachSchicht() {
         wacheFrame = new JFrame("Wachalltag");
@@ -230,7 +252,7 @@ public class WachalltagSimulator {
         centerPnl.setBackground(new Color(35, 35, 35));
         centerPnl.setBorder(BorderFactory.createEmptyBorder(50, 100, 50, 100));
 
-        lblClock = new JLabel("07:00", SwingConstants.CENTER);
+        lblClock = new JLabel(String.format("%02d:%02d", currentHour, currentMinute), SwingConstants.CENTER);
         lblClock.setFont(new Font("Consolas", Font.BOLD, 120));
         lblClock.setForeground(Color.WHITE);
         centerPnl.add(lblClock, BorderLayout.NORTH);
@@ -241,13 +263,20 @@ public class WachalltagSimulator {
         txtAktivitaet.setForeground(new Color(200, 200, 200));
         txtAktivitaet.setFont(new Font("Consolas", Font.PLAIN, 18));
         txtAktivitaet.setMargin(new Insets(20, 20, 20, 20));
-        txtAktivitaet.append("[07:00] Dienstuebernahme abgeschlossen. HLF einsatzbereit.\n");
+        txtAktivitaet.append("[07:00] Dienstuebernahme abgeschlossen. HLF einsatzbereit (Status 2).\n");
         centerPnl.add(new JScrollPane(txtAktivitaet), BorderLayout.CENTER);
         wacheFrame.add(centerPnl, BorderLayout.CENTER);
 
         JPanel bottomPnl = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 20));
         bottomPnl.setBackground(new Color(35, 35, 35));
         
+        JButton btnCrewAendern = new JButton("Fahrzeugbesatzung aendern");
+        btnCrewAendern.setBackground(new Color(41, 128, 185));
+        btnCrewAendern.setForeground(Color.WHITE);
+        btnCrewAendern.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        btnCrewAendern.setPreferredSize(new Dimension(350, 60));
+        bottomPnl.add(btnCrewAendern);
+
         btnSpulen = new JButton("Zeit vorspulen >>");
         btnSpulen.setBackground(new Color(39, 174, 96));
         btnSpulen.setForeground(Color.WHITE);
@@ -260,8 +289,16 @@ public class WachalltagSimulator {
 
         generiereNeuenAlarm();
 
+        btnCrewAendern.addActionListener(e -> {
+            if (clockTimer != null) clockTimer.stop();
+            btnSpulen.setEnabled(true);
+            wacheFrame.setVisible(false);
+            starten(); 
+        });
+
         btnSpulen.addActionListener(e -> {
             btnSpulen.setEnabled(false);
+            btnCrewAendern.setEnabled(false); 
             
             clockTimer = new Timer(50, ev -> {
                 currentMinute++;
@@ -274,11 +311,11 @@ public class WachalltagSimulator {
                     clockTimer.stop();
                     JOptionPane.showMessageDialog(wacheFrame, "16:30 Uhr: Schichtende! Alle Mann nach Hause.", "Feierabend", JOptionPane.INFORMATION_MESSAGE);
                     wacheFrame.dispose();
+                    schichtLaeuft = false;
                     Launcher.main(new String[]{});
                     return;
                 }
 
-                // ALARM!
                 if (currentHour == alarmStunde && currentMinute == alarmMinute) {
                     clockTimer.stop();
                     lblClock.setForeground(new Color(192, 57, 43)); 
@@ -293,7 +330,7 @@ public class WachalltagSimulator {
                         btnSpulen.removeActionListener(al);
                     }
                     btnSpulen.addActionListener(alarmEvent -> {
-                        wacheFrame.setVisible(false); // Wache ausblenden, Einsatz starten
+                        wacheFrame.setVisible(false); 
                         GruppenfuehrerSimulator.starten();
                     });
                 }
@@ -303,33 +340,36 @@ public class WachalltagSimulator {
     }
 
     private static void generiereNeuenAlarm() {
-        int offset = 60 + (int)(Math.random() * 180); // In 1-4 Stunden kracht es
+        int offset = 60 + (int)(Math.random() * 180); 
         int totalMins = (currentHour * 60) + currentMinute + offset;
         alarmStunde = totalMins / 60;
         alarmMinute = totalMins % 60;
         
         if (alarmStunde >= 16 && alarmMinute >= 30) {
-            alarmStunde = 99; // Kein Einsatz mehr vor Feierabend
+            alarmStunde = 99; 
         }
     }
 
-    // WIRD VOM EINSATZ-FENSTER AUFGERUFEN, WENN MAN STATUS 1 DRUECKT!
     public static void einsatzBeendet() {
         wacheFrame.setVisible(true);
-        txtAktivitaet.append("\n[" + String.format("%02d:%02d", currentHour, currentMinute) + "] HLF ist wieder auf der Wache eingerueckt. Status 2.\n");
+        txtAktivitaet.append("\n[" + String.format("%02d:%02d", currentHour, currentMinute) + "] HLF ist auf der Wache eingetroffen. Status 2 (Einsatzbereit auf Wache).\n");
         generiereNeuenAlarm();
         
         lblClock.setForeground(Color.WHITE);
+        lblClock.setText(String.format("%02d:%02d", currentHour, currentMinute));
         btnSpulen.setText("Zeit vorspulen >>");
         btnSpulen.setBackground(new Color(39, 174, 96));
         btnSpulen.setEnabled(true);
         
-        // Listener resetten, damit Spulen wieder klappt
+        JPanel bottomPnl = (JPanel) wacheFrame.getContentPane().getComponent(2);
+        bottomPnl.getComponent(0).setEnabled(true); 
+        
         for(java.awt.event.ActionListener al : btnSpulen.getActionListeners()) {
             btnSpulen.removeActionListener(al);
         }
         btnSpulen.addActionListener(e -> {
             btnSpulen.setEnabled(false);
+            bottomPnl.getComponent(0).setEnabled(false); 
             clockTimer.start();
         });
     }
