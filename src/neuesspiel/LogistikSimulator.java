@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.awt.Color;
 
 public class LogistikSimulator {
     
@@ -17,6 +16,9 @@ public class LogistikSimulator {
     public static JLabel topUhrzeitLabel, playerInfoLabel, notrufLabel;
     public static JPanel notrufPanel;
     public static JEditorPane fmsBoard;
+    
+    //FUNK
+    public static boolean cfgKiFunk = true;
     
     //hotkeys
     public static int hotkeyPause = java.awt.event.KeyEvent.VK_SPACE;
@@ -29,9 +31,7 @@ public class LogistikSimulator {
     public static int hotkeyEinsatzErsteller = java.awt.event.KeyEvent.VK_F2;
     public static int hotkeyEinsatzEditor = java.awt.event.KeyEvent.VK_F3;
     public static int hotkeyPersonalEinstellen = java.awt.event.KeyEvent.VK_P;
-    
-    
-    
+    public static int hotkeyKalender = java.awt.event.KeyEvent.VK_K; // NEUER HOTKEY
     
     public static TagesMission aktuelleMission = null; 
     public static JButton btnPostfach, btnTagBeenden;
@@ -272,10 +272,10 @@ public class LogistikSimulator {
         btnTagBeenden.setEnabled(false);
 
         btnDisp.addActionListener(e -> {
-    if(aktuellerNotruf != null) {
-        FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
-    }
-});
+            if(aktuellerNotruf != null) {
+                FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
+            }
+        });
         btnNach.addActionListener(e -> FensterManager.oeffneNachforderungMenu());
         btnAblehnen.addActionListener(e -> { 
             if(aktuellerNotruf != null) { 
@@ -309,28 +309,23 @@ public class LogistikSimulator {
         
         frame.setVisible(true);
 
-        
         KeyboardFocusManager.getCurrentKeyboardFocusManager().addKeyEventDispatcher(e -> {
             if (e.getID() == java.awt.event.KeyEvent.KEY_PRESSED) {
                 
-                // 1. PRIORITÄT: Fängt jeden Tastendruck ab, wenn das Zuweisen-Fenster offen ist!
                 if (FensterManager.hotkeyPopup != null) {
                     FensterManager.currentHotkeySetter.accept(e.getKeyCode());
                     FensterManager.currentHotkeyBtn.setText(java.awt.event.KeyEvent.getKeyText(e.getKeyCode()));
                     FensterManager.hotkeyPopup.dispose();
                     FensterManager.hotkeyPopup = null;
-                    return true; // Tastendruck schlucken
+                    return true;
                 }
 
-                // 2. PRIORITÄT: Hotkeys nur erlauben, wenn keine anderen Menüs/Fenster offen sind!
                 Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
                 if (activeWindow != frame) return false;
 
-                // 3. PRIORITÄT: Ignorieren, wenn wir in einem Textfeld tippen
                 Component focus = KeyboardFocusManager.getCurrentKeyboardFocusManager().getFocusOwner();
                 if (focus instanceof JTextField || focus instanceof JTextArea || focus instanceof JEditorPane) return false; 
                 
-                // Hotkeys ausführen
                 int code = e.getKeyCode();
                 if (code == hotkeyPause) btnPause.doClick();
                 else if (code == hotkeyPlay) btnPlay.doClick();
@@ -342,6 +337,7 @@ public class LogistikSimulator {
                 else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
                 else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
                 else if (code == hotkeyPersonalEinstellen) personalEinstellen();
+                else if (code == hotkeyKalender) Terminkalender.oeffneKalender(); // HIER IST DIE TASTENABFRAGE AKTIVIERT
             }
             return false;
         });
@@ -385,7 +381,6 @@ public class LogistikSimulator {
                             p.lehrgangDauerSec -= speed;
                             if (p.lehrgangDauerSec <= 0) {
                                 p.status = "Frei";
-                                // FIX: Doppelte Eintraege verhindern
                                 p.qualifikationen.remove("Anwaerter");
                                 if (!p.qualifikationen.contains(p.lehrgangThema)) {
                                     p.qualifikationen.add(p.lehrgangThema);
@@ -407,7 +402,6 @@ public class LogistikSimulator {
                     if (ein.bereitZumLoeschen) {
                         boolean ressourcenDa = true;
                         
-                        // FIX: Material wird nur geprueft und abgezogen, wenn Logistik überhaupt aktiviert ist!
                         if (cfgLogistikAktiv && !ein.reqMaterial.isEmpty()) {
                             for(Wache w : wachen) {
                                 for(String m : ein.reqMaterial.keySet()) {
@@ -418,7 +412,6 @@ public class LogistikSimulator {
                             }
                         }
                         
-                        // FIX: Wenn Logistik aus ist (!cfgLogistikAktiv), gilt der Einsatz automatisch als erfolgreich beendet!
                         if (!cfgLogistikAktiv || ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
                             budget += ein.belohnungGeld;
@@ -710,8 +703,27 @@ public class LogistikSimulator {
         }
 
         StringBuilder lage = new StringBuilder();
+        
+        // --- OPTISCHE TRENNUNG: REGIONALER FUNKVERKEHR ---
+        lage.append("=================================================================\n");
+        lage.append("===                 REGIONALER FUNKVERKEHR                    ===\n");
+        lage.append("=================================================================\n\n");
+    
+        // FunkManager starten, falls noch nicht passiert
+        FunkManager.init();
+    
+        if (cfgKiFunk) {
+            for (String msg : FunkManager.funkHistorie) {
+                lage.append(msg);
+            }
+        } else {
+            lage.append(" [ Funkueberwachung in den Gameplay-Einstellungen deaktiviert ]\n");
+        }
+        lage.append("\n\n\n");
+    
         if(inGameSekunden >= 19*3600) lage.append("Leitstelle geschlossen.\n\n");
         lage.append("=== LAUFENDE EINSAETZE ===\n");
+
         if (aktiveEinsaetze.isEmpty()) lage.append("Aktuell keine Einsaetze.\n");
         for (Einsatz e : aktiveEinsaetze) {
             lage.append("Einsatz: ").append(e.beschreibung).append(" (Alarm: ").append(e.alarmUhrzeit).append(")\n");
@@ -879,7 +891,6 @@ public class LogistikSimulator {
             w.addFahrzeug(f);
             f.status = 6; f.ausfallGrund = "Personal fehlt";
             
-            // NEU: Sofort nach dem Kauf sortieren!
             sortiereFuhrpark(w); 
             
             SpeicherManager.speichern("savegame.properties");
@@ -1007,8 +1018,6 @@ public class LogistikSimulator {
                 target.personalPool.add(potenziell);
                 budget -= 500;
                 
-                // FIX: Vorwissen wird sofort aktiviert und schickt nur noch eine Info-Mail!
-                // FIX: Vorwissen wird sofort aktiviert und schickt eine detaillierte Info-Mail
                 if (Math.random() > 0.6) {
                     String[] vorwissen = {"TM", "RS", "GF"};
                     String w = vorwissen[(int)(Math.random() * vorwissen.length)];
@@ -1018,7 +1027,6 @@ public class LogistikSimulator {
                         potenziell.qualifikationen.add(w); 
                     }
                     
-                    // NEU: Echte Absender-Adresse und detaillierter Text ueber die Vorerfahrung
                     String absender = "Personalabteilung <Personal@sn-ilw.de>";
                     String betreff = "Neue Personalakte: " + potenziell.name;
                     String text = "Hallo Leitstelle,\n\ndein neuer Mitarbeiter " + potenziell.name + " bringt bereits Vorerfahrung als [" + w + "] mit.\n\nWir haben diese Qualifikation direkt uebernommen und in der Akte vermerkt. Die Person ueberspringt somit die Probezeit als Anwaerter und ist ab sofort voll einsatzfaehig.\n\nMit freundlichen Gruessen,\nDeine Personalabteilung";
@@ -1112,6 +1120,9 @@ public class LogistikSimulator {
         if (level > altesLevel) sb.append("\n*** GLUECKWUNSCH! Du bist auf LEVEL ").append(level).append(" aufgestiegen! ***\n");
         
         tag++;
+        
+        Terminkalender.tagesWechselShift();
+        
         LocalDate neuerTag = getCurrentDate();
         int dayIndex = neuerTag.getDayOfMonth() - 1; 
         
@@ -1184,7 +1195,6 @@ public class LogistikSimulator {
                         int dauer = 2 + (int)(Math.random() * 5);
                         p.krankBis = tag + dauer; 
                         
-                        // NEU: Krankheit sofort in den Dienstplan eintragen
                         for (int t = tag + 1; t <= tag + dauer; t++) {
                             java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
                             java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
@@ -1206,18 +1216,15 @@ public class LogistikSimulator {
                     postfach.add(MailGenerator.generiereUrlaubsantrag(p, tag + startExtra, tag + startExtra + dauer));
                 }
                 
-                // FIX: Automatische Uebernahme von Anwaertern nach ihrer ersten Schicht
                 if (p.qualifikationen.contains("Anwaerter") && p.schichtenMonat >= 1 && !p.praeferenzGesendet) {
                     p.praeferenzGesendet = true;
-                    
-                    p.qualifikationen.remove("Anwaerter"); // Kein Anwärter mehr!
+                    p.qualifikationen.remove("Anwaerter"); 
                     String neueQual = (Math.random() < 0.5) ? "TM" : "RS";
                     
                     if (!p.qualifikationen.contains(neueQual)) {
-                        p.qualifikationen.add(neueQual); // Zuteilung TM oder RS
+                        p.qualifikationen.add(neueQual); 
                     }
                     
-                    // Reine Info Mail ins Postfach legen
                     postfach.add(new Email("Ausbildungsleitung", "[Uebernahme] " + p.name, "Info", "Gute Neuigkeiten! " + p.name + " hat die Probe-Schichten bestanden und wurde soeben automatisch als " + neueQual + " in den festen Dienst uebernommen.", p, tag, tag));
                 }
                 
@@ -1357,7 +1364,6 @@ public class LogistikSimulator {
         return r;
     }
 
-    // ACHTUNG: Hier prüft er bereits mit '.contains()', das ist exakt richtig!
     public static boolean personErfuellt(Personal p, String req) {
         if(p.qualifikationen.contains(req)) return true;
         if(req.equals("RS") && (p.qualifikationen.contains("NFS") || p.qualifikationen.contains("NA"))) return true;
@@ -1544,27 +1550,23 @@ public class LogistikSimulator {
         return mult;
     }
 
-public static void sortiereFuhrpark(Wache w) {
+    public static void sortiereFuhrpark(Wache w) {
         w.fuhrpark.sort(java.util.Comparator.comparing(f -> f.funkrufname));
     }
 
-public static void oeffneFahrzeugVerwaltung() {
-        // --- FEHLER 1 BEHOBEN: Wir erstellen das Fenster ganz klassisch ---
+    public static void oeffneFahrzeugVerwaltung() {
         JDialog d = new JDialog();
         d.setTitle("Fahrzeugverwaltung & Dienstplan-Farben");
         d.setSize(800, 500);
-        d.setUndecorated(true); // Macht das Fenster "frameless" (ohne Windows-Rahmen)
+        d.setUndecorated(true);
         d.setModal(true);
-        d.setLocationRelativeTo(null); // Zentriert das Fenster
+        d.setLocationRelativeTo(null); 
         
         d.setLayout(new BorderLayout(10, 10));
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        // --- FAHRZEUGE SAMMELN ---
         ArrayList<Fahrzeug> alleFahrzeuge = new ArrayList<>();
         for (Wache w : wachen) {
-            // --- FEHLER 2 BEHOBEN: Hier musst du schauen, wie die Liste in deiner Wache.java wirklich heisst! ---
-            // Heisst sie fahrzeuge? fahrzeugPool? fahrzeugListe? Aendere das Wort nach dem "w." entsprechend ab:
             for (Fahrzeug f : w.fuhrpark) { 
                 alleFahrzeuge.add(f);
             }
@@ -1575,32 +1577,22 @@ public static void oeffneFahrzeugVerwaltung() {
             d.dispose();
             return;
         }
-        if (alleFahrzeuge.isEmpty()) {
-            JOptionPane.showMessageDialog(d, "Keine Fahrzeuge vorhanden!");
-            d.dispose();
-            return;
-        }
 
-        // --- TABELLEN-MODELL ---
         String[] cols = {"Funkkennung", "Fahrzeugart", "Km-Stand", "Stempelfarbe (Klicken zum Aendern)"};
         javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(cols, 0) {
             @Override
             public Class<?> getColumnClass(int col) {
-                if (col == 3) return Color.class; // Spalte 3 ist eine Farbe!
+                if (col == 3) return Color.class; 
                 return String.class;
             }
             @Override
             public boolean isCellEditable(int row, int col) {
-                return col == 3; // NUR die Farbe darf bearbeitet (geklickt) werden
+                return col == 3; 
             }
         };
 
-        // Daten einfuellen (Passe die Variablen f.name, f.typ, f.kilometer an deine Fahrzeug.java an!)
         for (Fahrzeug f : alleFahrzeuge) {
-            // Falls 'stempelFarbe' null ist, setzen wir eine Standardfarbe
             if (f.stempelFarbe == null) f.stempelFarbe = new Color(192, 57, 43); 
-            
-            // Wir nehmen an: f.name = Funkkennung, f.typ = Fahrzeugart
             model.addRow(new Object[]{f.funkrufname, f.typ, f.kilometer + " km", f.stempelFarbe});
         }
 
@@ -1611,7 +1603,6 @@ public static void oeffneFahrzeugVerwaltung() {
         table.getTableHeader().setBackground(new Color(20, 20, 20));
         table.getTableHeader().setForeground(Color.WHITE);
 
-        // --- FARB-RENDERER (Macht die Zelle bunt) ---
         table.setDefaultRenderer(Color.class, new javax.swing.table.DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
@@ -1624,7 +1615,6 @@ public static void oeffneFahrzeugVerwaltung() {
             }
         });
 
-        // --- FARB-EDITOR (Oeffnet das Farbrad beim Klick) ---
         table.setDefaultEditor(Color.class, new DefaultCellEditor(new JCheckBox()) {
             private Color currentColor;
             private JButton button = new JButton();
@@ -1633,20 +1623,17 @@ public static void oeffneFahrzeugVerwaltung() {
                 button.setOpaque(true);
                 button.setBorderPainted(false);
                 button.addActionListener(e -> {
-                    // HIER OEFFNET SICH DAS FARBRAD!
                     Color newColor = JColorChooser.showDialog(button, "Waehle eine Farbe fuer den Dienstplan", currentColor);
                     if (newColor != null) {
                         currentColor = newColor;
                         
-                        // Speichere die Farbe direkt im Fahrzeug-Objekt ab!
                         int row = table.getSelectedRow();
                         Fahrzeug f = alleFahrzeuge.get(row);
                         f.stempelFarbe = currentColor;
                         
-                        // Speichern aufrufen, damit die Farbe im Savegame bleibt
                         SpeicherManager.speichern("savegame.properties"); 
                     }
-                    fireEditingStopped(); // Beendet den Edit-Modus der Tabelle
+                    fireEditingStopped(); 
                 });
             }
 
@@ -1667,7 +1654,6 @@ public static void oeffneFahrzeugVerwaltung() {
         scroll.getViewport().setBackground(new Color(35, 35, 35));
         scroll.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- UNTERES PANEL (Schliessen Button) ---
         JPanel bottomPnl = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
         bottomPnl.setBackground(new Color(45, 45, 45));
         
@@ -1683,4 +1669,6 @@ public static void oeffneFahrzeugVerwaltung() {
         d.setVisible(true);
     }
 
+    
+    
 }

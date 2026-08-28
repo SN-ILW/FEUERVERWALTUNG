@@ -279,6 +279,15 @@ public class SpeicherManager {
                 }
             }
 
+            // --- NEU: KALENDER SPEICHERN ---
+            for(int c = 0; c < 62; c++) {
+                for(int r = 0; r < 25; r++) {
+                    if(Terminkalender.kalenderDaten[c][r] != null && !Terminkalender.kalenderDaten[c][r].isEmpty()) {
+                        p.setProperty("kalender_" + c + "_" + r, Terminkalender.kalenderDaten[c][r]);
+                    }
+                }
+            }
+
             p.store(writer, "Logistik Simulator Savegame");
             System.out.println("=== [DEBUG] SPEICHER-VORGANG BEENDET ===\n");
             
@@ -424,7 +433,7 @@ public class SpeicherManager {
                     if(!farbStr.isEmpty()) {
                         try {
                             fzg.stempelFarbe = new Color(Integer.parseInt(farbStr));
-                        } catch(Exception e) { fzg.stempelFarbe = new Color(192, 57, 43); }
+                        } catch(Exception ex) { fzg.stempelFarbe = new Color(192, 57, 43); }
                     } else {
                         fzg.stempelFarbe = new Color(192, 57, 43);
                     }
@@ -549,6 +558,23 @@ public class SpeicherManager {
                 LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R2N1", "Verkehrsunfall (THL)", 2, 1, 0, 1, 0, 0, 0, 0, true, 20, "ELW & HLF", 4));
                 LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("KTP", "KTP", "Krankentransport", 0, 0, 1, 0, 0, 0, 0, 0, false, 0, "", 1));
                 LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
+            }
+
+            // --- NEU: KALENDER LADEN ---
+            Terminkalender.kalenderDaten = new String[62][25];
+            for (String key : p.stringPropertyNames()) {
+                if (key.startsWith("kalender_")) {
+                    String[] parts = key.split("_");
+                    if(parts.length == 3) {
+                        try {
+                            int c = Integer.parseInt(parts[1]);
+                            int r = Integer.parseInt(parts[2]);
+                            Terminkalender.kalenderDaten[c][r] = p.getProperty(key);
+                        } catch(Exception ex) {
+                            System.out.println("Fehler beim Laden des Kalenders: " + key);
+                        }
+                    }
+                }
             }
             
             return true;

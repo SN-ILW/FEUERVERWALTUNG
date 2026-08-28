@@ -52,9 +52,192 @@ public class FensterManager {
         return d;
     }
 
+    public static void oeffneLogistikMenu() {
+        JDialog d = createFramelessDialog("Wache versorgen", 400, 300);
+        JPanel content = new JPanel(new GridLayout(0, 1, 5, 5));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35, 35, 35));
+
+        JLabel l = new JLabel("Zu beliefernde Wache auswaehlen:"); l.setForeground(Color.WHITE); content.add(l);
+        JComboBox<String> wahlen = new JComboBox<>(); for(Wache w : wachen) wahlen.addItem(w.name); content.add(wahlen);
+
+        for(CustomMaterial cm : customMaterials) {
+            JButton btn = new JButton("10x " + cm.name + " umlagern");
+            btn.addActionListener(e -> {
+                Wache target = wachen.get(wahlen.getSelectedIndex());
+                if (hauptlager.getOrDefault(cm.name, 0) >= 10) { hauptlager.put(cm.name, hauptlager.get(cm.name) - 10); target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
+                else { JOptionPane.showMessageDialog(d, "Zu wenig Bestand im Hauptlager!"); }
+            });
+            content.add(btn);
+        }
+        
+        JScrollPane scroll = new JScrollPane(content); scroll.getVerticalScrollBar().setUnitIncrement(16); scroll.setBorder(BorderFactory.createEmptyBorder());
+        d.add(scroll, BorderLayout.CENTER); d.setVisible(true);
+    }
+
+    public static void oeffneBestellMenu() {
+        JDialog d = createFramelessDialog("Einkauf (Lieferung in 60s)", 400, 300);
+        JPanel content = new JPanel(new GridLayout(0, 1, 5, 5));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35, 35, 35));
+
+        for(int i=0; i<customMaterials.size(); i++) {
+            CustomMaterial cm = customMaterials.get(i);
+            double rabatt = techGrossabnehmer ? 0.8 : 1.0; int endPreis = (int)(cm.preis * rabatt);
+            JButton btn = new JButton(cm.bestellMenge + "x " + cm.name + " (" + endPreis + " EURO)");
+            btn.addActionListener(e -> {
+                if (budget >= endPreis) { budget -= endPreis; lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60)); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
+                else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
+            });
+            content.add(btn);
+        }
+
+        JScrollPane scroll = new JScrollPane(content); scroll.getVerticalScrollBar().setUnitIncrement(16); scroll.setBorder(BorderFactory.createEmptyBorder());
+        d.add(scroll, BorderLayout.CENTER); d.setVisible(true);
+    }
+    
+    public static void oeffneMaterialErsteller() {
+        JDialog d = createFramelessDialog("Eigenes Material Erstellen", 500, 400);
+        JPanel form = new JPanel(new GridLayout(7, 2, 5, 5));
+        form.setBackground(new Color(35, 35, 35));
+        
+        JTextField txtName = new JTextField();
+        JSpinner sVerbrauch = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        JSpinner sPreis = new JSpinner(new SpinnerNumberModel(500, 10, 10000, 10));
+        JSpinner sMenge = new JSpinner(new SpinnerNumberModel(10, 1, 1000, 10));
+        JSpinner sWarn = new JSpinner(new SpinnerNumberModel(5, 0, 1000, 5));
+        
+        JLabel l1 = new JLabel("Material Name:"); l1.setForeground(Color.WHITE); form.add(l1); form.add(txtName);
+        JLabel l2 = new JLabel("Max. Verbrauch pro Einsatz:"); l2.setForeground(Color.WHITE); form.add(l2); form.add(sVerbrauch);
+        JLabel l3 = new JLabel("Kaufpreis (Shop):"); l3.setForeground(Color.WHITE); form.add(l3); form.add(sPreis);
+        JLabel l4 = new JLabel("Bestellmenge pro Kauf:"); l4.setForeground(Color.WHITE); form.add(l4); form.add(sMenge);
+        JLabel l5 = new JLabel("Warnschwelle (Bestand):"); l5.setForeground(Color.WHITE); form.add(l5); form.add(sWarn);
+        
+        JLabel l6 = new JLabel("Fahrzeug-Bindung:"); l6.setForeground(Color.WHITE); form.add(l6);
+        JPanel pnlFz = new JPanel(new GridLayout(3, 3)); pnlFz.setBackground(new Color(35, 35, 35));
+        JCheckBox cbFz_RTW = new JCheckBox("RTW"); cbFz_RTW.setForeground(Color.WHITE); cbFz_RTW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_HLF = new JCheckBox("HLF"); cbFz_HLF.setForeground(Color.WHITE); cbFz_HLF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_NEF = new JCheckBox("NEF"); cbFz_NEF.setForeground(Color.WHITE); cbFz_NEF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_KTW = new JCheckBox("KTW"); cbFz_KTW.setForeground(Color.WHITE); cbFz_KTW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_ELW = new JCheckBox("ELW"); cbFz_ELW.setForeground(Color.WHITE); cbFz_ELW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_DLK = new JCheckBox("DLK"); cbFz_DLK.setForeground(Color.WHITE); cbFz_DLK.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_TLF = new JCheckBox("TLF"); cbFz_TLF.setForeground(Color.WHITE); cbFz_TLF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_MTW = new JCheckBox("MTW"); cbFz_MTW.setForeground(Color.WHITE); cbFz_MTW.setBackground(new Color(35,35,35));
+        
+        pnlFz.add(cbFz_RTW); pnlFz.add(cbFz_HLF); pnlFz.add(cbFz_NEF); 
+        pnlFz.add(cbFz_KTW); pnlFz.add(cbFz_ELW); pnlFz.add(cbFz_DLK);
+        pnlFz.add(cbFz_TLF); pnlFz.add(cbFz_MTW);
+        form.add(pnlFz);
+
+        JPanel topArea = new JPanel(new BorderLayout()); topArea.setBackground(new Color(35, 35, 35));
+        topArea.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        topArea.add(form, BorderLayout.CENTER);
+        d.add(topArea, BorderLayout.CENTER);
+
+        JButton btnAdd = new JButton("Material Anlegen");
+        btnAdd.addActionListener(e -> {
+            if(txtName.getText().trim().isEmpty()) { JOptionPane.showMessageDialog(d, "Name fehlt!"); return; }
+            ArrayList<String> fzList = new ArrayList<>();
+            if(cbFz_RTW.isSelected()) fzList.add("RTW"); if(cbFz_HLF.isSelected()) fzList.add("HLF");
+            if(cbFz_NEF.isSelected()) fzList.add("NEF"); if(cbFz_KTW.isSelected()) fzList.add("KTW");
+            if(cbFz_ELW.isSelected()) fzList.add("ELW"); if(cbFz_DLK.isSelected()) fzList.add("DLK");
+            if(cbFz_TLF.isSelected()) fzList.add("TLF"); if(cbFz_MTW.isSelected()) fzList.add("MTW");
+            
+            CustomMaterial mat = new CustomMaterial(txtName.getText().trim(), fzList, (int)sVerbrauch.getValue(), new ArrayList<>(), (int)sPreis.getValue(), (int)sMenge.getValue(), (int)sWarn.getValue());
+            customMaterials.add(mat);
+            for(Wache w : wachen) w.material.put(mat.name, 0);
+            hauptlager.put(mat.name, 0);
+            SpeicherManager.speichern("savegame.properties");
+            JOptionPane.showMessageDialog(d, "Material hinzugefuegt!");
+            d.dispose();
+        });
+        d.add(btnAdd, BorderLayout.SOUTH);
+        d.setVisible(true);
+    }
+
+    public static void oeffneMaterialBearbeiter() {
+        if(customMaterials.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Materialien!"); return; }
+        JDialog d = createFramelessDialog("Material Bearbeiten", 500, 450);
+
+        JPanel topSelect = new JPanel(new FlowLayout(FlowLayout.LEFT)); topSelect.setBackground(new Color(35, 35, 35));
+        JLabel lblTop = new JLabel("Zu bearbeitendes Material:"); lblTop.setForeground(Color.WHITE); topSelect.add(lblTop);
+        JComboBox<String> cMatWahl = new JComboBox<>();
+        for(CustomMaterial cm : customMaterials) cMatWahl.addItem(cm.name);
+        topSelect.add(cMatWahl);
+        d.add(topSelect, BorderLayout.NORTH);
+
+        JPanel form = new JPanel(new GridLayout(7, 2, 5, 5)); form.setBackground(new Color(35, 35, 35));
+        JTextField txtName = new JTextField();
+        JSpinner sVerbrauch = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
+        JSpinner sPreis = new JSpinner(new SpinnerNumberModel(500, 10, 10000, 10));
+        JSpinner sMenge = new JSpinner(new SpinnerNumberModel(10, 1, 1000, 10));
+        JSpinner sWarn = new JSpinner(new SpinnerNumberModel(5, 0, 1000, 5));
+        
+        JLabel l1 = new JLabel("Material Name:"); l1.setForeground(Color.WHITE); form.add(l1); form.add(txtName);
+        JLabel l2 = new JLabel("Max. Verbrauch pro Einsatz:"); l2.setForeground(Color.WHITE); form.add(l2); form.add(sVerbrauch);
+        JLabel l3 = new JLabel("Kaufpreis (Shop):"); l3.setForeground(Color.WHITE); form.add(l3); form.add(sPreis);
+        JLabel l4 = new JLabel("Bestellmenge pro Kauf:"); l4.setForeground(Color.WHITE); form.add(l4); form.add(sMenge);
+        JLabel l5 = new JLabel("Warnschwelle (Bestand):"); l5.setForeground(Color.WHITE); form.add(l5); form.add(sWarn);
+        
+        JLabel l6 = new JLabel("Fahrzeug-Bindung:"); l6.setForeground(Color.WHITE); form.add(l6);
+        JPanel pnlFz = new JPanel(new GridLayout(3, 3)); pnlFz.setBackground(new Color(35, 35, 35));
+        JCheckBox cbFz_RTW = new JCheckBox("RTW"); cbFz_RTW.setForeground(Color.WHITE); cbFz_RTW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_HLF = new JCheckBox("HLF"); cbFz_HLF.setForeground(Color.WHITE); cbFz_HLF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_NEF = new JCheckBox("NEF"); cbFz_NEF.setForeground(Color.WHITE); cbFz_NEF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_KTW = new JCheckBox("KTW"); cbFz_KTW.setForeground(Color.WHITE); cbFz_KTW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_ELW = new JCheckBox("ELW"); cbFz_ELW.setForeground(Color.WHITE); cbFz_ELW.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_DLK = new JCheckBox("DLK"); cbFz_DLK.setForeground(Color.WHITE); cbFz_DLK.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_TLF = new JCheckBox("TLF"); cbFz_TLF.setForeground(Color.WHITE); cbFz_TLF.setBackground(new Color(35,35,35));
+        JCheckBox cbFz_MTW = new JCheckBox("MTW"); cbFz_MTW.setForeground(Color.WHITE); cbFz_MTW.setBackground(new Color(35,35,35));
+        
+        pnlFz.add(cbFz_RTW); pnlFz.add(cbFz_HLF); pnlFz.add(cbFz_NEF); 
+        pnlFz.add(cbFz_KTW); pnlFz.add(cbFz_ELW); pnlFz.add(cbFz_DLK);
+        pnlFz.add(cbFz_TLF); pnlFz.add(cbFz_MTW);
+        form.add(pnlFz);
+
+        Runnable ladeMaterial = () -> {
+            CustomMaterial cm = customMaterials.get(cMatWahl.getSelectedIndex());
+            txtName.setText(cm.name); sVerbrauch.setValue(cm.maxVerbrauch); sPreis.setValue(cm.preis);
+            sMenge.setValue(cm.bestellMenge); sWarn.setValue(cm.warnSchwelle);
+            cbFz_RTW.setSelected(cm.fahrzeuge.contains("RTW")); cbFz_HLF.setSelected(cm.fahrzeuge.contains("HLF"));
+            cbFz_NEF.setSelected(cm.fahrzeuge.contains("NEF")); cbFz_KTW.setSelected(cm.fahrzeuge.contains("KTW"));
+            cbFz_ELW.setSelected(cm.fahrzeuge.contains("ELW")); cbFz_DLK.setSelected(cm.fahrzeuge.contains("DLK"));
+            cbFz_TLF.setSelected(cm.fahrzeuge.contains("TLF")); cbFz_MTW.setSelected(cm.fahrzeuge.contains("MTW"));
+        };
+        ladeMaterial.run();
+        cMatWahl.addActionListener(e -> ladeMaterial.run());
+
+        JPanel topArea = new JPanel(new BorderLayout()); topArea.setBackground(new Color(35, 35, 35));
+        topArea.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        topArea.add(form, BorderLayout.CENTER); d.add(topArea, BorderLayout.CENTER);
+
+        JButton btnAdd = new JButton("Aenderungen Speichern");
+        btnAdd.addActionListener(e -> {
+            if(txtName.getText().trim().isEmpty()) { JOptionPane.showMessageDialog(d, "Name fehlt!"); return; }
+            CustomMaterial cm = customMaterials.get(cMatWahl.getSelectedIndex());
+            
+            String oldWach = cm.name;
+            int oldLag = hauptlager.getOrDefault(cm.name, 0); hauptlager.remove(cm.name);
+            
+            cm.name = txtName.getText().trim(); cm.maxVerbrauch = (int) sVerbrauch.getValue();
+            cm.preis = (int) sPreis.getValue(); cm.bestellMenge = (int) sMenge.getValue(); cm.warnSchwelle = (int) sWarn.getValue();
+            
+            cm.fahrzeuge.clear();
+            if(cbFz_RTW.isSelected()) cm.fahrzeuge.add("RTW"); if(cbFz_HLF.isSelected()) cm.fahrzeuge.add("HLF");
+            if(cbFz_NEF.isSelected()) cm.fahrzeuge.add("NEF"); if(cbFz_KTW.isSelected()) cm.fahrzeuge.add("KTW");
+            if(cbFz_ELW.isSelected()) cm.fahrzeuge.add("ELW"); if(cbFz_DLK.isSelected()) cm.fahrzeuge.add("DLK");
+            if(cbFz_TLF.isSelected()) cm.fahrzeuge.add("TLF"); if(cbFz_MTW.isSelected()) cm.fahrzeuge.add("MTW");
+            
+            hauptlager.put(cm.name, oldLag);
+            SpeicherManager.speichern("savegame.properties");
+            JOptionPane.showMessageDialog(d, "Erfolgreich aktualisiert!"); d.dispose();
+        });
+        d.add(btnAdd, BorderLayout.SOUTH); d.setVisible(true);
+    }
+    
     public static void oeffnePersonalHauptmenu() {
-        JDialog d = createFramelessDialog("Personalwesen", 400, 350);
-        JPanel content = new JPanel(new GridLayout(6, 1, 10, 10));
+        JDialog d = createFramelessDialog("Personalwesen", 400, 400); // Fensterhoehe leicht angepasst
+        JPanel content = new JPanel(new GridLayout(7, 1, 10, 10)); // Grid auf 7 Zeilen erhöht!
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35, 35, 35));
 
@@ -64,11 +247,19 @@ public class FensterManager {
         JButton b4 = new JButton("Personal weiterbilden"); b4.addActionListener(e -> { d.dispose(); oeffnePersonalWeiterbildung(); });
         JButton b5 = new JButton("Leihkraft anfordern (250 EURO)"); b5.addActionListener(e -> { d.dispose(); leihkraftAnfordern(); });
         JButton b6 = new JButton("Personal umstationieren"); b6.addActionListener(e -> { d.dispose(); oeffnePersonalTransfer(); });
-
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6);
+        
+        JButton btnKalenderPers = LogistikSimulator.createStyledButton("Terminkalender & Events (K)", new Color(155, 89, 182));
+        btnKalenderPers.addActionListener(e -> {
+            d.dispose(); // Schliesst das Personalwesen
+            Terminkalender.oeffneKalender(); // Oeffnet den Kalender
+        });
+        
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(btnKalenderPers);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
+    
+    
     public static void oeffneLogistikHauptmenu() {
         JDialog d = createFramelessDialog("Lager & Logistik", 400, 200);
         JPanel content = new JPanel(new GridLayout(3, 1, 10, 10));
@@ -134,16 +325,13 @@ public class FensterManager {
     }
 
     public static void oeffneFuhrparkHauptmenu() {
-        // Fenster etwas hoeher gemacht (von 250 auf 300)
         JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 300); 
-        
-        // GridLayout auf 5 Zeilen erhoeht
         JPanel content = new JPanel(new GridLayout(5, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
         JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); 
-        b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
+       b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
         
         JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); 
         b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
@@ -154,7 +342,6 @@ public class FensterManager {
         JButton b4 = new JButton("TÜV & Inspektion durchfuehren"); 
         b4.addActionListener(e -> { d.dispose(); LogistikSimulator.fahrzeugeInspektion(); });
         
-        // --- NEUER BUTTON FUER DIE FARBEN UND UEBERSICHT ---
         JButton b5 = new JButton("Fahrzeug-Uebersicht & Dienstplan-Farben"); 
         b5.addActionListener(e -> { d.dispose(); LogistikSimulator.oeffneFahrzeugVerwaltung(); });
 
@@ -162,7 +349,7 @@ public class FensterManager {
         content.add(b2); 
         content.add(b3); 
         content.add(b4);
-        content.add(b5); // Den neuen Button hinzufuegen
+        content.add(b5); 
         
         d.add(content, BorderLayout.CENTER); 
         d.setVisible(true);
@@ -446,8 +633,17 @@ public class FensterManager {
         JButton btnClose = new JButton("Schliessen");
         btnClose.addActionListener(e -> d.dispose());
 
+        JButton btnKalenderPostfach = new JButton("Terminkalender (K)");
+        btnKalenderPostfach.setBackground(new Color(155, 89, 182)); // Lila, passend zu den Events
+        btnKalenderPostfach.setForeground(Color.WHITE);
+        btnKalenderPostfach.setFocusPainted(false);
+        btnKalenderPostfach.addActionListener(e -> {
+            d.dispose();
+            Terminkalender.oeffneKalender();
+        });
+        
         pnlBtns.add(btnGenehmigen); pnlBtns.add(btnTM); pnlBtns.add(btnRS); pnlBtns.add(btnLehrgang); 
-        pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); pnlBtns.add(btnClose);
+        pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); pnlBtns.add(btnKalenderPostfach); pnlBtns.add(btnClose);
         
         d.add(pnlBtns, BorderLayout.SOUTH);
 
@@ -777,6 +973,11 @@ public class FensterManager {
             bl.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 60; f.originalAnfahrt = 60; uiAktualisieren(getUhrzeit()); d.dispose(); });
             content.add(bl);
         }
+        if(techKlinikHagenow) {
+            JButton bh = new JButton(klinikHagenowAbgemeldet ? "[ABGEMELDET] Klinik Hagenow" : "Krankenhaus Hagenow (Fahrzeit: 80s)"); bh.setEnabled(!klinikHagenowAbgemeldet);
+            bh.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 80; f.originalAnfahrt = 80; uiAktualisieren(getUhrzeit()); d.dispose(); });
+            content.add(bh);
+        }
 
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
@@ -849,7 +1050,6 @@ public class FensterManager {
     }
 
     public static void oeffnePersonalWeiterbildung() {
-        // Wir machen das Fenster direkt hier "frameless" (ohne Windows-Rahmen)
         JDialog d = new JDialog(frame, "Manuelle Personal Weiterbildung", true);
         d.setSize(800, 600);
         d.setUndecorated(true);
@@ -857,7 +1057,6 @@ public class FensterManager {
         d.setLayout(new BorderLayout(10, 10));
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        // --- HILFSKLASSE FUER LEHRGAENGE ---
         class Lehrgang {
             String name; int preis;
             public Lehrgang(String n, int p) { this.name = n; this.preis = p; }
@@ -876,7 +1075,6 @@ public class FensterManager {
         });
         cbKurs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        // --- PERSONAL SAMMELN ---
         ArrayList<Personal> alleMitarbeiter = new ArrayList<>();
         for(Wache w : wachen) { 
             for(Personal p : w.personalPool) { 
@@ -890,7 +1088,6 @@ public class FensterManager {
             return; 
         }
 
-        // --- TABELLE ERSTELLEN ---
         String[] cols = {"Name (Wache)", "Status", "Aktuelle Qualifikationen", "Buchen"};
         javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(cols, 0) {
             @Override public Class<?> getColumnClass(int col) {
@@ -904,8 +1101,6 @@ public class FensterManager {
                     if(p.qualifikationen.contains("Anwaerter")) return false;
                     if(p.status.equals("Urlaub") || p.status.equals("Krank") || p.status.equals("Lehrgang")) return false;
                     
-                    // ALTE LOGIK: if(personErfuellt(p, l.name)) return false; 
-                    // NEUE LOGIK:
                     if(p.qualifikationen.contains(l.name)) return false; 
                     
                     return true; 
@@ -928,7 +1123,6 @@ public class FensterManager {
         table.getTableHeader().setBackground(new Color(20, 20, 20));
         table.getTableHeader().setForeground(Color.WHITE);
 
-        // --- NEU: CHECKBOX AUSGRAUEN WENN GESPERRT ---
         table.getColumnModel().getColumn(3).setCellRenderer(new javax.swing.table.TableCellRenderer() {
             JCheckBox cb = new JCheckBox();
             {
@@ -937,7 +1131,7 @@ public class FensterManager {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 cb.setSelected(value != null && (Boolean)value);
-                cb.setEnabled(table.isCellEditable(row, column)); // HIER WIRD SIE SICHTBAR GRAU!
+                cb.setEnabled(table.isCellEditable(row, column)); 
                 cb.setBackground(isSelected ? new Color(41, 128, 185) : new Color(43, 43, 43));
                 return cb;
             }
@@ -947,7 +1141,6 @@ public class FensterManager {
         scroll.getViewport().setBackground(new Color(35, 35, 35));
         scroll.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // --- TOP PANEL ---
         JPanel topPnl = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         topPnl.setBackground(new Color(45, 45, 45));
         JLabel lblTop = new JLabel("Lehrgang auswaehlen:");
@@ -956,21 +1149,18 @@ public class FensterManager {
         topPnl.add(lblTop);
         topPnl.add(cbKurs);
 
-        // --- BOTTOM PANEL (Mit Rotem Schliessen-Button) ---
-        JPanel bottomPnl = new JPanel(new BorderLayout()); // BorderLayout sorgt für Links/Rechts Anordnung
+        JPanel bottomPnl = new JPanel(new BorderLayout()); 
         bottomPnl.setBackground(new Color(45, 45, 45));
         bottomPnl.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
         
-        // Button Links: Schliessen
         JButton btnClose = new JButton("Schliessen");
-        btnClose.setBackground(new Color(192, 57, 43)); // Rot
+        btnClose.setBackground(new Color(192, 57, 43)); 
         btnClose.setForeground(Color.WHITE);
         btnClose.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnClose.setFocusPainted(false);
         btnClose.addActionListener(e -> d.dispose());
         bottomPnl.add(btnClose, BorderLayout.WEST);
 
-        // Bereich Rechts: Kosten & Kaufen
         JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
         rightBottom.setBackground(new Color(45, 45, 45));
         
@@ -987,7 +1177,6 @@ public class FensterManager {
         rightBottom.add(btnKaufen);
         bottomPnl.add(rightBottom, BorderLayout.EAST);
 
-        // --- LISTENER ---
         model.addTableModelListener(e -> {
             int count = 0;
             for (int i = 0; i < model.getRowCount(); i++) {
@@ -1050,97 +1239,78 @@ public class FensterManager {
     }
 
     public static void oeffneEinstellungen() {
-        JDialog d = createFramelessDialog("Spieleinstellungen", 500, 480);
+        JDialog d = createFramelessDialog("Spieleinstellungen", 550, 500);
         JTabbedPane tabs = new JTabbedPane();
         tabs.setBackground(new Color(45, 45, 45)); tabs.setForeground(Color.WHITE);
 
-        // --- TAB 1: ALLGEMEINES & SOUND ---
-        JPanel pnlAllgemein = new JPanel(new GridLayout(9, 1, 5, 5)); 
+        // --- TAB 1: ALLGEMEIN ---
+        JPanel pnlAllgemein = new JPanel(new GridLayout(6, 1, 5, 5)); 
         pnlAllgemein.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlAllgemein.setBackground(new Color(35, 35, 35));
+        JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer);
+        JCheckBox cbLogistik = new JCheckBox("Lager & Logistik System aktivieren", LogistikSimulator.cfgLogistikAktiv);
+        cbAuto.setForeground(Color.WHITE); cbAuto.setBackground(new Color(35, 35, 35)); cbAuto.setFocusPainted(false);
+        cbLogistik.setForeground(Color.WHITE); cbLogistik.setBackground(new Color(35, 35, 35)); cbLogistik.setFocusPainted(false);
+        pnlAllgemein.add(cbAuto); pnlAllgemein.add(cbLogistik);
+        tabs.addTab("Allgemein", pnlAllgemein);
 
+        // --- TAB 2: GAMEPLAY (2. Reiter wie gewuenscht) ---
+        JPanel pnlGameplay = new JPanel(new GridLayout(6, 1, 5, 5));
+        pnlGameplay.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlGameplay.setBackground(new Color(35, 35, 35));
         JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", LogistikSimulator.cfgKrankentransport);
         JCheckBox cbDmg = new JCheckBox("Beschaedigte Fahrzeuge erlauben", LogistikSimulator.cfgBeschaedigung);
         JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", LogistikSimulator.cfgKrankheit);
-        JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer);
-        JCheckBox cbLogistik = new JCheckBox("Lager & Logistik System aktivieren", LogistikSimulator.cfgLogistikAktiv);
-        JCheckBox[] topBoxes = {cbKtp, cbDmg, cbSick, cbAuto, cbLogistik};
-        for (JCheckBox box : topBoxes) { box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false); pnlAllgemein.add(box); }
+        JCheckBox cbKiFunk = new JCheckBox("Landkreis Funk (KI-Funkverkehr) aktivieren", LogistikSimulator.cfgKiFunk); // NEU!
+        
+        JCheckBox[] gpBoxes = {cbKtp, cbDmg, cbSick, cbKiFunk};
+        for (JCheckBox box : gpBoxes) { box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false); pnlGameplay.add(box); }
+        tabs.addTab("Gameplay", pnlGameplay);
 
+        // --- TAB 3: SOUND ---
+        JPanel pnlSound = new JPanel(new GridLayout(6, 1, 5, 5));
+        pnlSound.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlSound.setBackground(new Color(35, 35, 35));
+        
         JPanel pnlS1 = new JPanel(new BorderLayout(10, 0)); pnlS1.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundNotruf = new JCheckBox("Sound: Neuer Notruf", LogistikSimulator.cfgSoundNotruf); cbSoundNotruf.setForeground(Color.WHITE); cbSoundNotruf.setBackground(new Color(35, 35, 35));
         JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf); slNotruf.setBackground(new Color(35, 35, 35));
-        pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER); pnlAllgemein.add(pnlS1);
+        pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER); pnlSound.add(pnlS1);
 
         JPanel pnlS2 = new JPanel(new BorderLayout(10, 0)); pnlS2.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6", LogistikSimulator.cfgSoundStatus6); cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35));
         JSlider slStatus6 = new JSlider(0, 100, LogistikSimulator.volStatus6); slStatus6.setBackground(new Color(35, 35, 35));
-        pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER); pnlAllgemein.add(pnlS2);
+        pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER); pnlSound.add(pnlS2);
 
         JPanel pnlS3 = new JPanel(new BorderLayout(10, 0)); pnlS3.setBackground(new Color(35, 35, 35));
         JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7", LogistikSimulator.cfgSoundStatus7); cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35));
         JSlider slStatus7 = new JSlider(0, 100, LogistikSimulator.volStatus7); slStatus7.setBackground(new Color(35, 35, 35));
-        pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER); pnlAllgemein.add(pnlS3);
+        pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER); pnlSound.add(pnlS3);
+        
+        tabs.addTab("Sound", pnlSound);
 
-        tabs.addTab("Allgemein", pnlAllgemein);
-
-        // --- TAB 2: HOTKEYS ---
-        JPanel pnlHotkeys = new JPanel(new GridLayout(10, 2, 10, 10)); // 10 Zeilen
+        // --- TAB 4: HOTKEYS ---
+        JPanel pnlHotkeys = new JPanel(new GridLayout(12, 2, 10, 10)); // Auf 12 erhoeht
         pnlHotkeys.setBorder(BorderFactory.createEmptyBorder(10,20,10,20)); pnlHotkeys.setBackground(new Color(35, 35, 35));
 
         JLabel lHk1 = new JLabel("Spiel Pausieren:", SwingConstants.RIGHT); lHk1.setForeground(Color.WHITE);
-        JButton btnHk1 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPause));
-        btnHk1.addActionListener(e -> assignHotkey(btnHk1, code -> LogistikSimulator.hotkeyPause = code));
-        pnlHotkeys.add(lHk1); pnlHotkeys.add(btnHk1);
-
+        JButton btnHk1 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPause)); btnHk1.addActionListener(e -> assignHotkey(btnHk1, code -> LogistikSimulator.hotkeyPause = code)); pnlHotkeys.add(lHk1); pnlHotkeys.add(btnHk1);
         JLabel lHk2 = new JLabel("Normale Geschwindigkeit:", SwingConstants.RIGHT); lHk2.setForeground(Color.WHITE);
-        JButton btnHk2 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPlay));
-        btnHk2.addActionListener(e -> assignHotkey(btnHk2, code -> LogistikSimulator.hotkeyPlay = code));
-        pnlHotkeys.add(lHk2); pnlHotkeys.add(btnHk2);
-
+        JButton btnHk2 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPlay)); btnHk2.addActionListener(e -> assignHotkey(btnHk2, code -> LogistikSimulator.hotkeyPlay = code)); pnlHotkeys.add(lHk2); pnlHotkeys.add(btnHk2);
         JLabel lHk3 = new JLabel("Schneller Vorlauf:", SwingConstants.RIGHT); lHk3.setForeground(Color.WHITE);
-        JButton btnHk3 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFast));
-        btnHk3.addActionListener(e -> assignHotkey(btnHk3, code -> LogistikSimulator.hotkeyFast = code));
-        pnlHotkeys.add(lHk3); pnlHotkeys.add(btnHk3);
-
+        JButton btnHk3 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFast)); btnHk3.addActionListener(e -> assignHotkey(btnHk3, code -> LogistikSimulator.hotkeyFast = code)); pnlHotkeys.add(lHk3); pnlHotkeys.add(btnHk3);
         JLabel lHk4 = new JLabel("Notruf Disponieren:", SwingConstants.RIGHT); lHk4.setForeground(Color.WHITE);
-        JButton btnHk4 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDisp));
-        btnHk4.addActionListener(e -> assignHotkey(btnHk4, code -> LogistikSimulator.hotkeyDisp = code));
-        pnlHotkeys.add(lHk4); pnlHotkeys.add(btnHk4);
-
+        JButton btnHk4 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDisp)); btnHk4.addActionListener(e -> assignHotkey(btnHk4, code -> LogistikSimulator.hotkeyDisp = code)); pnlHotkeys.add(lHk4); pnlHotkeys.add(btnHk4);
         JLabel lHk5 = new JLabel("Dienstplan oeffnen:", SwingConstants.RIGHT); lHk5.setForeground(Color.WHITE);
-        JButton btnHk5 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDienstplan));
-        btnHk5.addActionListener(e -> assignHotkey(btnHk5, code -> LogistikSimulator.hotkeyDienstplan = code));
-        pnlHotkeys.add(lHk5); pnlHotkeys.add(btnHk5);
-
+        JButton btnHk5 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyDienstplan)); btnHk5.addActionListener(e -> assignHotkey(btnHk5, code -> LogistikSimulator.hotkeyDienstplan = code)); pnlHotkeys.add(lHk5); pnlHotkeys.add(btnHk5);
         JLabel lHk6 = new JLabel("Postfach oeffnen:", SwingConstants.RIGHT); lHk6.setForeground(Color.WHITE);
-        JButton btnHk6 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPostfach));
-        btnHk6.addActionListener(e -> assignHotkey(btnHk6, code -> LogistikSimulator.hotkeyPostfach = code));
-        pnlHotkeys.add(lHk6); pnlHotkeys.add(btnHk6);
-
+        JButton btnHk6 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPostfach)); btnHk6.addActionListener(e -> assignHotkey(btnHk6, code -> LogistikSimulator.hotkeyPostfach = code)); pnlHotkeys.add(lHk6); pnlHotkeys.add(btnHk6);
         JLabel lHk7 = new JLabel("Fuhrpark oeffnen:", SwingConstants.RIGHT); lHk7.setForeground(Color.WHITE);
-        JButton btnHk7 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFuhrpark));
-        btnHk7.addActionListener(e -> assignHotkey(btnHk7, code -> LogistikSimulator.hotkeyFuhrpark = code));
-        pnlHotkeys.add(lHk7); pnlHotkeys.add(btnHk7);
-
-        JLabel lHk8 = new JLabel("Einsatz-Ersteller:", SwingConstants.RIGHT); lHk8.setForeground(Color.WHITE);
-        JButton btnHk8 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyEinsatzErsteller));
-        btnHk8.addActionListener(e -> assignHotkey(btnHk8, code -> LogistikSimulator.hotkeyEinsatzErsteller = code));
-        pnlHotkeys.add(lHk8); pnlHotkeys.add(btnHk8);
-
-        JLabel lHk9 = new JLabel("Einsatz-Editor:", SwingConstants.RIGHT); lHk9.setForeground(Color.WHITE);
-        JButton btnHk9 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyEinsatzEditor));
-        btnHk9.addActionListener(e -> assignHotkey(btnHk9, code -> LogistikSimulator.hotkeyEinsatzEditor = code));
-        pnlHotkeys.add(lHk9); pnlHotkeys.add(btnHk9);
-
-        JLabel lHk10 = new JLabel("Personal einstellen:", SwingConstants.RIGHT); lHk10.setForeground(Color.WHITE);
-        JButton btnHk10 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPersonalEinstellen));
-        btnHk10.addActionListener(e -> assignHotkey(btnHk10, code -> LogistikSimulator.hotkeyPersonalEinstellen = code));
-        pnlHotkeys.add(lHk10); pnlHotkeys.add(btnHk10);
-
-        JScrollPane scrollHotkeys = new JScrollPane(pnlHotkeys);
-        scrollHotkeys.setBorder(BorderFactory.createEmptyBorder());
-        scrollHotkeys.getVerticalScrollBar().setUnitIncrement(16);
-        tabs.addTab("Tastatur-Kürzel", scrollHotkeys);
+        JButton btnHk7 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyFuhrpark)); btnHk7.addActionListener(e -> assignHotkey(btnHk7, code -> LogistikSimulator.hotkeyFuhrpark = code)); pnlHotkeys.add(lHk7); pnlHotkeys.add(btnHk7);
+        
+        JLabel lHk8 = new JLabel("Kalender oeffnen:", SwingConstants.RIGHT); lHk8.setForeground(Color.WHITE);
+        JButton btnHk8 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyKalender)); 
+        btnHk8.addActionListener(e -> assignHotkey(btnHk8, code -> LogistikSimulator.hotkeyKalender = code)); pnlHotkeys.add(lHk8); pnlHotkeys.add(btnHk8);
+        
+        JScrollPane scrollHotkeys = new JScrollPane(pnlHotkeys);scrollHotkeys.setBorder(BorderFactory.createEmptyBorder());
+        scrollHotkeys.getVerticalScrollBar().setUnitIncrement(16);tabs.addTab("Tastatur-Kuerzel", scrollHotkeys);
 
         // --- BUTTONS UNTEN ---
         JPanel pnlBottom = new JPanel(new GridLayout(2, 1, 5, 5)); pnlBottom.setBackground(new Color(35, 35, 35)); pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 10, 10, 10));
@@ -1152,7 +1322,9 @@ public class FensterManager {
         
         JButton btnSave = LogistikSimulator.createStyledButton("Speichern & Schliessen", new Color(39, 174, 96));
         btnSave.addActionListener(e -> {
-            LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected(); LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
+            LogistikSimulator.cfgAutoTransfer = cbAuto.isSelected(); LogistikSimulator.cfgLogistikAktiv = cbLogistik.isSelected();
+            LogistikSimulator.cfgKrankentransport = cbKtp.isSelected(); LogistikSimulator.cfgBeschaedigung = cbDmg.isSelected(); LogistikSimulator.cfgKrankheit = cbSick.isSelected(); 
+            LogistikSimulator.cfgKiFunk = cbKiFunk.isSelected(); // NEU
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected(); LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected(); LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
             LogistikSimulator.volNotruf = slNotruf.getValue(); LogistikSimulator.volStatus6 = slStatus6.getValue(); LogistikSimulator.volStatus7 = slStatus7.getValue();
             SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); d.dispose();
@@ -1184,213 +1356,6 @@ public class FensterManager {
         });
         
         hotkeyPopup.setVisible(true);
-    }
-
-    public static void oeffneFuhrpark() {
-        if(wachen.isEmpty()){ JOptionPane.showMessageDialog(frame, "Du hast keine Wache!"); return; }
-        JDialog d = createFramelessDialog("Fuhrpark verwalten", 400, 350);
-        JPanel content = new JPanel(new GridLayout(9, 2, 10, 10));
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35, 35, 35));
-
-        JLabel l = new JLabel("Fuer welche Wache?"); l.setForeground(Color.WHITE); content.add(l);
-        JComboBox<String> cbWachen = new JComboBox<>(); for(Wache w : wachen) cbWachen.addItem(w.name); content.add(cbWachen);
-
-        // FIX: Die Preise auf dem Button stimmen jetzt mit den abgebuchten Preisen in der Logik ueberein!
-        JButton b1 = new JButton("ELW kaufen (2500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 2500));
-        JButton b2 = new JButton("HLF kaufen (2000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 2000));
-        JButton b3 = new JButton("DLK kaufen (2500 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 2500));
-        JButton b4 = new JButton("RTW kaufen (2000 EURO)"); b4.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "RTW", 2000));
-        JButton b5 = new JButton("NEF kaufen (2500 EURO)"); b5.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "NEF", 2500));
-        JButton b6 = new JButton("KTW kaufen (1000 EURO)"); b6.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "KTW", 1000));
-        JButton b7 = new JButton("TLF kaufen (2500 EURO)"); b7.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "TLF", 2500));
-        JButton b8 = new JButton("MTW kaufen (1000 EURO)"); b8.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "MTW", 1000));
-
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(b8);
-        d.add(content, BorderLayout.CENTER); d.setVisible(true);
-    }
-
-    public static void oeffneLogistikMenu() {
-        JDialog d = createFramelessDialog("Wache versorgen", 400, 300);
-        JPanel content = new JPanel(new GridLayout(0, 1, 5, 5));
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35, 35, 35));
-
-        JLabel l = new JLabel("Zu beliefernde Wache auswaehlen:"); l.setForeground(Color.WHITE); content.add(l);
-        JComboBox<String> wahlen = new JComboBox<>(); for(Wache w : wachen) wahlen.addItem(w.name); content.add(wahlen);
-
-        for(CustomMaterial cm : customMaterials) {
-            JButton btn = new JButton("10x " + cm.name + " umlagern");
-            btn.addActionListener(e -> {
-                Wache target = wachen.get(wahlen.getSelectedIndex());
-                if (hauptlager.getOrDefault(cm.name, 0) >= 10) { hauptlager.put(cm.name, hauptlager.get(cm.name) - 10); target.material.put(cm.name, target.material.getOrDefault(cm.name, 0) + 10); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
-                else { JOptionPane.showMessageDialog(d, "Zu wenig Bestand im Hauptlager!"); }
-            });
-            content.add(btn);
-        }
-        
-        JScrollPane scroll = new JScrollPane(content); scroll.getVerticalScrollBar().setUnitIncrement(16); scroll.setBorder(BorderFactory.createEmptyBorder());
-        d.add(scroll, BorderLayout.CENTER); d.setVisible(true);
-    }
-
-    public static void oeffneBestellMenu() {
-        JDialog d = createFramelessDialog("Einkauf (Lieferung in 60s)", 400, 300);
-        JPanel content = new JPanel(new GridLayout(0, 1, 5, 5));
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35, 35, 35));
-
-        for(int i=0; i<customMaterials.size(); i++) {
-            CustomMaterial cm = customMaterials.get(i);
-            double rabatt = techGrossabnehmer ? 0.8 : 1.0; int endPreis = (int)(cm.preis * rabatt);
-            JButton btn = new JButton(cm.bestellMenge + "x " + cm.name + " (" + endPreis + " EURO)");
-            btn.addActionListener(e -> {
-                if (budget >= endPreis) { budget -= endPreis; lieferungen.add(new Bestellung(cm.name, cm.bestellMenge, 60)); SpeicherManager.speichern("savegame.properties"); uiAktualisieren(getUhrzeit()); } 
-                else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
-            });
-            content.add(btn);
-        }
-
-        JScrollPane scroll = new JScrollPane(content); scroll.getVerticalScrollBar().setUnitIncrement(16); scroll.setBorder(BorderFactory.createEmptyBorder());
-        d.add(scroll, BorderLayout.CENTER); d.setVisible(true);
-    }
-    
-    public static void oeffneMaterialErsteller() {
-        JDialog d = createFramelessDialog("Eigenes Material Erstellen", 500, 400);
-        JPanel form = new JPanel(new GridLayout(7, 2, 5, 5));
-        form.setBackground(new Color(35, 35, 35));
-        
-        JTextField txtName = new JTextField();
-        JSpinner sVerbrauch = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
-        JSpinner sPreis = new JSpinner(new SpinnerNumberModel(500, 10, 10000, 10));
-        JSpinner sMenge = new JSpinner(new SpinnerNumberModel(10, 1, 1000, 10));
-        JSpinner sWarn = new JSpinner(new SpinnerNumberModel(5, 0, 1000, 5));
-        
-        JLabel l1 = new JLabel("Material Name:"); l1.setForeground(Color.WHITE); form.add(l1); form.add(txtName);
-        JLabel l2 = new JLabel("Max. Verbrauch pro Einsatz:"); l2.setForeground(Color.WHITE); form.add(l2); form.add(sVerbrauch);
-        JLabel l3 = new JLabel("Kaufpreis (Shop):"); l3.setForeground(Color.WHITE); form.add(l3); form.add(sPreis);
-        JLabel l4 = new JLabel("Bestellmenge pro Kauf:"); l4.setForeground(Color.WHITE); form.add(l4); form.add(sMenge);
-        JLabel l5 = new JLabel("Warnschwelle (Bestand):"); l5.setForeground(Color.WHITE); form.add(l5); form.add(sWarn);
-        
-        JLabel l6 = new JLabel("Fahrzeug-Bindung:"); l6.setForeground(Color.WHITE); form.add(l6);
-        JPanel pnlFz = new JPanel(new GridLayout(3, 3)); pnlFz.setBackground(new Color(35, 35, 35));
-        JCheckBox cbFz_RTW = new JCheckBox("RTW"); cbFz_RTW.setForeground(Color.WHITE); cbFz_RTW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_HLF = new JCheckBox("HLF"); cbFz_HLF.setForeground(Color.WHITE); cbFz_HLF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_NEF = new JCheckBox("NEF"); cbFz_NEF.setForeground(Color.WHITE); cbFz_NEF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_KTW = new JCheckBox("KTW"); cbFz_KTW.setForeground(Color.WHITE); cbFz_KTW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_ELW = new JCheckBox("ELW"); cbFz_ELW.setForeground(Color.WHITE); cbFz_ELW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_DLK = new JCheckBox("DLK"); cbFz_DLK.setForeground(Color.WHITE); cbFz_DLK.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_TLF = new JCheckBox("TLF"); cbFz_TLF.setForeground(Color.WHITE); cbFz_TLF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_MTW = new JCheckBox("MTW"); cbFz_MTW.setForeground(Color.WHITE); cbFz_MTW.setBackground(new Color(35,35,35));
-        
-        pnlFz.add(cbFz_RTW); pnlFz.add(cbFz_HLF); pnlFz.add(cbFz_NEF); 
-        pnlFz.add(cbFz_KTW); pnlFz.add(cbFz_ELW); pnlFz.add(cbFz_DLK);
-        pnlFz.add(cbFz_TLF); pnlFz.add(cbFz_MTW);
-        form.add(pnlFz);
-
-        JPanel topArea = new JPanel(new BorderLayout()); topArea.setBackground(new Color(35, 35, 35));
-        topArea.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        topArea.add(form, BorderLayout.CENTER);
-        d.add(topArea, BorderLayout.CENTER);
-
-        JButton btnAdd = new JButton("Material Anlegen");
-        btnAdd.addActionListener(e -> {
-            if(txtName.getText().trim().isEmpty()) { JOptionPane.showMessageDialog(d, "Name fehlt!"); return; }
-            ArrayList<String> fzList = new ArrayList<>();
-            if(cbFz_RTW.isSelected()) fzList.add("RTW"); if(cbFz_HLF.isSelected()) fzList.add("HLF");
-            if(cbFz_NEF.isSelected()) fzList.add("NEF"); if(cbFz_KTW.isSelected()) fzList.add("KTW");
-            if(cbFz_ELW.isSelected()) fzList.add("ELW"); if(cbFz_DLK.isSelected()) fzList.add("DLK");
-            if(cbFz_TLF.isSelected()) fzList.add("TLF"); if(cbFz_MTW.isSelected()) fzList.add("MTW");
-            
-            CustomMaterial mat = new CustomMaterial(txtName.getText().trim(), fzList, (int)sVerbrauch.getValue(), new ArrayList<>(), (int)sPreis.getValue(), (int)sMenge.getValue(), (int)sWarn.getValue());
-            customMaterials.add(mat);
-            for(Wache w : wachen) w.material.put(mat.name, 0);
-            hauptlager.put(mat.name, 0);
-            SpeicherManager.speichern("savegame.properties");
-            JOptionPane.showMessageDialog(d, "Material hinzugefuegt!");
-            d.dispose();
-        });
-        d.add(btnAdd, BorderLayout.SOUTH);
-        d.setVisible(true);
-    }
-
-    public static void oeffneMaterialBearbeiter() {
-        if(customMaterials.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Materialien!"); return; }
-        JDialog d = createFramelessDialog("Material Bearbeiten", 500, 450);
-
-        JPanel topSelect = new JPanel(new FlowLayout(FlowLayout.LEFT)); topSelect.setBackground(new Color(35, 35, 35));
-        JLabel lblTop = new JLabel("Zu bearbeitendes Material:"); lblTop.setForeground(Color.WHITE); topSelect.add(lblTop);
-        JComboBox<String> cMatWahl = new JComboBox<>();
-        for(CustomMaterial cm : customMaterials) cMatWahl.addItem(cm.name);
-        topSelect.add(cMatWahl);
-        d.add(topSelect, BorderLayout.NORTH);
-
-        JPanel form = new JPanel(new GridLayout(7, 2, 5, 5)); form.setBackground(new Color(35, 35, 35));
-        JTextField txtName = new JTextField();
-        JSpinner sVerbrauch = new JSpinner(new SpinnerNumberModel(1, 1, 100, 1));
-        JSpinner sPreis = new JSpinner(new SpinnerNumberModel(500, 10, 10000, 10));
-        JSpinner sMenge = new JSpinner(new SpinnerNumberModel(10, 1, 1000, 10));
-        JSpinner sWarn = new JSpinner(new SpinnerNumberModel(5, 0, 1000, 5));
-        
-        JLabel l1 = new JLabel("Material Name:"); l1.setForeground(Color.WHITE); form.add(l1); form.add(txtName);
-        JLabel l2 = new JLabel("Max. Verbrauch pro Einsatz:"); l2.setForeground(Color.WHITE); form.add(l2); form.add(sVerbrauch);
-        JLabel l3 = new JLabel("Kaufpreis (Shop):"); l3.setForeground(Color.WHITE); form.add(l3); form.add(sPreis);
-        JLabel l4 = new JLabel("Bestellmenge pro Kauf:"); l4.setForeground(Color.WHITE); form.add(l4); form.add(sMenge);
-        JLabel l5 = new JLabel("Warnschwelle (Bestand):"); l5.setForeground(Color.WHITE); form.add(l5); form.add(sWarn);
-        
-        JLabel l6 = new JLabel("Fahrzeug-Bindung:"); l6.setForeground(Color.WHITE); form.add(l6);
-        JPanel pnlFz = new JPanel(new GridLayout(3, 3)); pnlFz.setBackground(new Color(35, 35, 35));
-        JCheckBox cbFz_RTW = new JCheckBox("RTW"); cbFz_RTW.setForeground(Color.WHITE); cbFz_RTW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_HLF = new JCheckBox("HLF"); cbFz_HLF.setForeground(Color.WHITE); cbFz_HLF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_NEF = new JCheckBox("NEF"); cbFz_NEF.setForeground(Color.WHITE); cbFz_NEF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_KTW = new JCheckBox("KTW"); cbFz_KTW.setForeground(Color.WHITE); cbFz_KTW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_ELW = new JCheckBox("ELW"); cbFz_ELW.setForeground(Color.WHITE); cbFz_ELW.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_DLK = new JCheckBox("DLK"); cbFz_DLK.setForeground(Color.WHITE); cbFz_DLK.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_TLF = new JCheckBox("TLF"); cbFz_TLF.setForeground(Color.WHITE); cbFz_TLF.setBackground(new Color(35,35,35));
-        JCheckBox cbFz_MTW = new JCheckBox("MTW"); cbFz_MTW.setForeground(Color.WHITE); cbFz_MTW.setBackground(new Color(35,35,35));
-        
-        pnlFz.add(cbFz_RTW); pnlFz.add(cbFz_HLF); pnlFz.add(cbFz_NEF); 
-        pnlFz.add(cbFz_KTW); pnlFz.add(cbFz_ELW); pnlFz.add(cbFz_DLK);
-        pnlFz.add(cbFz_TLF); pnlFz.add(cbFz_MTW);
-        form.add(pnlFz);
-
-        Runnable ladeMaterial = () -> {
-            CustomMaterial cm = customMaterials.get(cMatWahl.getSelectedIndex());
-            txtName.setText(cm.name); sVerbrauch.setValue(cm.maxVerbrauch); sPreis.setValue(cm.preis);
-            sMenge.setValue(cm.bestellMenge); sWarn.setValue(cm.warnSchwelle);
-            cbFz_RTW.setSelected(cm.fahrzeuge.contains("RTW")); cbFz_HLF.setSelected(cm.fahrzeuge.contains("HLF"));
-            cbFz_NEF.setSelected(cm.fahrzeuge.contains("NEF")); cbFz_KTW.setSelected(cm.fahrzeuge.contains("KTW"));
-            cbFz_ELW.setSelected(cm.fahrzeuge.contains("ELW")); cbFz_DLK.setSelected(cm.fahrzeuge.contains("DLK"));
-            cbFz_TLF.setSelected(cm.fahrzeuge.contains("TLF")); cbFz_MTW.setSelected(cm.fahrzeuge.contains("MTW"));
-        };
-        ladeMaterial.run();
-        cMatWahl.addActionListener(e -> ladeMaterial.run());
-
-        JPanel topArea = new JPanel(new BorderLayout()); topArea.setBackground(new Color(35, 35, 35));
-        topArea.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        topArea.add(form, BorderLayout.CENTER); d.add(topArea, BorderLayout.CENTER);
-
-        JButton btnAdd = new JButton("Aenderungen Speichern");
-        btnAdd.addActionListener(e -> {
-            if(txtName.getText().trim().isEmpty()) { JOptionPane.showMessageDialog(d, "Name fehlt!"); return; }
-            CustomMaterial cm = customMaterials.get(cMatWahl.getSelectedIndex());
-            
-            String oldWach = cm.name;
-            int oldLag = hauptlager.getOrDefault(cm.name, 0); hauptlager.remove(cm.name);
-            
-            cm.name = txtName.getText().trim(); cm.maxVerbrauch = (int) sVerbrauch.getValue();
-            cm.preis = (int) sPreis.getValue(); cm.bestellMenge = (int) sMenge.getValue(); cm.warnSchwelle = (int) sWarn.getValue();
-            
-            cm.fahrzeuge.clear();
-            if(cbFz_RTW.isSelected()) cm.fahrzeuge.add("RTW"); if(cbFz_HLF.isSelected()) cm.fahrzeuge.add("HLF");
-            if(cbFz_NEF.isSelected()) cm.fahrzeuge.add("NEF"); if(cbFz_KTW.isSelected()) cm.fahrzeuge.add("KTW");
-            if(cbFz_ELW.isSelected()) cm.fahrzeuge.add("ELW"); if(cbFz_DLK.isSelected()) cm.fahrzeuge.add("DLK");
-            if(cbFz_TLF.isSelected()) cm.fahrzeuge.add("TLF"); if(cbFz_MTW.isSelected()) cm.fahrzeuge.add("MTW");
-            
-            hauptlager.put(cm.name, oldLag);
-            SpeicherManager.speichern("savegame.properties");
-            JOptionPane.showMessageDialog(d, "Erfolgreich aktualisiert!"); d.dispose();
-        });
-        d.add(btnAdd, BorderLayout.SOUTH); d.setVisible(true);
     }
 
     public static void oeffneEinsatzErsteller() {
@@ -1635,81 +1600,6 @@ public class FensterManager {
         d.add(btnPanel, BorderLayout.SOUTH); d.setVisible(true);
     }
     
-    public static void oeffnePersonalTransfer() {
-        if(wachen.size() < 2) { JOptionPane.showMessageDialog(frame, "Du brauchst mindestens zwei Wachen fuer einen Transfer!"); return; }
-        
-        JDialog d = createFramelessDialog("Personal transferieren", 450, 300);
-        JPanel content = new JPanel(new GridLayout(4, 2, 10, 10));
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35,35,35));
-
-        JComboBox<String> cbPers = new JComboBox<>();
-        ArrayList<Personal> pList = new ArrayList<>();
-        ArrayList<Wache> wList = new ArrayList<>(); 
-        
-        for(Wache w : wachen) {
-            for(Personal p : w.personalPool) {
-                pList.add(p);
-                wList.add(w);
-                cbPers.addItem(p.name + " (" + w.name + ")");
-            }
-        }
-
-        JComboBox<String> cbZiel = new JComboBox<>();
-        for(Wache w : wachen) cbZiel.addItem(w.name);
-
-        JComboBox<String> cbArt = new JComboBox<>(new String[]{"Dauerhaft (Versetzung)", "Temporaer (Bis Tagesabschluss)"});
-
-        JButton btnTransfer = new JButton("Transferieren");
-        btnTransfer.addActionListener(e -> {
-            int pIndex = cbPers.getSelectedIndex();
-            int zielIndex = cbZiel.getSelectedIndex();
-            if(pIndex == -1 || zielIndex == -1) return;
-
-            Personal p = pList.get(pIndex);
-            Wache alteWache = wList.get(pIndex);
-            Wache zielWache = wachen.get(zielIndex);
-
-            if(alteWache == zielWache) {
-                JOptionPane.showMessageDialog(d, "Die Person arbeitet bereits auf dieser Wache!"); return;
-            }
-            if(p.status.equals("Lehrgang")) {
-                JOptionPane.showMessageDialog(d, "Mitarbeiter ist auf Lehrgang und kann nicht transferiert werden!"); return;
-            }
-
-            alteWache.personalPool.remove(p);
-            zielWache.personalPool.add(p);
-            
-            p.zugewiesenesFahrzeug = "Keines";
-            p.geplantesFahrzeug = "Keines";
-
-            if(cbArt.getSelectedIndex() == 1) { 
-                if(!LogistikSimulator.verliehenesPersonal.containsKey(p)) {
-                    LogistikSimulator.verliehenesPersonal.put(p, alteWache);
-                }
-            } else { 
-                LogistikSimulator.verliehenesPersonal.remove(p);
-            }
-
-            SpeicherManager.speichern("savegame.properties");
-            JOptionPane.showMessageDialog(d, p.name + " wurde erfolgreich nach " + zielWache.name + " umstationiert.\nAchtung: Bitte teile die Person im Schichtplan neu einem Fahrzeug zu!");
-            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
-            d.dispose();
-        });
-
-        JLabel l1 = new JLabel("Mitarbeiter waehlen:"); l1.setForeground(Color.WHITE);
-        JLabel l2 = new JLabel("Ziel-Wache:"); l2.setForeground(Color.WHITE);
-        JLabel l3 = new JLabel("Art des Transfers:"); l3.setForeground(Color.WHITE);
-
-        content.add(l1); content.add(cbPers);
-        content.add(l2); content.add(cbZiel);
-        content.add(l3); content.add(cbArt);
-        content.add(new JLabel("")); content.add(btnTransfer);
-
-        d.add(content, BorderLayout.CENTER);
-        d.setVisible(true);
-    }
-    
     public static void oeffneAlarmierungsFenster(Einsatz ein) {
         JDialog d = createFramelessDialog("Alarmierung: " + ein.vorlage.stichwort + " - " + ein.beschreibung, 800, 600);
         
@@ -1908,4 +1798,103 @@ public class FensterManager {
 
         d.setVisible(true);
     }
+    
+    public static void oeffnePersonalTransfer() {
+        if(wachen.size() < 2) { JOptionPane.showMessageDialog(frame, "Du brauchst mindestens zwei Wachen fuer einen Transfer!"); return; }
+        
+        JDialog d = createFramelessDialog("Personal transferieren", 450, 300);
+        JPanel content = new JPanel(new GridLayout(4, 2, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35,35,35));
+
+        JComboBox<String> cbPers = new JComboBox<>();
+        ArrayList<Personal> pList = new ArrayList<>();
+        ArrayList<Wache> wList = new ArrayList<>(); 
+        
+        for(Wache w : wachen) {
+            for(Personal p : w.personalPool) {
+                pList.add(p);
+                wList.add(w);
+                cbPers.addItem(p.name + " (" + w.name + ")");
+            }
+        }
+
+        JComboBox<String> cbZiel = new JComboBox<>();
+        for(Wache w : wachen) cbZiel.addItem(w.name);
+
+        JComboBox<String> cbArt = new JComboBox<>(new String[]{"Dauerhaft (Versetzung)", "Temporaer (Bis Tagesabschluss)"});
+
+        JButton btnTransfer = new JButton("Transferieren");
+        btnTransfer.addActionListener(e -> {
+            int pIndex = cbPers.getSelectedIndex();
+            int zielIndex = cbZiel.getSelectedIndex();
+            if(pIndex == -1 || zielIndex == -1) return;
+
+            Personal p = pList.get(pIndex);
+            Wache alteWache = wList.get(pIndex);
+            Wache zielWache = wachen.get(zielIndex);
+
+            if(alteWache == zielWache) {
+                JOptionPane.showMessageDialog(d, "Die Person arbeitet bereits auf dieser Wache!"); return;
+            }
+            if(p.status.equals("Lehrgang")) {
+                JOptionPane.showMessageDialog(d, "Mitarbeiter ist auf Lehrgang und kann nicht transferiert werden!"); return;
+            }
+
+            alteWache.personalPool.remove(p);
+            zielWache.personalPool.add(p);
+            
+            p.zugewiesenesFahrzeug = "Keines";
+            p.geplantesFahrzeug = "Keines";
+
+            if(cbArt.getSelectedIndex() == 1) { 
+                if(!LogistikSimulator.verliehenesPersonal.containsKey(p)) {
+                    LogistikSimulator.verliehenesPersonal.put(p, alteWache);
+                }
+            } else { 
+                LogistikSimulator.verliehenesPersonal.remove(p);
+            }
+
+            SpeicherManager.speichern("savegame.properties");
+            JOptionPane.showMessageDialog(d, p.name + " wurde erfolgreich nach " + zielWache.name + " umstationiert.\nAchtung: Bitte teile die Person im Schichtplan neu einem Fahrzeug zu!");
+            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+            d.dispose();
+        });
+
+        JLabel l1 = new JLabel("Mitarbeiter waehlen:"); l1.setForeground(Color.WHITE);
+        JLabel l2 = new JLabel("Ziel-Wache:"); l2.setForeground(Color.WHITE);
+        JLabel l3 = new JLabel("Art des Transfers:"); l3.setForeground(Color.WHITE);
+
+        content.add(l1); content.add(cbPers);
+        content.add(l2); content.add(cbZiel);
+        content.add(l3); content.add(cbArt);
+        content.add(new JLabel("")); content.add(btnTransfer);
+
+        d.add(content, BorderLayout.CENTER);
+        d.setVisible(true);
+    }
+    
+    public static void oeffneFuhrpark() {
+        if(wachen.isEmpty()){ JOptionPane.showMessageDialog(frame, "Du hast keine Wache!"); return; }
+        JDialog d = createFramelessDialog("Fuhrpark verwalten", 400, 350);
+        JPanel content = new JPanel(new GridLayout(9, 2, 10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
+        content.setBackground(new Color(35, 35, 35));
+
+        JLabel l = new JLabel("Fuer welche Wache?"); l.setForeground(Color.WHITE); content.add(l);
+        JComboBox<String> cbWachen = new JComboBox<>(); for(Wache w : wachen) cbWachen.addItem(w.name); content.add(cbWachen);
+
+        JButton b1 = new JButton("ELW kaufen (2500 EURO)"); b1.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "ELW", 2500));
+        JButton b2 = new JButton("HLF kaufen (2000 EURO)"); b2.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "HLF", 2000));
+        JButton b3 = new JButton("DLK kaufen (2500 EURO)"); b3.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "DLK", 2500));
+        JButton b4 = new JButton("RTW kaufen (2000 EURO)"); b4.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "RTW", 2000));
+        JButton b5 = new JButton("NEF kaufen (2500 EURO)"); b5.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "NEF", 2500));
+        JButton b6 = new JButton("KTW kaufen (1000 EURO)"); b6.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "KTW", 1000));
+        JButton b7 = new JButton("TLF kaufen (2500 EURO)"); b7.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "TLF", 2500));
+        JButton b8 = new JButton("MTW kaufen (1000 EURO)"); b8.addActionListener(e -> kaufFahrzeug(wachen.get(cbWachen.getSelectedIndex()), "MTW", 1000));
+
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(b8);
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+    }
+    
 }

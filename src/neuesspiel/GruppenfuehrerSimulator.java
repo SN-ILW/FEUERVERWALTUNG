@@ -387,25 +387,29 @@ public class GruppenfuehrerSimulator {
         // --- DAS IST DAS NEUE ZEICHEN-PANEL FUER DAS FAHRZEUG ---
         else if (phase == 2 || phase == 7) {
             pnlRoad = new JPanel() {
-                ImageIcon iconHinfahrt;
-                ImageIcon iconRueckfahrt;
+                ImageIcon iconHinStatic, iconHinGif;
+                ImageIcon iconRueckStatic, iconRueckGif;
                 {
-                    // WICHTIG: TRAGE HIER DEINE ECHTEN DATEINAMEN EIN!
-                    String nameHinfahrt = "A.png"; 
-                    String nameRueckfahrt = "R.png"; 
+                    // 1. DEINE NORMALEN BILDER (Ohne Blaulicht)
+                    String dateiHin = "A.png"; 
+                    String dateiRueck = "R.png"; 
                     
-                    // Sucht im src/neuesspiel/ Ordner
-                    java.net.URL urlHin = GruppenfuehrerSimulator.class.getResource(nameHinfahrt);
-                    if (urlHin != null) iconHinfahrt = new ImageIcon(urlHin);
-                    else iconHinfahrt = new ImageIcon(nameHinfahrt); // Sucht im Hauptordner
+                    // 2. DEINE GIF BILDER (Mit Blaulicht)
+                    String dateiHinGif = "anfahrt2.gif"; 
+                    String dateiRueckGif = "abfahrt2.gif"; 
                     
-                    java.net.URL urlRueck = GruppenfuehrerSimulator.class.getResource(nameRueckfahrt);
-                    if (urlRueck != null) iconRueckfahrt = new ImageIcon(urlRueck);
-                    else iconRueckfahrt = new ImageIcon(nameRueckfahrt);
-                    
-                    // DEBUG: Zeigt in der NetBeans-Konsole an, wenn das Bild fehlt!
-                    if(iconHinfahrt.getIconWidth() <= 0) System.out.println("FEHLER: Bild '" + nameHinfahrt + "' nicht gefunden!");
-                    if(iconRueckfahrt.getIconWidth() <= 0) System.out.println("FEHLER: Bild '" + nameRueckfahrt + "' nicht gefunden!");
+                    // Bilder laden
+                    iconHinStatic = ladeBild(dateiHin);
+                    iconRueckStatic = ladeBild(dateiRueck);
+                    iconHinGif = ladeBild(dateiHinGif);
+                    iconRueckGif = ladeBild(dateiRueckGif);
+                }
+                
+                // Hilfsmethode, damit der Code uebersichtlich bleibt
+                private ImageIcon ladeBild(String name) {
+                    java.net.URL url = GruppenfuehrerSimulator.class.getResource(name);
+                    if (url != null) return new ImageIcon(url);
+                    return new ImageIcon(name);
                 }
                 
                 @Override
@@ -415,9 +419,24 @@ public class GruppenfuehrerSimulator {
                     int imgH = 90;
                     int imgW = 250; 
                     
-                    ImageIcon currentIcon = (phase == 7) ? iconRueckfahrt : iconHinfahrt;
+                    // Pruefen: Welche Richtung?
+                    boolean istRueckfahrt = (phase == 7);
                     
-                    if (currentIcon.getIconWidth() > 0) {
+                    // Pruefen: Ist das Blaulicht an? Dann nimm das GIF!
+                    ImageIcon currentIcon;
+                    if (istRueckfahrt) {
+                        currentIcon = blaulichtAktiv ? iconRueckGif : iconRueckStatic;
+                    } else {
+                        currentIcon = blaulichtAktiv ? iconHinGif : iconHinStatic;
+                    }
+                    
+                    // Notfall-Sicherung: Falls das GIF fehlt, nimm das normale Bild
+                    if (currentIcon == null || currentIcon.getIconWidth() <= 0) {
+                        currentIcon = istRueckfahrt ? iconRueckStatic : iconHinStatic;
+                    }
+                    
+                    // Groesse anpassen
+                    if (currentIcon != null && currentIcon.getIconWidth() > 0) {
                         imgW = (int)((double)currentIcon.getIconWidth() / currentIcon.getIconHeight() * imgH);
                     }
                     
@@ -426,10 +445,11 @@ public class GruppenfuehrerSimulator {
                     
                     int x = phase == 2 ? (int)(max_x * fahrtProgress) : (int)(max_x * (1.0f - fahrtProgress));
                     
-                    if (currentIcon.getIconWidth() > 0) {
+                    // Bild oder GIF endgueltig zeichnen
+                    if (currentIcon != null && currentIcon.getIconWidth() > 0) {
                         g.drawImage(currentIcon.getImage(), x, 10, imgW, imgH, this);
                     } else {
-                        // Der rote Kasten (Fallback)
+                        // Der rote Fehler-Kasten
                         g.setColor(new Color(192, 57, 43));
                         g.fillRect(x, 10, imgW, imgH);
                         g.setColor(Color.WHITE);
@@ -453,6 +473,7 @@ public class GruppenfuehrerSimulator {
             
             actionPanel.add(container);
         }
+        
         else if (phase == 4) {
             if (!gfAbgesessen && !alleAbgesessen) {
                 JButton btnGfErkunden = createBtn("Erkundung (nur GF & AF absitzen)", new Color(241, 196, 15));
