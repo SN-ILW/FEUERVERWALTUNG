@@ -1,5 +1,5 @@
 package neuesspiel;
-
+import java.awt.Color;
 public class Fahrzeug {
     public String funkrufname;
     public String typ;
@@ -13,6 +13,7 @@ public class Fahrzeug {
     public int naechsteInspektion = 1000;
     public int reqEL=0, reqGF=0, reqNA=0, reqNFS=0, reqMA=0, reqTF=0, reqFüAs=0, reqRS=0, reqTM=0;
     
+    
     public Fahrzeug(String kennung, String typ) {
         this.funkrufname = kennung;
         this.typ = typ;
@@ -25,6 +26,9 @@ public class Fahrzeug {
         else if(typ.equals("TLF")){ reqTF=1; reqMA=1; }
         else if(typ.equals("MTW")){ reqTM=1; }
     }
+    
+    // Fuege das oben zu den anderen Variablen in deiner Fahrzeug.java hinzu:
+    public Color stempelFarbe = new Color(192, 57, 43); // Standardmaessig ein schickes Rot
     
     public void tick(int speed, String uhrzeit) {
         if (status == 3) {

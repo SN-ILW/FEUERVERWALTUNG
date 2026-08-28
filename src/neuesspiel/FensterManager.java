@@ -134,18 +134,38 @@ public class FensterManager {
     }
 
     public static void oeffneFuhrparkHauptmenu() {
-        JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 250); 
-        JPanel content = new JPanel(new GridLayout(4, 1, 10, 10)); 
+        // Fenster etwas hoeher gemacht (von 250 auf 300)
+        JDialog d = createFramelessDialog("Fuhrpark & Werkstatt", 400, 300); 
+        
+        // GridLayout auf 5 Zeilen erhoeht
+        JPanel content = new JPanel(new GridLayout(5, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
-        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
-        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
-        JButton b3 = new JButton("Fahrzeug umstationieren"); b3.addActionListener(e -> { d.dispose(); oeffneFahrzeugTransfer(); });
-        JButton b4 = new JButton("TÜV & Inspektion durchfuehren"); b4.addActionListener(e -> { d.dispose(); LogistikSimulator.fahrzeugeInspektion(); });
+        JButton b1 = new JButton("Fahrzeuge verwalten / kaufen"); 
+        b1.addActionListener(e -> { d.dispose(); oeffneFuhrpark(); });
+        
+        JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); 
+        b2.addActionListener(e -> { d.dispose(); fahrzeugeReparieren(); });
+        
+        JButton b3 = new JButton("Fahrzeug umstationieren"); 
+        b3.addActionListener(e -> { d.dispose(); oeffneFahrzeugTransfer(); });
+        
+        JButton b4 = new JButton("TÜV & Inspektion durchfuehren"); 
+        b4.addActionListener(e -> { d.dispose(); LogistikSimulator.fahrzeugeInspektion(); });
+        
+        // --- NEUER BUTTON FUER DIE FARBEN UND UEBERSICHT ---
+        JButton b5 = new JButton("Fahrzeug-Uebersicht & Dienstplan-Farben"); 
+        b5.addActionListener(e -> { d.dispose(); LogistikSimulator.oeffneFahrzeugVerwaltung(); });
 
-        content.add(b1); content.add(b2); content.add(b3); content.add(b4);
-        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+        content.add(b1); 
+        content.add(b2); 
+        content.add(b3); 
+        content.add(b4);
+        content.add(b5); // Den neuen Button hinzufuegen
+        
+        d.add(content, BorderLayout.CENTER); 
+        d.setVisible(true);
     }
 
     public static void oeffneSystemHauptmenu() {
@@ -829,41 +849,204 @@ public class FensterManager {
     }
 
     public static void oeffnePersonalWeiterbildung() {
-        JDialog d = createFramelessDialog("Manuelle Personal Weiterbildung", 400, 200);
-        JPanel content = new JPanel(new GridLayout(3, 2, 10, 10));
-        content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
-        content.setBackground(new Color(35, 35, 35));
+        // Wir machen das Fenster direkt hier "frameless" (ohne Windows-Rahmen)
+        JDialog d = new JDialog(frame, "Manuelle Personal Weiterbildung", true);
+        d.setSize(800, 600);
+        d.setUndecorated(true);
+        d.setLocationRelativeTo(frame);
+        d.setLayout(new BorderLayout(10, 10));
+        d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        ArrayList<Personal> alleMitarbeiter = new ArrayList<>(); JComboBox<String> cbPers = new JComboBox<>();
-        for(Wache w : wachen) { for(Personal p : w.personalPool) { alleMitarbeiter.add(p); cbPers.addItem(p.name + " (" + w.name + ")"); } }
-        if(alleMitarbeiter.isEmpty()) { JOptionPane.showMessageDialog(d, "Kein Personal vorhanden!"); return; }
+        // --- HILFSKLASSE FUER LEHRGAENGE ---
+        class Lehrgang {
+            String name; int preis;
+            public Lehrgang(String n, int p) { this.name = n; this.preis = p; }
+            @Override public String toString() { return name + " (" + preis + " EURO)"; }
+        }
 
-        JComboBox<String> cbKurs = new JComboBox<>(new String[]{"RS (500 EURO)", "NFS (1500 EURO)", "NA (3000 EURO)", "TF (500 EURO)", "GF (1500 EURO)", "MA (1000 EURO)", "FueAs (500 EURO)", "EL (2000 EURO)"});
+        JComboBox<Lehrgang> cbKurs = new JComboBox<>(new Lehrgang[]{
+            new Lehrgang("RS", 250),
+            new Lehrgang("TM", 250),
+            new Lehrgang("NFS", 500),
+            new Lehrgang("TF", 500),
+            new Lehrgang("GF", 750),
+            new Lehrgang("MA", 750),
+            new Lehrgang("FueAs", 800),
+            new Lehrgang("EL", 1000)
+        });
+        cbKurs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        JButton btnKaufen = new JButton("Weiterbildung starten");
-        btnKaufen.addActionListener(e -> {
-            double rabatt = 1.0 - (lehrerStufe * 0.10); 
-            int pIndex = cbPers.getSelectedIndex(); String kursStr = (String) cbKurs.getSelectedItem();
-            String q = kursStr.split(" ")[0]; int cost = Integer.parseInt(kursStr.split("\\(")[1].split(" ")[0]);
-            Personal p = alleMitarbeiter.get(pIndex);
-            
-            if(p.qualifikationen.contains("Anwaerter")) { JOptionPane.showMessageDialog(d, "Anwaerter koennen erst nach ihrer ersten Schicht ausgebildet werden!"); return; }
-            if(p.status.equals("Urlaub") || p.status.equals("Krank") || p.status.equals("Lehrgang")) { JOptionPane.showMessageDialog(d, "Der Mitarbeiter ist aktuell nicht verfuegbar!"); return; }
-            if(p.qualifikationen.contains(q)) { JOptionPane.showMessageDialog(d, "Personal erfuellt diese Qualifikation bereits!"); return; }
-            
-            if(budget >= cost) {
-                budget -= cost; p.status = "Lehrgang"; p.geplanterStatus = "Lehrgang"; p.lehrgangDauerSec = (int)(3 * 60 * rabatt); p.lehrgangThema = q;
-                SpeicherManager.speichern("savegame.properties");
-                JOptionPane.showMessageDialog(d, p.name + " ist nun fuer " + p.lehrgangDauerSec + " Sekunden auf Lehrgang zum " + q + "!");
-                uiAktualisieren(getUhrzeit()); d.dispose();
-            } else { JOptionPane.showMessageDialog(d, "Nicht genug Budget!"); }
+        // --- PERSONAL SAMMELN ---
+        ArrayList<Personal> alleMitarbeiter = new ArrayList<>();
+        for(Wache w : wachen) { 
+            for(Personal p : w.personalPool) { 
+                alleMitarbeiter.add(p); 
+            } 
+        }
+        
+        if(alleMitarbeiter.isEmpty()) { 
+            JOptionPane.showMessageDialog(d, "Kein Personal vorhanden!"); 
+            d.dispose();
+            return; 
+        }
+
+        // --- TABELLE ERSTELLEN ---
+        String[] cols = {"Name (Wache)", "Status", "Aktuelle Qualifikationen", "Buchen"};
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(cols, 0) {
+            @Override public Class<?> getColumnClass(int col) {
+                return (col == 3) ? Boolean.class : String.class;
+            }
+            @Override public boolean isCellEditable(int row, int col) {
+                if (col == 3) {
+                    Personal p = alleMitarbeiter.get(row);
+                    Lehrgang l = (Lehrgang) cbKurs.getSelectedItem();
+                    
+                    if(p.qualifikationen.contains("Anwaerter")) return false;
+                    if(p.status.equals("Urlaub") || p.status.equals("Krank") || p.status.equals("Lehrgang")) return false;
+                    
+                    // ALTE LOGIK: if(personErfuellt(p, l.name)) return false; 
+                    // NEUE LOGIK:
+                    if(p.qualifikationen.contains(l.name)) return false; 
+                    
+                    return true; 
+                }
+                return false;
+            }
+        };
+
+        for (Personal p : alleMitarbeiter) {
+            String wacheName = "";
+            for(Wache w : wachen) { if(w.personalPool.contains(p)) wacheName = w.name; }
+            String qualis = p.qualifikationen.isEmpty() ? "-" : String.join(", ", p.qualifikationen);
+            model.addRow(new Object[]{p.name + " (" + wacheName + ")", p.status, qualis, false});
+        }
+
+        JTable table = new JTable(model);
+        table.setRowHeight(30);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.getTableHeader().setBackground(new Color(20, 20, 20));
+        table.getTableHeader().setForeground(Color.WHITE);
+
+        // --- NEU: CHECKBOX AUSGRAUEN WENN GESPERRT ---
+        table.getColumnModel().getColumn(3).setCellRenderer(new javax.swing.table.TableCellRenderer() {
+            JCheckBox cb = new JCheckBox();
+            {
+                cb.setHorizontalAlignment(SwingConstants.CENTER);
+            }
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                cb.setSelected(value != null && (Boolean)value);
+                cb.setEnabled(table.isCellEditable(row, column)); // HIER WIRD SIE SICHTBAR GRAU!
+                cb.setBackground(isSelected ? new Color(41, 128, 185) : new Color(43, 43, 43));
+                return cb;
+            }
         });
 
-        JLabel l1 = new JLabel("Mitarbeiter waehlen:"); l1.setForeground(Color.WHITE); content.add(l1); content.add(cbPers);
-        JLabel l2 = new JLabel("Lehrgang waehlen:"); l2.setForeground(Color.WHITE); content.add(l2); content.add(cbKurs);
-        content.add(new JLabel("")); content.add(btnKaufen);
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.getViewport().setBackground(new Color(35, 35, 35));
+        scroll.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+        // --- TOP PANEL ---
+        JPanel topPnl = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
+        topPnl.setBackground(new Color(45, 45, 45));
+        JLabel lblTop = new JLabel("Lehrgang auswaehlen:");
+        lblTop.setForeground(Color.WHITE);
+        lblTop.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        topPnl.add(lblTop);
+        topPnl.add(cbKurs);
+
+        // --- BOTTOM PANEL (Mit Rotem Schliessen-Button) ---
+        JPanel bottomPnl = new JPanel(new BorderLayout()); // BorderLayout sorgt für Links/Rechts Anordnung
+        bottomPnl.setBackground(new Color(45, 45, 45));
+        bottomPnl.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+        
+        // Button Links: Schliessen
+        JButton btnClose = new JButton("Schliessen");
+        btnClose.setBackground(new Color(192, 57, 43)); // Rot
+        btnClose.setForeground(Color.WHITE);
+        btnClose.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnClose.setFocusPainted(false);
+        btnClose.addActionListener(e -> d.dispose());
+        bottomPnl.add(btnClose, BorderLayout.WEST);
+
+        // Bereich Rechts: Kosten & Kaufen
+        JPanel rightBottom = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 0));
+        rightBottom.setBackground(new Color(45, 45, 45));
+        
+        JLabel lblTotal = new JLabel("Gesamtkosten: 0 EURO");
+        lblTotal.setForeground(new Color(241, 196, 15));
+        lblTotal.setFont(new Font("Segoe UI", Font.BOLD, 16));
+
+        JButton btnKaufen = new JButton("Weiterbildung starten");
+        btnKaufen.setBackground(new Color(39, 174, 96));
+        btnKaufen.setForeground(Color.WHITE);
+        btnKaufen.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        rightBottom.add(lblTotal);
+        rightBottom.add(btnKaufen);
+        bottomPnl.add(rightBottom, BorderLayout.EAST);
+
+        // --- LISTENER ---
+        model.addTableModelListener(e -> {
+            int count = 0;
+            for (int i = 0; i < model.getRowCount(); i++) {
+                if ((Boolean) model.getValueAt(i, 3)) count++;
+            }
+            Lehrgang l = (Lehrgang) cbKurs.getSelectedItem();
+            lblTotal.setText("Gesamtkosten: " + (count * l.preis) + " EURO");
+        });
+
+        cbKurs.addActionListener(e -> {
+            for (int i = 0; i < model.getRowCount(); i++) {
+                model.setValueAt(false, i, 3);
+            }
+            model.fireTableDataChanged(); 
+        });
+
+        btnKaufen.addActionListener(e -> {
+            int count = 0;
+            for (int i = 0; i < model.getRowCount(); i++) {
+                if ((Boolean) model.getValueAt(i, 3)) count++;
+            }
+            
+            if (count == 0) { 
+                JOptionPane.showMessageDialog(d, "Bitte waehle mindestens einen Mitarbeiter aus der Tabelle aus!"); 
+                return; 
+            }
+
+            Lehrgang l = (Lehrgang) cbKurs.getSelectedItem();
+            int totalCost = count * l.preis;
+
+            if (budget >= totalCost) {
+                double rabatt = 1.0 - (lehrerStufe * 0.10); 
+                budget -= totalCost; 
+                
+                int lehrgangsDauer = (int)(3 * 60 * rabatt);
+
+                for (int i = 0; i < model.getRowCount(); i++) {
+                    if ((Boolean) model.getValueAt(i, 3)) {
+                        Personal p = alleMitarbeiter.get(i);
+                        p.status = "Lehrgang"; 
+                        p.geplanterStatus = "Lehrgang"; 
+                        p.lehrgangDauerSec = lehrgangsDauer; 
+                        p.lehrgangThema = l.name;
+                    }
+                }
+
+                SpeicherManager.speichern("savegame.properties");
+                JOptionPane.showMessageDialog(d, count + " Mitarbeiter sind nun fuer " + lehrgangsDauer + " Sekunden auf Lehrgang zum " + l.name + "!");
+                uiAktualisieren(getUhrzeit()); 
+                d.dispose();
+            } else { 
+                JOptionPane.showMessageDialog(d, "Nicht genug Budget! (Benoetigt: " + totalCost + " EURO)"); 
+            }
+        });
+
+        d.add(topPnl, BorderLayout.NORTH);
+        d.add(scroll, BorderLayout.CENTER);
+        d.add(bottomPnl, BorderLayout.SOUTH);
+        d.setVisible(true);
     }
 
     public static void oeffneEinstellungen() {

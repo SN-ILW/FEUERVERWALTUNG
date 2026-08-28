@@ -182,12 +182,51 @@ public class Schichtplaner {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
+                
+                if (val == null) {
+                    c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE);
+                    return c;
+                }
+                
                 if (val.equals("Krank")) { c.setBackground(new Color(231, 76, 60)); c.setForeground(Color.WHITE); }
                 else if (val.equals("Urlaub")) { c.setBackground(new Color(243, 156, 18)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Lehrgang")) { c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); }
                 else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Frei")) { c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); }
-                else { c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); }
+                else { 
+                    // --- NEU: FARBE AUS DEM FAHRZEUG LADEN ---
+                    boolean farbeGefunden = false;
+                    for (Wache w : wachen) {
+                        for (Fahrzeug f : w.fuhrpark) {
+                            if (f.funkrufname.equals(val)) {
+                                if (f.stempelFarbe != null) {
+                                    c.setBackground(f.stempelFarbe);
+                                    
+                                    // Berechnet die Helligkeit der Farbe (Luma-Formel)
+                                    // um automatisch weisse oder schwarze Schrift zu setzen
+                                    double luma = (0.299 * f.stempelFarbe.getRed()) + (0.587 * f.stempelFarbe.getGreen()) + (0.114 * f.stempelFarbe.getBlue());
+                                    if (luma > 140) {
+                                        c.setForeground(Color.BLACK); // Bei hellen Farben schwarze Schrift
+                                    } else {
+                                        c.setForeground(Color.WHITE); // Bei dunklen Farben weisse Schrift
+                                    }
+                                } else {
+                                    c.setBackground(new Color(46, 204, 113)); // Standardgruen, falls keine Farbe gesetzt
+                                    c.setForeground(Color.BLACK);
+                                }
+                                farbeGefunden = true;
+                                break;
+                            }
+                        }
+                        if (farbeGefunden) break;
+                    }
+                    
+                    // Fallback, falls das Fahrzeug geloescht wurde aber noch im Dienstplan steht
+                    if (!farbeGefunden) {
+                        c.setBackground(new Color(46, 204, 113)); 
+                        c.setForeground(Color.BLACK);
+                    }
+                }
                 return c;
             }
         });

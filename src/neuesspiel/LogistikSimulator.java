@@ -7,6 +7,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.awt.Color;
 
 public class LogistikSimulator {
     
@@ -1545,6 +1546,141 @@ public class LogistikSimulator {
 
 public static void sortiereFuhrpark(Wache w) {
         w.fuhrpark.sort(java.util.Comparator.comparing(f -> f.funkrufname));
+    }
+
+public static void oeffneFahrzeugVerwaltung() {
+        // --- FEHLER 1 BEHOBEN: Wir erstellen das Fenster ganz klassisch ---
+        JDialog d = new JDialog();
+        d.setTitle("Fahrzeugverwaltung & Dienstplan-Farben");
+        d.setSize(800, 500);
+        d.setUndecorated(true); // Macht das Fenster "frameless" (ohne Windows-Rahmen)
+        d.setModal(true);
+        d.setLocationRelativeTo(null); // Zentriert das Fenster
+        
+        d.setLayout(new BorderLayout(10, 10));
+        d.getContentPane().setBackground(new Color(35, 35, 35));
+
+        // --- FAHRZEUGE SAMMELN ---
+        ArrayList<Fahrzeug> alleFahrzeuge = new ArrayList<>();
+        for (Wache w : wachen) {
+            // --- FEHLER 2 BEHOBEN: Hier musst du schauen, wie die Liste in deiner Wache.java wirklich heisst! ---
+            // Heisst sie fahrzeuge? fahrzeugPool? fahrzeugListe? Aendere das Wort nach dem "w." entsprechend ab:
+            for (Fahrzeug f : w.fuhrpark) { 
+                alleFahrzeuge.add(f);
+            }
+        }
+
+        if (alleFahrzeuge.isEmpty()) {
+            JOptionPane.showMessageDialog(d, "Keine Fahrzeuge vorhanden!");
+            d.dispose();
+            return;
+        }
+        if (alleFahrzeuge.isEmpty()) {
+            JOptionPane.showMessageDialog(d, "Keine Fahrzeuge vorhanden!");
+            d.dispose();
+            return;
+        }
+
+        // --- TABELLEN-MODELL ---
+        String[] cols = {"Funkkennung", "Fahrzeugart", "Km-Stand", "Stempelfarbe (Klicken zum Aendern)"};
+        javax.swing.table.DefaultTableModel model = new javax.swing.table.DefaultTableModel(cols, 0) {
+            @Override
+            public Class<?> getColumnClass(int col) {
+                if (col == 3) return Color.class; // Spalte 3 ist eine Farbe!
+                return String.class;
+            }
+            @Override
+            public boolean isCellEditable(int row, int col) {
+                return col == 3; // NUR die Farbe darf bearbeitet (geklickt) werden
+            }
+        };
+
+        // Daten einfuellen (Passe die Variablen f.name, f.typ, f.kilometer an deine Fahrzeug.java an!)
+        for (Fahrzeug f : alleFahrzeuge) {
+            // Falls 'stempelFarbe' null ist, setzen wir eine Standardfarbe
+            if (f.stempelFarbe == null) f.stempelFarbe = new Color(192, 57, 43); 
+            
+            // Wir nehmen an: f.name = Funkkennung, f.typ = Fahrzeugart
+            model.addRow(new Object[]{f.funkrufname, f.typ, f.kilometer + " km", f.stempelFarbe});
+        }
+
+        JTable table = new JTable(model);
+        table.setRowHeight(40);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 14));
+        table.getTableHeader().setBackground(new Color(20, 20, 20));
+        table.getTableHeader().setForeground(Color.WHITE);
+
+        // --- FARB-RENDERER (Macht die Zelle bunt) ---
+        table.setDefaultRenderer(Color.class, new javax.swing.table.DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel label = new JLabel();
+                label.setOpaque(true);
+                if (value instanceof Color) {
+                    label.setBackground((Color) value);
+                }
+                return label;
+            }
+        });
+
+        // --- FARB-EDITOR (Oeffnet das Farbrad beim Klick) ---
+        table.setDefaultEditor(Color.class, new DefaultCellEditor(new JCheckBox()) {
+            private Color currentColor;
+            private JButton button = new JButton();
+
+            {
+                button.setOpaque(true);
+                button.setBorderPainted(false);
+                button.addActionListener(e -> {
+                    // HIER OEFFNET SICH DAS FARBRAD!
+                    Color newColor = JColorChooser.showDialog(button, "Waehle eine Farbe fuer den Dienstplan", currentColor);
+                    if (newColor != null) {
+                        currentColor = newColor;
+                        
+                        // Speichere die Farbe direkt im Fahrzeug-Objekt ab!
+                        int row = table.getSelectedRow();
+                        Fahrzeug f = alleFahrzeuge.get(row);
+                        f.stempelFarbe = currentColor;
+                        
+                        // Speichern aufrufen, damit die Farbe im Savegame bleibt
+                        SpeicherManager.speichern("savegame.properties"); 
+                    }
+                    fireEditingStopped(); // Beendet den Edit-Modus der Tabelle
+                });
+            }
+
+            @Override
+            public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
+                currentColor = (Color) value;
+                button.setBackground(currentColor);
+                return button;
+            }
+
+            @Override
+            public Object getCellEditorValue() {
+                return currentColor;
+            }
+        });
+
+        JScrollPane scroll = new JScrollPane(table);
+        scroll.getViewport().setBackground(new Color(35, 35, 35));
+        scroll.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // --- UNTERES PANEL (Schliessen Button) ---
+        JPanel bottomPnl = new JPanel(new FlowLayout(FlowLayout.RIGHT, 20, 10));
+        bottomPnl.setBackground(new Color(45, 45, 45));
+        
+        JButton btnClose = new JButton("Schliessen");
+        btnClose.setBackground(new Color(192, 57, 43));
+        btnClose.setForeground(Color.WHITE);
+        btnClose.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnClose.addActionListener(e -> d.dispose());
+        bottomPnl.add(btnClose);
+
+        d.add(scroll, BorderLayout.CENTER);
+        d.add(bottomPnl, BorderLayout.SOUTH);
+        d.setVisible(true);
     }
 
 }

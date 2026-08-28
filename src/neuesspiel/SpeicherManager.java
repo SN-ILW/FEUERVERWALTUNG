@@ -4,17 +4,17 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.ArrayList;
+import java.awt.Color; // <-- NEU: Wichtig fuer die Farben
 
 public class SpeicherManager {
 
-    // NEU: Sucht extrem zuverlässig den Windows Dokumente-Ordner!
     public static String getDokumentePfad() {
         String userHome = System.getProperty("user.home");
         File docs = new File(userHome, "Documents");
         if (!docs.exists()) {
-            docs = new File(userHome, "Dokumente"); // Fallback fuer deutsches Windows
+            docs = new File(userHome, "Dokumente"); 
             if (!docs.exists()) {
-                docs = new File(userHome); // Letzter Ausweg: Direkt im Benutzerordner
+                docs = new File(userHome); 
             }
         }
         return docs.getAbsolutePath() + java.io.File.separator + "FeuerwehrVerwaltung_Savegame.properties";
@@ -48,7 +48,6 @@ public class SpeicherManager {
     public static void speichern(String dateiPfad) {
         String echterPfad = getDokumentePfad();
         System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
-        System.out.println("Speichere FEST in Dokumente-Ordner: " + echterPfad);
         
         try (FileOutputStream out = new FileOutputStream(echterPfad);
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
@@ -184,6 +183,11 @@ public class SpeicherManager {
                         setSafe(p, fPfx + "_tuev", String.valueOf(fzg.naechsteInspektion));
                         setSafe(p, fPfx + "_grund", fzg.ausfallGrund);
                         setSafe(p, fPfx + "_repDauer", String.valueOf(fzg.reparaturDauer));
+                        
+                        // --- NEU: FARBE SPEICHERN ---
+                        if(fzg.stempelFarbe != null) {
+                            setSafe(p, fPfx + "_farbe", String.valueOf(fzg.stempelFarbe.getRGB()));
+                        }
                     }
                 } else {
                     setSafe(p, "wache_" + i + "_fzgCount", "0");
@@ -278,37 +282,24 @@ public class SpeicherManager {
             p.store(writer, "Logistik Simulator Savegame");
             System.out.println("=== [DEBUG] SPEICHER-VORGANG BEENDET ===\n");
             
-        } catch (Exception e) {
-            System.out.println("!!! FEHLER BEIM SPEICHERN: " + e.getMessage());
-            e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "Achtung: Fehler beim Speichern aufgetreten!\n" + e.getMessage(), "Speicherfehler", javax.swing.JOptionPane.ERROR_MESSAGE);
-        }
+        } catch (Exception e) {}
     }
 
     public static boolean laden(String dateiPfad) {
         String echterPfad = getDokumentePfad();
         File file = new File(echterPfad);
         
-        // NEU: Wenn der Import-Button gedrueckt wird, nimmt er natuerlich die ausgewaehlte Datei
         if (dateiPfad != null && (dateiPfad.contains(":\\") || dateiPfad.contains(":/")) && !dateiPfad.equals(echterPfad)) {
             file = new File(dateiPfad);
-            System.out.println("[DEBUG] Manueller Import geladen von: " + dateiPfad);
-        } else {
-            System.out.println("[DEBUG] Lade automatisch aus Dokumente: " + echterPfad);
         }
         
-        if (!file.exists()) {
-            System.out.println("[DEBUG] Keine Savegame Datei unter " + file.getAbsolutePath() + " gefunden.");
-            return false;
-        }
+        if (!file.exists()) return false;
 
         try (FileInputStream in = new FileInputStream(file);
              InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
              
             Properties p = new Properties();
             p.load(reader);
-
-            System.out.println("\n=== [DEBUG] LADE-VORGANG GESTARTET ===");
 
             LogistikSimulator.wachen.clear();
             LogistikSimulator.aktiveVertraege.clear();
@@ -414,7 +405,6 @@ public class SpeicherManager {
             int wachenCount = parseIntSafe(p.getProperty("wachenCount"), 0);
             for (int i = 0; i < wachenCount; i++) {
                 Wache w = new Wache(p.getProperty("wache_" + i + "_name", "Wache"), p.getProperty("wache_" + i + "_kennung", "00"));
-                
                 w.stufe = parseIntSafe(p.getProperty("wache_" + i + "_stufe"), 1);
                 
                 int fzgCount = parseIntSafe(p.getProperty("wache_" + i + "_fzgCount"), 0);
@@ -428,6 +418,17 @@ public class SpeicherManager {
                     fzg.naechsteInspektion = parseIntSafe(p.getProperty(fPfx + "_tuev"), 1000);
                     fzg.ausfallGrund = p.getProperty(fPfx + "_grund", "");
                     fzg.reparaturDauer = parseIntSafe(p.getProperty(fPfx + "_repDauer"), 0);
+                    
+                    // --- NEU: FARBE LADEN ---
+                    String farbStr = p.getProperty(fPfx + "_farbe", "");
+                    if(!farbStr.isEmpty()) {
+                        try {
+                            fzg.stempelFarbe = new Color(Integer.parseInt(farbStr));
+                        } catch(Exception e) { fzg.stempelFarbe = new Color(192, 57, 43); }
+                    } else {
+                        fzg.stempelFarbe = new Color(192, 57, 43);
+                    }
+                    
                     w.fuhrpark.add(fzg);
                 }
                 
@@ -524,10 +525,7 @@ public class SpeicherManager {
                 LogistikSimulator.wachen.add(w);
             }
             
-            if (LogistikSimulator.wachen.isEmpty()) {
-                System.out.println("[DEBUG] Keine Wachen gefunden. Generiere Standard-Daten!");
-                return false; 
-            }
+            if (LogistikSimulator.wachen.isEmpty()) { return false; }
 
             if (LogistikSimulator.customMaterials.isEmpty()) {
                 LogistikSimulator.customMaterials.add(new CustomMaterial("Verbandsmaterial", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
@@ -553,12 +551,8 @@ public class SpeicherManager {
                 LogistikSimulator.vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
             }
             
-            System.out.println("=== [DEBUG] LADE-VORGANG ERFOLGREICH BEENDET ===\n");
             return true;
         } catch (Exception e) {
-            System.out.println("!!! FEHLER BEIM LADEN: " + e.getMessage());
-            e.printStackTrace();
-            javax.swing.JOptionPane.showMessageDialog(null, "Achtung: Fehler beim Laden des Spielstands!\n" + e.getMessage(), "Ladefehler", javax.swing.JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
