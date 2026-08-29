@@ -18,14 +18,20 @@ public class Einsatz {
     public String nachforderungTyp = "";
     
     public int bearbeitungsZeit = 0;
+    public int maxBearbeitungsZeit = 0; // NEU: Speichert die Start-Zeit für Prozentrechnung
     public boolean erstesFahrzeugDa = false;
     private StringBuilder lagemeldungHistorie = new StringBuilder();
 
-    // --- NEUE FELDER FÜR DIE EINSATZAKTE ---
+    // Felder für die Einsatzakte
     public int patientenAnzahl = 0;
     public String patientenStatusText = "Keine Patienten betroffen";
     public String schadensObjekt = "";
     public ArrayList<String> einsatzProtokoll = new ArrayList<>();
+    
+    // NEU: Schalter für dynamische Meldungen
+    private boolean meldung75 = false;
+    private boolean meldung50 = false;
+    private boolean meldung25 = false;
 
     public Einsatz(EinsatzVorlage v, String zeit) {
         this.vorlage = v;
@@ -38,6 +44,7 @@ public class Einsatz {
         }
         
         this.bearbeitungsZeit = 300 + (int)(Math.random() * 301);
+        this.maxBearbeitungsZeit = this.bearbeitungsZeit; // Startwert merken
         
         for(CustomMaterial cm : LogistikSimulator.customMaterials) {
             if(cm.einsatzStichworte.contains(v.stichwort) || cm.einsatzStichworte.isEmpty()) {
@@ -48,53 +55,55 @@ public class Einsatz {
         }
         
         lagemeldungHistorie.append("[").append(zeit).append("] Alarmierung: ").append(v.stichwort).append(" - ").append(v.beschreibung).append("\n");
-        
-        // Initialisiere die detaillierte Einsatzakte
         initEinsatzDetails();
     }
     
     private void initEinsatzDetails() {
-        // Patientenanzahl je nach Stichwort zufällig bestimmen
         if (vorlage.art.equals("RD") || vorlage.art.equals("KTP")) {
             this.patientenAnzahl = 1 + (int)(Math.random() * 2);
             this.patientenStatusText = patientenAnzahl + "x Patient(en) versorgt / in Behandlung";
         } else if (vorlage.stichwort.startsWith("F2") || vorlage.stichwort.startsWith("F3")) {
             this.patientenAnzahl = (Math.random() < 0.4) ? (int)(1 + Math.random() * 3) : 0;
-            this.patientenStatusText = (patientenAnzahl > 0) 
-                ? patientenAnzahl + "x Person(en) mit Rauchgasintoxikation" 
-                : "Keine Personenschäden";
+            this.patientenStatusText = (patientenAnzahl > 0) ? patientenAnzahl + "x Person(en) mit Rauchgasintoxikation" : "Keine Personenschäden";
         }
 
-        // Schadensobjekt je nach Einsatz bestimmen
         if (beschreibung.contains("Dachstuhl") || vorlage.stichwort.contains("F2")) schadensObjekt = "Dachstuhl / Wohngebäude";
         else if (beschreibung.contains("BMA")) schadensObjekt = "Automatische Brandmeldeanlage";
         else if (beschreibung.contains("PKW") || beschreibung.contains("THL")) schadensObjekt = "Verkehrsunfall / Fahrzeuge";
         else if (vorlage.art.equals("FW")) schadensObjekt = "Unrat / Kleinbrand";
         else schadensObjekt = "Rettungsdiensteinsatzstelle";
 
-        // Initialer Log in der Akte
         addProtokoll("Einsatz disponiert & Fahrzeuge alarmiert.");
     }
 
-    // Fügt dem privaten Einsatz-Protokoll der Akte einen Funkspruch hinzu
     public void addProtokoll(String eintrag) {
-        einsatzProtokoll.add("[" + LogistikSimulator.getUhrzeit() + "] " + eintrag);
+        String uhrzeit = LogistikSimulator.getUhrzeit();
+        einsatzProtokoll.add("[" + uhrzeit + "] " + eintrag);
+        
+        // Damit es auch auf der rechten Seite direkt als "System-Nachricht" auftaucht:
+        FunkManager.funkHistorie.add("[" + uhrzeit + "] EINSATZ UPDATE: " + eintrag + "\n");
+        if (FunkManager.funkHistorie.size() > 8) FunkManager.funkHistorie.removeFirst();
     }
 
     public void fahrzeugAngekommen(Fahrzeug f, String uhrzeit) {
         if (!erstesFahrzeugDa) {
             erstesFahrzeugDa = true;
             lagemeldungAbgegeben = true;
-            lagemeldungHistorie.append("[").append(uhrzeit).append("] 1. Lagemeldung: Erstes Fahrzeug eingetroffen. Einsatz wird bearbeitet...\n");
             
-            addProtokoll(f.funkrufname + " ist eingetroffen. Erste Lagemeldung abgesetzt.");
+            // Dynamische Eintreff-Meldung
+            String lageText = "";
+            if (vorlage.art.equals("FW")) lageText = "Erste Lage auf Sicht: " + schadensObjekt + " bestaetigt. Wir leiten die Erkundung ein.";
+            else lageText = "Eingetroffen. Patient angetroffen, wir beginnen mit der Erstversorgung.";
+            
+            lagemeldungHistorie.append("[").append(uhrzeit).append("] 1. Lagemeldung: ").append(lageText).append("\n");
+            addProtokoll(f.funkrufname + " funkt: " + lageText);
             
             if (!nachforderungTyp.isEmpty()) {
                 lagemeldungHistorie.append("[").append(uhrzeit).append("] NACHFORDERUNG: Es werden weitere Kraefte benoetigt: ").append(nachforderungTyp).append("\n");
-                addProtokoll("Nachforderung abgesetzt! Benötigt: " + nachforderungTyp);
+                addProtokoll("Kritische Lage! Nachforderung abgesetzt: " + nachforderungTyp);
             }
         } else {
-            addProtokoll(f.funkrufname + " ist an der Einsatzstelle eingetroffen.");
+            addProtokoll(f.funkrufname + " ist ebenfalls an der Einsatzstelle eingetroffen.");
         }
     }
 
@@ -102,9 +111,29 @@ public class Einsatz {
         if (erstesFahrzeugDa && (nachforderungBedient || nachforderungTyp.isEmpty())) {
             bearbeitungsZeit -= (speed * 8); 
             
+            // Fortschritt berechnen (1.0 = 100%, 0.0 = 0%)
+            double fortschritt = (double) bearbeitungsZeit / maxBearbeitungsZeit;
+            
+            // DYNAMISCHE MELDUNGEN AUSLÖSEN
+            if (fortschritt <= 0.75 && !meldung75) {
+                meldung75 = true;
+                if (vorlage.art.equals("FW")) addProtokoll("Erkundung abgeschlossen. Angriffstrupp geht zur Brandbekaempfung vor.");
+                else addProtokoll("Vitalparameter des Patienten aufgenommen. Verdachtsdiagnose wird geprueft.");
+            }
+            else if (fortschritt <= 0.50 && !meldung50) {
+                meldung50 = true;
+                if (vorlage.art.equals("FW")) addProtokoll("Lagemeldung: Feuer unter Kontrolle! Keine weitere Ausbreitung.");
+                else addProtokoll("Patient ist kreislaufstabil. Behandlung wird fortgesetzt.");
+            }
+            else if (fortschritt <= 0.25 && !meldung25) {
+                meldung25 = true;
+                if (vorlage.art.equals("FW")) addProtokoll("Letzte Glutnester werden abgeloescht. Nachloescharbeiten laufen.");
+                else addProtokoll("Transportvorbereitungen laufen. Patient wird gleich verladen.");
+            }
+            
             if (bearbeitungsZeit <= 0 && !bereitZumLoeschen) {
                 lagemeldungHistorie.append("[").append(uhrzeit).append("] Abschlussmeldung: Einsatz erfolgreich beendet. Fahrzeuge ruecken ab.\n");
-                addProtokoll("Abschlussmeldung: Einsatz beendet. Fahrzeuge rücken ab.");
+                addProtokoll("Abschlussmeldung: Einsatzstelle uebergeben/beendet. Wir machen uns frei.");
                 bereitZumLoeschen = true;
             }
         }

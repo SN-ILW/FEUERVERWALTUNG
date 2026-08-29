@@ -12,7 +12,7 @@ public class Fahrzeug {
     public int kilometer = 0;
     public int naechsteInspektion = 1000;
     public int reqEL=0, reqGF=0, reqNA=0, reqNFS=0, reqMA=0, reqTF=0, reqFüAs=0, reqRS=0, reqTM=0;
-    
+    public int ausrueckeVerzoegerung = 0;
     
     public Fahrzeug(String kennung, String typ) {
         this.funkrufname = kennung;
@@ -31,31 +31,49 @@ public class Fahrzeug {
     public Color stempelFarbe = new Color(192, 57, 43); // Standardmaessig ein schickes Rot
     
     public void tick(int speed, String uhrzeit) {
-        if (status == 3) {
+        // --- NEU: AUSRÜCKEVERZÖGERUNG ---
+        if (ausrueckeVerzoegerung > 0) {
+            ausrueckeVerzoegerung -= speed;
+            if (ausrueckeVerzoegerung <= 0) {
+                ausrueckeVerzoegerung = 0;
+                this.status = 3;
+                if (aktuellerEinsatz != null) {
+                    aktuellerEinsatz.addProtokoll("📻 " + this.funkrufname + " funkt: Status 3 (Einsatzuebernahme, Ausgerueckt)");
+                }
+            }
+            return; // Fahrzeug fährt erst los, wenn es ausgerüstet ist!
+        }
+
+        // --- ANFAHRT & RÜCKFAHRT ---
+        if (status == 3 || status == 8 || (status == 1 && anfahrtsZeit > 0)) {
             anfahrtsZeit -= speed;
             if (anfahrtsZeit <= 0) {
-                status = 4;
                 anfahrtsZeit = 0;
-                if (aktuellerEinsatz != null) aktuellerEinsatz.fahrzeugAngekommen(this, uhrzeit);
+                
+                if (status == 3) {
+                    status = 4;
+                    if (aktuellerEinsatz != null) {
+                        aktuellerEinsatz.addProtokoll("📻 " + this.funkrufname + " funkt: Status 4 (Eingetroffen an EST)");
+                        aktuellerEinsatz.fahrzeugAngekommen(this, uhrzeit);
+                    }
+                } else if (status == 8) {
+                    status = 1;
+                    if (aktuellerEinsatz != null) {
+                        aktuellerEinsatz.addProtokoll("📻 " + this.funkrufname + " funkt: Status 1 (Patient uebergeben, wieder frei)");
+                    }
+                } else if (status == 1) {
+                    status = 2; // Wieder auf der Wache angekommen
+                }
             }
-        } else if (status == 1 && aktuellerEinsatz == null) {
-            anfahrtsZeit -= speed;
-            if (anfahrtsZeit <= 0) {
-                status = 2;
-                anfahrtsZeit = 0;
-            }
-        } else if (status == 6 && reparaturDauer > 0) {
+        }
+
+        // --- REPARATUR ---
+        if (status == 6 && reparaturDauer > 0 && (ausfallGrund.equals("In Bearbeitung") || ausfallGrund.equals("Personalwechsel"))) {
             reparaturDauer -= speed;
             if (reparaturDauer <= 0) {
+                reparaturDauer = 0;
                 status = 2;
                 ausfallGrund = "";
-                reparaturDauer = 0;
-            }
-        } else if (status == 8) {
-            anfahrtsZeit -= speed;
-            if (anfahrtsZeit <= 0) {
-                status = 1; 
-                anfahrtsZeit = (int)(originalAnfahrt * 1.5); 
             }
         }
     }

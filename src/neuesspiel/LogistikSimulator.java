@@ -455,16 +455,19 @@ public class LogistikSimulator {
                                         f.aktuellerEinsatz = null;
                                         
                                         if(f.typ.equals("RTW")) {
-                                            if(calltakerStufe >= 2 && Math.random() > 0.5) {
-                                                f.status = 8;
-                                                f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
-                                            } else {
-                                                f.status = 7; 
-                                                playSound("status7.wav");
-                                            }
-                                        } else {
-                                            f.status = 1; 
-                                        }
+            if(calltakerStufe >= 2 && Math.random() > 0.5) {
+                f.status = 8;
+                f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
+                f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 8 (Fahrt ins Krankenhaus)");
+            } else {
+                f.status = 7; 
+                playSound("status7.wav");
+                f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 7 (Patient geladen)");
+            }
+        } else {
+            f.status = 1; 
+            f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 1 (Wieder Frei)");
+        }
                                         
                                         if (cfgBeschaedigung) {
                                             double baseChance = 0.05;
@@ -704,11 +707,14 @@ public class LogistikSimulator {
                    .append("<td width='70'><span class='badge ").append(stClass).append("'>Status ").append(f.status).append("</span></td>")
                    .append("<td>");
                 
-                if(f.status == 3) fms.append("Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
+                if(f.ausrueckeVerzoegerung > 0) {
+                    fms.append("Alarm! Ausruecken in: ").append(f.ausrueckeVerzoegerung/speed).append("s");
+                }
+                else if(f.status == 3) fms.append("Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("Rückfahrt: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 8) fms.append("Anfahrt Klinik: ").append(f.anfahrtsZeit/speed).append("s");
                 else if(f.status == 4 && f.aktuellerEinsatz != null) fms.append("<a href='FZG:").append(f.funkrufname).append("'>Am Einsatzort (Akte)</a>");
-                else if(f.status == 7) fms.append("<a href='HOSP:").append(f.funkrufname).append("'>Patient geladen (Ziel wählen)</a>");
+                else if(f.status == 7) fms.append("<a href='HOSP:").append(f.funkrufname).append("'>Patient geladen (Ziel)</a>");
                 else if(f.status == 6) {
                     fms.append("<span style='color:#e74c3c;'>").append(f.ausfallGrund).append("</span>");
                     if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
@@ -873,17 +879,18 @@ public class LogistikSimulator {
         int multiplier = isRushHour() ? 3 : 1;
         
         for (Fahrzeug f : fzListe) {
-            int baseTime = 30; 
+            int ruestZeit = 15; 
             for(Wache wCheck : wachen) {
                 for(Personal p : wCheck.personalPool) { 
                     if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { 
-                        baseTime = 60; break; 
+                        ruestZeit = 45; break; 
                     } 
                 }
             }
-            f.status = 3; 
-            f.anfahrtsZeit = (int)(baseTime * multiplier * getSpeedMultiplier(f)); 
             f.aktuellerEinsatz = aktuellerNotruf;
+            f.ausrueckeVerzoegerung = (int)(ruestZeit * multiplier * getSpeedMultiplier(f)); 
+            f.anfahrtsZeit = (int)(60 * multiplier * getSpeedMultiplier(f)); 
+            aktuellerNotruf.addProtokoll("AUTOM. ALARM (AAO): " + f.funkrufname);
             xpBel += 25;
         }
         

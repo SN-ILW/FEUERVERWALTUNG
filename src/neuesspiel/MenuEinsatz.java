@@ -3,7 +3,6 @@ package neuesspiel;
 import javax.swing.*;
 import javax.swing.table.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.util.ArrayList;
 
 import static neuesspiel.LogistikSimulator.*;
@@ -32,16 +31,19 @@ public class MenuEinsatz {
                     }
                     if (fehlend > 0) {
                         int wahl = JOptionPane.showConfirmDialog(d, "Es fehlen " + fehlend + " Fahrzeuge! Kreis alarmieren?", "Ueberlandhilfe", JOptionPane.YES_NO_OPTION);
-                        if (wahl == JOptionPane.YES_OPTION && budget >= (fehlend*500)) { budget -= (fehlend*500); ein.nachforderungBedient = true; } 
+                        if (wahl == JOptionPane.YES_OPTION && budget >= (fehlend*500)) { budget -= (fehlend*500); ein.nachforderungBedient = true; ein.addProtokoll("🚨 UEBERLANDHILFE ALARMIERT: " + ein.nachforderungTyp); } 
                         else if (wahl == JOptionPane.YES_OPTION) { JOptionPane.showMessageDialog(d, "Zu wenig Geld!", "Fehler", JOptionPane.ERROR_MESSAGE); return; } else { return; }
                     } else { ein.nachforderungBedient = true; }
                     
                     if (ein.nachforderungBedient) { 
                         int multiplier = isRushHour() ? 3 : 1;
                         for (Fahrzeug f : gefundene) { 
-                            int baseTime = 30; 
-                            for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { baseTime = 60; break; } } }
-                            f.status = 3; f.anfahrtsZeit = (int)(baseTime * multiplier * getSpeedMultiplier(f)); f.aktuellerEinsatz = ein; 
+                            int ruestZeit = 15; 
+                            for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { ruestZeit = 45; break; } } }
+                            f.ausrueckeVerzoegerung = (int)(ruestZeit * getSpeedMultiplier(f));
+                            f.anfahrtsZeit = (int)(60 * multiplier * getSpeedMultiplier(f)); 
+                            f.aktuellerEinsatz = ein; 
+                            ein.addProtokoll("NACHFORDERUNG ALARMIERT: " + f.funkrufname);
                         } 
                     } 
                     uiAktualisieren(getUhrzeit()); d.dispose();
@@ -75,7 +77,6 @@ public class MenuEinsatz {
             .append(".log-entry { font-family: 'Consolas', monospace; font-size: 11px; color: #bdc3c7; margin-bottom: 2px; }")
             .append("</style></head><body>");
 
-        // 1. Allgemein & Lage
         html.append("<div class='box box-lage'>")
             .append("<div class='title'>EINSATZLAGE & OBJEKT</div>")
             .append("<b>Stichwort:</b> ").append(ein.vorlage.stichwort).append("<br>")
@@ -83,16 +84,14 @@ public class MenuEinsatz {
             .append("<b>Lagemeldung:</b> ").append(ein.getLagemeldungText().replace("\n", "<br>"))
             .append("</div>");
 
-        // 2. Patienten & Medizinische Daten
         html.append("<div class='box box-pat'>")
             .append("<div class='title'>PATIENTEN & MANV-STATUS</div>")
             .append("<b>Betroffene Personen:</b> ").append(ein.patientenAnzahl).append("<br>")
             .append("<b>Status:</b> ").append(ein.patientenStatusText)
             .append("</div>");
 
-        // 3. Funksprueche / Einsatz-Protokoll
         html.append("<div class='box'>")
-            .append("<div class='title'>EINSATZPROTOKOLL & FUNKVERLAUF</div>");
+            .append("<div class='title'>STATUSFAX & FUNKPROTOKOLL</div>");
         
         if (ein.einsatzProtokoll.isEmpty()) {
             html.append("<div class='log-entry'>Keine Funksprueche protokolliert.</div>");
@@ -101,48 +100,24 @@ public class MenuEinsatz {
                 html.append("<div class='log-entry'>&gt; ").append(log).append("</div>");
             }
         }
-        html.append("</div>");
-
-        html.append("</body></html>");
+        html.append("</div></body></html>");
 
         JEditorPane txtAkte = new JEditorPane("text/html", html.toString());
-        txtAkte.setEditable(false);
-        txtAkte.setBackground(new Color(35, 35, 35));
-
+        txtAkte.setEditable(false); txtAkte.setBackground(new Color(35, 35, 35));
         d.add(new JScrollPane(txtAkte), BorderLayout.CENTER);
 
-        // Buttons unten
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT)); 
-        btnPanel.setBackground(new Color(35, 35, 35));
-        
-        JButton btnBeenden = new JButton("Einsatz sofort abbrechen (-250 XP)");
-        btnBeenden.setBackground(new Color(192, 57, 43)); 
-        btnBeenden.setForeground(Color.WHITE);
-        btnBeenden.addActionListener(e -> {
-            ein.bereitZumLoeschen = true; 
-            LogistikSimulator.xp -= 250; 
-            LogistikSimulator.abgelehnteEinsaetzeHeute++; 
-            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
-            d.dispose();
-        });
-
-        JButton btnClose = new JButton("Schliessen");
-        btnClose.addActionListener(e -> d.dispose());
-
-        btnPanel.add(btnBeenden);
-        btnPanel.add(btnClose);
-
-        d.add(btnPanel, BorderLayout.SOUTH);
-        d.setVisible(true);
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT)); btnPanel.setBackground(new Color(35, 35, 35));
+        JButton btnBeenden = new JButton("Einsatz sofort abbrechen (-250 XP)"); btnBeenden.setBackground(new Color(192, 57, 43)); btnBeenden.setForeground(Color.WHITE);
+        btnBeenden.addActionListener(e -> { ein.bereitZumLoeschen = true; LogistikSimulator.xp -= 250; LogistikSimulator.abgelehnteEinsaetzeHeute++; LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); d.dispose(); });
+        JButton btnClose = new JButton("Schliessen"); btnClose.addActionListener(e -> d.dispose());
+        btnPanel.add(btnBeenden); btnPanel.add(btnClose); d.add(btnPanel, BorderLayout.SOUTH); d.setVisible(true);
     }
     
     public static void oeffneAlarmierungsFenster(Einsatz ein) {
         JDialog d = createFramelessDialog("Alarmierung: " + ein.vorlage.stichwort + " - " + ein.beschreibung, 800, 600);
         
         JPanel pnlTop = new JPanel(new GridLayout(2, 1, 5, 5)); pnlTop.setBackground(new Color(35, 35, 35)); pnlTop.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-        
-        JLabel lblTitel = new JLabel("NOTRUF: " + ein.vorlage.stichwort + " | " + ein.beschreibung, SwingConstants.CENTER);
-        lblTitel.setForeground(new Color(231, 76, 60)); lblTitel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        JLabel lblTitel = new JLabel("NOTRUF: " + ein.vorlage.stichwort + " | " + ein.beschreibung, SwingConstants.CENTER); lblTitel.setForeground(new Color(231, 76, 60)); lblTitel.setFont(new Font("Segoe UI", Font.BOLD, 18));
         pnlTop.add(lblTitel);
         
         StringBuilder reqText = new StringBuilder("Benoetigt: ");
@@ -174,7 +149,6 @@ public class MenuEinsatz {
         d.add(new JScrollPane(table), BorderLayout.CENTER);
 
         JPanel pnlBottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10)); pnlBottom.setBackground(new Color(35, 35, 35));
-
         JButton btnAAO = new JButton("AAO nutzen (Auto-Auswahl)"); btnAAO.setBackground(new Color(41, 128, 185)); btnAAO.setForeground(Color.WHITE);
         JButton btnAlarm = new JButton("ALARM AUSLOESEN"); btnAlarm.setBackground(new Color(39, 174, 96)); btnAlarm.setForeground(Color.WHITE); btnAlarm.setFont(new Font("Segoe UI", Font.BOLD, 14));
         JButton btnAbbruch = new JButton("Abbrechen"); btnAbbruch.addActionListener(e -> d.dispose());
@@ -247,15 +221,21 @@ public class MenuEinsatz {
                 }
             }
             if (!matsDa) {
-                JOptionPane.showMessageDialog(d, "Nicht genug Material (" + ein.reqMaterial.keySet().iterator().next() + ") auf den Wachen!", "Material fehlt", JOptionPane.ERROR_MESSAGE); return;
+                JOptionPane.showMessageDialog(d, "Nicht genug Material auf den Wachen!", "Material fehlt", JOptionPane.ERROR_MESSAGE); return;
             }
 
             int xpBel = 0; int multiplier = isRushHour() ? 3 : 1;
             
             for (Fahrzeug f : selectedFz) {
-                int baseTime = 30; 
-                for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { baseTime = 60; break; } } }
-                f.status = 3; f.anfahrtsZeit = (int)(baseTime * multiplier * getSpeedMultiplier(f)); f.aktuellerEinsatz = ein; xpBel += 25;
+                int ruestZeit = 15; // 15 Sekunden Rüstzeit, wenn die Leute auf Wache sind
+                for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { ruestZeit = 45; break; } } }
+                
+                f.aktuellerEinsatz = ein; 
+                f.ausrueckeVerzoegerung = (int)(ruestZeit * getSpeedMultiplier(f));
+                f.anfahrtsZeit = (int)(60 * multiplier * getSpeedMultiplier(f)); 
+                
+                ein.addProtokoll("ALARMIERT: " + f.funkrufname);
+                xpBel += 25;
             }
             
             if (!selectedFz.isEmpty() || ueberlandHilfeAktiv) { ein.xpBelohnung = xpBel * ein.vorlage.minLevel; aktiveEinsaetze.add(ein); }
@@ -268,26 +248,33 @@ public class MenuEinsatz {
     public static void oeffneKrankenhausWahl(Fahrzeug f) {
         JDialog d = createFramelessDialog("Zielklinik waehlen fuer " + f.funkrufname, 450, 350);
         JPanel content = new JPanel(new GridLayout(5, 1, 10, 10)); content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); content.setBackground(new Color(35, 35, 35));
-
         JLabel l = new JLabel("Patient verladen. Bitte Zielklinik waehlen:", SwingConstants.CENTER); l.setForeground(Color.WHITE); content.add(l);
 
-        JButton b1 = new JButton(klinik1Abgemeldet ? "[ABGEMELDET] Helios Kliniken Schwerin" : "Helios Kliniken Schwerin (Fahrzeit: 45s)"); b1.setEnabled(!klinik1Abgemeldet);
-        b1.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 45; f.originalAnfahrt = 45; uiAktualisieren(getUhrzeit()); d.dispose(); });
-        JButton b2 = new JButton(klinik2Abgemeldet ? "[ABGEMELDET] Unimedizin Rostock" : "Universitaetsmedizin Rostock (Fahrzeit: 120s)"); b2.setEnabled(!klinik2Abgemeldet);
-        b2.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 120; f.originalAnfahrt = 120; uiAktualisieren(getUhrzeit()); d.dispose(); });
+        java.util.function.Consumer<String> zielWahl = (klinikName) -> {
+            f.status = 8; f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
+            if (f.aktuellerEinsatz != null) {
+                f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 8 (Fahrt zur Klinik: " + klinikName + ")");
+            }
+            uiAktualisieren(getUhrzeit()); d.dispose();
+        };
+
+        JButton b1 = new JButton(klinik1Abgemeldet ? "[ABGEMELDET] Helios Kliniken Schwerin" : "Helios Kliniken Schwerin (Fahrzeit: 60s)"); b1.setEnabled(!klinik1Abgemeldet);
+        b1.addActionListener(e -> zielWahl.accept("Helios Kliniken Schwerin"));
+        JButton b2 = new JButton(klinik2Abgemeldet ? "[ABGEMELDET] Unimedizin Rostock" : "Universitaetsmedizin Rostock (Fahrzeit: 60s)"); b2.setEnabled(!klinik2Abgemeldet);
+        b2.addActionListener(e -> zielWahl.accept("Unimedizin Rostock"));
         content.add(b1); content.add(b2);
 
         if(techKlinikCrivitz) {
-            JButton bc = new JButton(klinikCrivitzAbgemeldet ? "[ABGEMELDET] Klinik Crivitz" : "Krankenhaus Crivitz (Fahrzeit: 50s)"); bc.setEnabled(!klinikCrivitzAbgemeldet);
-            bc.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 50; f.originalAnfahrt = 50; uiAktualisieren(getUhrzeit()); d.dispose(); }); content.add(bc);
+            JButton bc = new JButton(klinikCrivitzAbgemeldet ? "[ABGEMELDET] Klinik Crivitz" : "Krankenhaus Crivitz (Fahrzeit: 60s)"); bc.setEnabled(!klinikCrivitzAbgemeldet);
+            bc.addActionListener(e -> zielWahl.accept("Klinik Crivitz")); content.add(bc);
         }
         if(techKlinikLeezen) {
             JButton bl = new JButton(klinikLeezenAbgemeldet ? "[ABGEMELDET] Klinik Leezen" : "Krankenhaus Leezen (Fahrzeit: 60s)"); bl.setEnabled(!klinikLeezenAbgemeldet);
-            bl.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 60; f.originalAnfahrt = 60; uiAktualisieren(getUhrzeit()); d.dispose(); }); content.add(bl);
+            bl.addActionListener(e -> zielWahl.accept("Krankenhaus Leezen")); content.add(bl);
         }
         if(techKlinikHagenow) {
-            JButton bh = new JButton(klinikHagenowAbgemeldet ? "[ABGEMELDET] Klinik Hagenow" : "Krankenhaus Hagenow (Fahrzeit: 80s)"); bh.setEnabled(!klinikHagenowAbgemeldet);
-            bh.addActionListener(e -> { f.status = 8; f.anfahrtsZeit = 80; f.originalAnfahrt = 80; uiAktualisieren(getUhrzeit()); d.dispose(); }); content.add(bh);
+            JButton bh = new JButton(klinikHagenowAbgemeldet ? "[ABGEMELDET] Klinik Hagenow" : "Krankenhaus Hagenow (Fahrzeit: 60s)"); bh.setEnabled(!klinikHagenowAbgemeldet);
+            bh.addActionListener(e -> zielWahl.accept("Krankenhaus Hagenow")); content.add(bh);
         }
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
