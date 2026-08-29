@@ -149,7 +149,11 @@ public class MenuVerwaltung {
             EinsatzVorlage v = new EinsatzVorlage((String)artBox.getSelectedItem(), stichwortField.getText().replaceAll("[^a-zA-Z0-9 ]", ""), txtDesc.getText(), 
                     (int)sRTW.getValue(), (int)sNEF.getValue(), (int)sKTW.getValue(), (int)sHLF.getValue(), (int)sDLK.getValue(), (int)sELW.getValue(), (int)sTLF.getValue(), (int)sMTW.getValue(),
                     cbNach.isSelected(), (int)sProb.getValue(), nTyp, (int)sMinLevel.getValue());
-            vorlagenPool.add(v); SpeicherManager.speichern("savegame.properties"); JOptionPane.showMessageDialog(d, "Vorlage hinzugefuegt!"); d.dispose();
+            vorlagenPool.add(v);
+            SpeicherManager.speichern("savegame.properties");
+            JOptionPane.showMessageDialog(d, "Vorlage hinzugefuegt!");
+            ImportManager.speichereEinsaetzeInCSV();
+            d.dispose();
         });
         d.add(btnAdd, BorderLayout.SOUTH); d.setVisible(true);
     }
