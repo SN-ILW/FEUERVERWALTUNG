@@ -11,8 +11,9 @@ import static neuesspiel.FensterManager.assignHotkey;
 public class MenuVerwaltung {
 
     public static void oeffneSystemHauptmenu() {
-        JDialog d = createFramelessDialog("System & Editor", 400, 500); 
-        JPanel content = new JPanel(new GridLayout(9, 1, 10, 10)); 
+        JDialog d = createFramelessDialog("System & Editor", 400, 450); 
+        // Raster auf 8 Zeilen verkleinert, da der Import-Button jetzt im Tab ist
+        JPanel content = new JPanel(new GridLayout(8, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
 
@@ -24,15 +25,6 @@ public class MenuVerwaltung {
             d.dispose(); 
             if(SpeicherManager.laden("savegame.properties")) { JOptionPane.showMessageDialog(frame, "Spielstand geladen!"); uiAktualisieren(getUhrzeit()); }
         });
-        
-        JButton btnLoadCustom = new JButton("Spielstand importieren / auswaehlen"); btnLoadCustom.setBackground(new Color(41, 128, 185)); btnLoadCustom.setForeground(Color.WHITE);
-        btnLoadCustom.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser(System.getProperty("user.dir")); chooser.setDialogTitle("Savegame auswaehlen"); chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Properties Dateien (*.properties)", "properties"));
-            if (chooser.showOpenDialog(d) == JFileChooser.APPROVE_OPTION) {
-                d.dispose(); java.io.File file = chooser.getSelectedFile();
-                if (SpeicherManager.laden(file.getAbsolutePath())) { JOptionPane.showMessageDialog(frame, "Spielstand erfolgreich importiert!"); uiAktualisieren(getUhrzeit()); }
-            }
-        });
 
         JButton b4 = new JButton("Einsatz-Vorlage erstellen"); b4.addActionListener(e -> { d.dispose(); FensterManager.oeffneEinsatzErsteller(); });
         JButton b5 = new JButton("Einsatz-Vorlage bearbeiten"); b5.addActionListener(e -> { d.dispose(); FensterManager.oeffneEinsatzBearbeiter(); });
@@ -40,7 +32,7 @@ public class MenuVerwaltung {
         JButton b7 = new JButton("Material-Vorlage bearbeiten"); b7.addActionListener(e -> { d.dispose(); FensterManager.oeffneMaterialBearbeiter(); });
         JButton btnVertragEditor = new JButton("Vertrags-Editor"); btnVertragEditor.addActionListener(e -> { d.dispose(); FensterManager.oeffneVertragsEditor(); });
         
-        content.add(b1); content.add(b2); content.add(b3); content.add(btnLoadCustom); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(btnVertragEditor);
+        content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); content.add(b6); content.add(b7); content.add(btnVertragEditor);
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
@@ -48,11 +40,18 @@ public class MenuVerwaltung {
         JDialog d = createFramelessDialog("Spieleinstellungen", 550, 500);
         JTabbedPane tabs = new JTabbedPane(); tabs.setBackground(new Color(45, 45, 45)); tabs.setForeground(Color.WHITE);
 
+        // Tab 1: Allgemein
         JPanel pnlAllgemein = new JPanel(new GridLayout(6, 1, 5, 5)); pnlAllgemein.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlAllgemein.setBackground(new Color(35, 35, 35));
         JCheckBox cbAuto = new JCheckBox("Auto-Umlagerung (Lager -> Wache)", LogistikSimulator.cfgAutoTransfer); JCheckBox cbLogistik = new JCheckBox("Lager & Logistik System aktivieren", LogistikSimulator.cfgLogistikAktiv);
         cbAuto.setForeground(Color.WHITE); cbAuto.setBackground(new Color(35, 35, 35)); cbAuto.setFocusPainted(false); cbLogistik.setForeground(Color.WHITE); cbLogistik.setBackground(new Color(35, 35, 35)); cbLogistik.setFocusPainted(false);
-        pnlAllgemein.add(cbAuto); pnlAllgemein.add(cbLogistik); tabs.addTab("Allgemein", pnlAllgemein);
+        pnlAllgemein.add(cbAuto); pnlAllgemein.add(cbLogistik); 
+        tabs.addTab("Allgemein", pnlAllgemein);
+        
+        // --- HIER IST DER NEUE TAB FÜR DEN IMPORT / EXPORT ---
+        tabs.addTab("Daten (Import/Export)", DatenManager.createImportExportTab(LogistikSimulator.frame));
+        // -----------------------------------------------------
 
+        // Tab 3: Gameplay
         JPanel pnlGameplay = new JPanel(new GridLayout(7, 1, 5, 5)); pnlGameplay.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlGameplay.setBackground(new Color(35, 35, 35));
         JCheckBox cbKtp = new JCheckBox("Krankentransport generieren", LogistikSimulator.cfgKrankentransport); JCheckBox cbDmg = new JCheckBox("Beschaedigte Fahrzeuge erlauben", LogistikSimulator.cfgBeschaedigung);
         JCheckBox cbSick = new JCheckBox("Krankes Personal erlauben", LogistikSimulator.cfgKrankheit); JCheckBox cbKiFunk = new JCheckBox("Landkreis Funk (KI-Funkverkehr) aktivieren", LogistikSimulator.cfgKiFunk); 
@@ -61,12 +60,14 @@ public class MenuVerwaltung {
         for (JCheckBox box : gpBoxes) { box.setForeground(Color.WHITE); box.setBackground(new Color(35, 35, 35)); box.setFocusPainted(false); pnlGameplay.add(box); }
         tabs.addTab("Gameplay", pnlGameplay);
 
+        // Tab 4: Sound
         JPanel pnlSound = new JPanel(new GridLayout(6, 1, 5, 5)); pnlSound.setBorder(BorderFactory.createEmptyBorder(10,10,10,10)); pnlSound.setBackground(new Color(35, 35, 35));
         JPanel pnlS1 = new JPanel(new BorderLayout(10, 0)); pnlS1.setBackground(new Color(35, 35, 35)); JCheckBox cbSoundNotruf = new JCheckBox("Sound: Neuer Notruf", LogistikSimulator.cfgSoundNotruf); cbSoundNotruf.setForeground(Color.WHITE); cbSoundNotruf.setBackground(new Color(35, 35, 35)); JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf); slNotruf.setBackground(new Color(35, 35, 35)); pnlS1.add(cbSoundNotruf, BorderLayout.WEST); pnlS1.add(slNotruf, BorderLayout.CENTER); pnlSound.add(pnlS1);
         JPanel pnlS2 = new JPanel(new BorderLayout(10, 0)); pnlS2.setBackground(new Color(35, 35, 35)); JCheckBox cbSoundStatus6 = new JCheckBox("Sound: Status 6", LogistikSimulator.cfgSoundStatus6); cbSoundStatus6.setForeground(Color.WHITE); cbSoundStatus6.setBackground(new Color(35, 35, 35)); JSlider slStatus6 = new JSlider(0, 100, LogistikSimulator.volStatus6); slStatus6.setBackground(new Color(35, 35, 35)); pnlS2.add(cbSoundStatus6, BorderLayout.WEST); pnlS2.add(slStatus6, BorderLayout.CENTER); pnlSound.add(pnlS2);
         JPanel pnlS3 = new JPanel(new BorderLayout(10, 0)); pnlS3.setBackground(new Color(35, 35, 35)); JCheckBox cbSoundStatus7 = new JCheckBox("Sound: Status 7", LogistikSimulator.cfgSoundStatus7); cbSoundStatus7.setForeground(Color.WHITE); cbSoundStatus7.setBackground(new Color(35, 35, 35)); JSlider slStatus7 = new JSlider(0, 100, LogistikSimulator.volStatus7); slStatus7.setBackground(new Color(35, 35, 35)); pnlS3.add(cbSoundStatus7, BorderLayout.WEST); pnlS3.add(slStatus7, BorderLayout.CENTER); pnlSound.add(pnlS3);
         tabs.addTab("Sound", pnlSound);
 
+        // Tab 5: Hotkeys
         JPanel pnlHotkeys = new JPanel(new GridLayout(12, 2, 10, 10)); pnlHotkeys.setBorder(BorderFactory.createEmptyBorder(10,20,10,20)); pnlHotkeys.setBackground(new Color(35, 35, 35));
         JLabel lHk1 = new JLabel("Spiel Pausieren:", SwingConstants.RIGHT); lHk1.setForeground(Color.WHITE); JButton btnHk1 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPause)); btnHk1.addActionListener(e -> assignHotkey(btnHk1, code -> LogistikSimulator.hotkeyPause = code)); pnlHotkeys.add(lHk1); pnlHotkeys.add(btnHk1);
         JLabel lHk2 = new JLabel("Normale Geschwindigkeit:", SwingConstants.RIGHT); lHk2.setForeground(Color.WHITE); JButton btnHk2 = new JButton(java.awt.event.KeyEvent.getKeyText(LogistikSimulator.hotkeyPlay)); btnHk2.addActionListener(e -> assignHotkey(btnHk2, code -> LogistikSimulator.hotkeyPlay = code)); pnlHotkeys.add(lHk2); pnlHotkeys.add(btnHk2);
@@ -93,6 +94,9 @@ public class MenuVerwaltung {
         pnlBottom.add(btnReset); pnlBottom.add(btnSave);
         d.add(tabs, BorderLayout.CENTER); d.add(pnlBottom, BorderLayout.SOUTH); d.setVisible(true);
     }
+
+
+    
 
     public static void oeffneEinsatzErsteller() {
         JDialog d = createFramelessDialog("Einsatz-Vorlagen Ersteller", 600, 550);

@@ -278,7 +278,8 @@ public class LogistikSimulator {
         pnlCenter.add(pnlRight);
         
         // Raster auf 4x4 vergrößern, um Platz zu machen!
-        JPanel pnlBottom = new JPanel(new GridLayout(4, 4, 5, 5));
+        // Raster wieder zurueck auf 3 Zeilen, 4 Spalten (12 Buttons insgesamt)
+        JPanel pnlBottom = new JPanel(new GridLayout(3, 4, 5, 5));
         pnlBottom.setBackground(bgDark);
         pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         
@@ -296,11 +297,6 @@ public class LogistikSimulator {
         JButton btnKlinik = createStyledButton("Kliniken & Betten", new Color(230, 126, 34)); 
         JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
         btnBank.setForeground(Color.BLACK);
-        
-        // --- UNSER NEUER IMPORT-BUTTON ---
-        JButton btnImport = createStyledButton("Import Einsätze", new Color(108, 122, 137));
-        btnImport.addActionListener(e -> ImportManager.importiereEinsaetzeUeberDialog(frame));
-        // ---------------------------------
         
         btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
         btnTagBeenden.setEnabled(false);
@@ -335,7 +331,7 @@ public class LogistikSimulator {
         
         pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
         pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
-        pnlBottom.add(btnImport);
+        
         pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
         
         frame.add(pnlTop, BorderLayout.NORTH);

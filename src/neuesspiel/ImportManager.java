@@ -21,7 +21,7 @@ public class ImportManager {
     }
 
     // Öffnet ein Auswahlfenster für den Spieler
-    public static void importiereEinsaetzeUeberDialog(JFrame parentFrame) {
+public static void importiereEinsaetzeUeberDialog(JFrame parentFrame) {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Waehle eine Einsatz-CSV-Datei zum Importieren");
         // Erlaubt nur .csv Dateien
