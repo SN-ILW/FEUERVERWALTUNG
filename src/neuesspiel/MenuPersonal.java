@@ -260,7 +260,7 @@ public class MenuPersonal {
         }
 
         JComboBox<Lehrgang> cbKurs = new JComboBox<>(new Lehrgang[]{
-            new Lehrgang("RS", 250), new Lehrgang("TM", 250), new Lehrgang("NFS", 500), new Lehrgang("TF", 500),
+            new Lehrgang("RS", 250), new Lehrgang("TM", 250), new Lehrgang("NFS", 500), new Lehrgang("NA", 1000), new Lehrgang("TF", 500),
             new Lehrgang("GF", 750), new Lehrgang("MA", 750), new Lehrgang("FueAs", 800), new Lehrgang("EL", 1000)
         });
         cbKurs.setFont(new Font("Segoe UI", Font.PLAIN, 14));
