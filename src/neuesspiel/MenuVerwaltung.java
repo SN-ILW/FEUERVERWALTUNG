@@ -38,7 +38,8 @@ public class MenuVerwaltung {
     }
 
     public static void oeffneEinstellungen() {
-        JDialog d = createFramelessDialog("Spieleinstellungen", 550, 600);
+        // Fenster etwas höher gemacht, damit alles gut reinpasst
+        JDialog d = createFramelessDialog("Spieleinstellungen & System", 550, 750);
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setBackground(new Color(45, 45, 45));
         tabbedPane.setForeground(Color.WHITE);
@@ -50,7 +51,6 @@ public class MenuVerwaltung {
         pnlKeys.setBackground(new Color(35, 35, 35));
         pnlKeys.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Helfer-Klasse fuer sauberen Code
         class HotkeyRow {
             void add(String text, int currentKey, java.util.function.IntConsumer setter) {
                 JLabel lbl = new JLabel(text, SwingConstants.RIGHT);
@@ -63,8 +63,7 @@ public class MenuVerwaltung {
                 btn.setFocusPainted(false);
                 btn.addActionListener(e -> FensterManager.assignHotkey(btn, setter));
                 
-                pnlKeys.add(lbl); 
-                pnlKeys.add(btn);
+                pnlKeys.add(lbl); pnlKeys.add(btn);
             }
         }
         HotkeyRow row = new HotkeyRow();
@@ -110,7 +109,6 @@ public class MenuVerwaltung {
         JCheckBox cbFunk = new JCheckBox("KI Funkverkehr im Hintergrund", LogistikSimulator.cfgKiFunk);
         JCheckBox cbAutoLager = new JCheckBox("Autom. Wachenbelieferung (von Hauptlager)", LogistikSimulator.cfgAutoTransfer);
         
-        // --- SOUND & LAUTSTÄRKE EINSTELLUNGEN ---
         JCheckBox cbSoundNotruf = new JCheckBox("Sound bei Notruf", LogistikSimulator.cfgSoundNotruf);
         JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf);
         slNotruf.setBackground(new Color(35, 35, 35)); slNotruf.setForeground(Color.WHITE);
@@ -130,8 +128,6 @@ public class MenuVerwaltung {
         pnlSystem.add(cbLogistik); pnlSystem.add(cbKrank); pnlSystem.add(cbKtp); pnlSystem.add(cbDefekt);
         pnlSystem.add(new JLabel(" ")); pnlSystem.add(new JLabel("Sonstiges:")); 
         pnlSystem.add(cbFunk); pnlSystem.add(cbAutoLager);
-        
-        // Sounds dem Layout hinzufügen (Checkbox, danach direkt der Regler)
         pnlSystem.add(new JLabel(" ")); pnlSystem.add(new JLabel("Sounds & Lautstaerke:")); 
         pnlSystem.add(cbSoundNotruf); pnlSystem.add(slNotruf);
         pnlSystem.add(cbSoundStatus6); pnlSystem.add(slStatus6);
@@ -141,6 +137,126 @@ public class MenuVerwaltung {
         scrollSys.setBorder(BorderFactory.createEmptyBorder());
         scrollSys.getVerticalScrollBar().setUnitIncrement(16);
         tabbedPane.addTab("Spielregeln & Sounds", scrollSys);
+
+
+        // ==========================================
+        // TAB 3: DATENVERWALTUNG & EDITOREN
+        // ==========================================
+        JPanel pnlDaten = new JPanel(new GridLayout(0, 1, 5, 5));
+        pnlDaten.setBackground(new Color(35, 35, 35));
+        pnlDaten.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Block: Spielstand
+        JLabel lblSpeicher = new JLabel("Spielstandverwaltung:");
+        lblSpeicher.setForeground(new Color(241, 196, 15)); // Gelb
+        lblSpeicher.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        pnlDaten.add(lblSpeicher);
+
+        JButton btnSave = LogistikSimulator.createStyledButton("Spielstand Speichern", new Color(41, 128, 185));
+        btnSave.addActionListener(e -> { SpeicherManager.speichern("savegame.properties"); JOptionPane.showMessageDialog(d, "Spiel gespeichert!"); });
+        
+        JButton btnLoad = LogistikSimulator.createStyledButton("Spielstand Laden", new Color(39, 174, 96));
+        btnLoad.addActionListener(e -> { 
+            if(SpeicherManager.laden("savegame.properties")) { 
+                JOptionPane.showMessageDialog(d, "Spielstand geladen!"); 
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
+                d.dispose();
+            } 
+        });
+
+        // --- NEU: BACKUP EXPORT / IMPORT ---
+        JButton btnExportSave = LogistikSimulator.createStyledButton("Backup Exportieren (Ordner waehlen)", new Color(52, 73, 94));
+        btnExportSave.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Spielstand exportieren / sichern");
+            if (chooser.showSaveDialog(d) == JFileChooser.APPROVE_OPTION) {
+                java.io.File file = chooser.getSelectedFile();
+                String path = file.getAbsolutePath();
+                if (!path.endsWith(".properties")) path += ".properties";
+                SpeicherManager.speichern(path);
+                JOptionPane.showMessageDialog(d, "Backup erfolgreich exportiert unter:\n" + path);
+            }
+        });
+
+        JButton btnImportSave = LogistikSimulator.createStyledButton("Spielstand Importieren (Datei waehlen)", new Color(142, 68, 173));
+        btnImportSave.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setDialogTitle("Spielstand Datei auswaehlen");
+            if (chooser.showOpenDialog(d) == JFileChooser.APPROVE_OPTION) {
+                java.io.File file = chooser.getSelectedFile();
+                if (SpeicherManager.laden(file.getAbsolutePath())) {
+                    SpeicherManager.speichern("savegame.properties"); // Überschreibt den lokalen Standard-Spielstand
+                    JOptionPane.showMessageDialog(d, "Spielstand erfolgreich importiert und geladen!");
+                    LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                    d.dispose();
+                } else {
+                    JOptionPane.showMessageDialog(d, "Fehler beim Laden der Datei!", "Import fehlgeschlagen", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        JButton btnReset = LogistikSimulator.createStyledButton("Spielstand Zuruecksetzen (ACHTUNG!)", new Color(192, 57, 43));
+        btnReset.addActionListener(e -> {
+            if (JOptionPane.showConfirmDialog(d, "Wirklich ALLES zuruecksetzen?\nDer aktuelle Spielstand geht unwiederbringlich verloren!", "Achtung", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE) == JOptionPane.YES_OPTION) {
+                LogistikSimulator.initStandardDaten();
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                JOptionPane.showMessageDialog(d, "Spiel wurde erfolgreich auf Werkseinstellungen zurueckgesetzt.");
+                d.dispose();
+            }
+        });
+        
+        pnlDaten.add(btnSave); 
+        pnlDaten.add(btnLoad); 
+        pnlDaten.add(btnExportSave); 
+        pnlDaten.add(btnImportSave); 
+        pnlDaten.add(btnReset);
+
+        pnlDaten.add(new JLabel(" ")); // Lücke
+
+        // Block: Editoren
+        JLabel lblEdit = new JLabel("Editoren & Vorlagen:");
+        lblEdit.setForeground(new Color(241, 196, 15));
+        lblEdit.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        pnlDaten.add(lblEdit);
+
+        JButton b4 = LogistikSimulator.createStyledButton("Einsatz-Vorlage erstellen", new Color(142, 68, 173)); 
+        b4.addActionListener(e -> { d.dispose(); FensterManager.oeffneEinsatzErsteller(); });
+        JButton b5 = LogistikSimulator.createStyledButton("Einsatz-Vorlage bearbeiten", new Color(142, 68, 173)); 
+        b5.addActionListener(e -> { d.dispose(); FensterManager.oeffneEinsatzBearbeiter(); });
+        JButton b6 = LogistikSimulator.createStyledButton("Material-Vorlage erstellen", new Color(142, 68, 173)); 
+        b6.addActionListener(e -> { d.dispose(); FensterManager.oeffneMaterialErsteller(); });
+        JButton b7 = LogistikSimulator.createStyledButton("Material-Vorlage bearbeiten", new Color(142, 68, 173)); 
+        b7.addActionListener(e -> { d.dispose(); FensterManager.oeffneMaterialBearbeiter(); });
+        JButton b8 = LogistikSimulator.createStyledButton("Vertrags-Editor", new Color(142, 68, 173)); 
+        b8.addActionListener(e -> { d.dispose(); FensterManager.oeffneVertragsEditor(); });
+        pnlDaten.add(b4); pnlDaten.add(b5); pnlDaten.add(b6); pnlDaten.add(b7); pnlDaten.add(b8);
+
+        pnlDaten.add(new JLabel(" ")); // Lücke
+
+        // Block: Im- & Export
+        JLabel lblExport = new JLabel("Im- & Export Einsaetze:");
+        lblExport.setForeground(new Color(241, 196, 15));
+        lblExport.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        pnlDaten.add(lblExport);
+
+        JButton btnExport = LogistikSimulator.createStyledButton("Einsaetze exportieren (CSV)", new Color(243, 156, 18));
+        btnExport.addActionListener(e -> { 
+            ImportManager.speichereEinsaetzeInCSV(); 
+            JOptionPane.showMessageDialog(d, "Einsaetze erfolgreich in CSV exportiert!"); 
+        });
+        
+        JButton btnImport = LogistikSimulator.createStyledButton("Einsaetze importieren (CSV)", new Color(243, 156, 18));
+        btnImport.addActionListener(e -> { 
+            ImportManager.ladeEinsaetze(); 
+            JOptionPane.showMessageDialog(d, "Einsaetze erfolgreich aus CSV importiert!"); 
+        });
+        pnlDaten.add(btnExport); pnlDaten.add(btnImport);
+
+        JScrollPane scrollDaten = new JScrollPane(pnlDaten);
+        scrollDaten.setBorder(BorderFactory.createEmptyBorder());
+        scrollDaten.getVerticalScrollBar().setUnitIncrement(16);
+        tabbedPane.addTab("Datenverwaltung & Editoren", scrollDaten);
+
 
         // ==========================================
         // SPEICHERN & SCHLIESSEN BUTTON
@@ -159,12 +275,10 @@ public class MenuVerwaltung {
             LogistikSimulator.cfgKiFunk = cbFunk.isSelected();
             LogistikSimulator.cfgAutoTransfer = cbAutoLager.isSelected();
             
-            // Sounds speichern
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected();
             LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected();
             LogistikSimulator.cfgSoundStatus7 = cbSoundStatus7.isSelected();
             
-            // NEU: Lautstärke speichern
             LogistikSimulator.volNotruf = slNotruf.getValue();
             LogistikSimulator.volStatus6 = slStatus6.getValue();
             LogistikSimulator.volStatus7 = slStatus7.getValue();
