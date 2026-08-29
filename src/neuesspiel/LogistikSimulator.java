@@ -173,15 +173,30 @@ public class LogistikSimulator {
         btnPause = createStyledButton("Pause", new Color(60, 63, 65)); 
         btnPlay = createStyledButton("Play", new Color(39, 174, 96)); 
         btnFastForward = createStyledButton(">> 5x Spulen", new Color(60, 63, 65));
+        
+        // --- NEUER BUTTON: Sprung zu 18 Uhr ---
+        JButton btnFeierabend = createStyledButton(">> 18 Uhr", new Color(142, 68, 173));
+        
         JButton btnExit = createStyledButton("X Beenden", new Color(192, 57, 43));
         
         btnPause.addActionListener(e -> setSpeed(0));
         btnPlay.addActionListener(e -> setSpeed(1));
         btnFastForward.addActionListener(e -> setSpeed(3));
+        
+        // --- NEUE AKTION FÜR DEN BUTTON ---
+        btnFeierabend.addActionListener(e -> {
+            if (inGameSekunden < 18 * 3600) {
+                inGameSekunden = 18 * 3600;
+                uiAktualisieren(getUhrzeit());
+            }
+        });
+        
         btnExit.addActionListener(e -> beendenMitSpeichern()); 
         
         pnlTime.add(lblRate); pnlTime.add(cbRate);
-        pnlTime.add(btnPause); pnlTime.add(btnPlay); pnlTime.add(btnFastForward); pnlTime.add(btnExit);
+        pnlTime.add(btnPause); pnlTime.add(btnPlay); pnlTime.add(btnFastForward); 
+        pnlTime.add(btnFeierabend); // Hier wird er dem Panel hinzugefügt
+        pnlTime.add(btnExit);
         pnlTop.add(pnlTime, BorderLayout.EAST);
         
         JPanel pnlCenter = new JPanel(new GridLayout(1, 2, 0, 0));
@@ -262,7 +277,8 @@ public class LogistikSimulator {
         pnlCenter.add(pnlLeft); 
         pnlCenter.add(pnlRight);
         
-        JPanel pnlBottom = new JPanel(new GridLayout(3, 4, 5, 5));
+        // Raster auf 4x4 vergrößern, um Platz zu machen!
+        JPanel pnlBottom = new JPanel(new GridLayout(4, 4, 5, 5));
         pnlBottom.setBackground(bgDark);
         pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
         
@@ -278,9 +294,13 @@ public class LogistikSimulator {
         
         JButton btnSys = createStyledButton("System & Editor", new Color(127, 140, 141));
         JButton btnKlinik = createStyledButton("Kliniken & Betten", new Color(230, 126, 34)); 
-        
         JButton btnBank = createStyledButton("Bank & Finanzen", new Color(241, 196, 15));
         btnBank.setForeground(Color.BLACK);
+        
+        // --- UNSER NEUER IMPORT-BUTTON ---
+        JButton btnImport = createStyledButton("Import Einsätze", new Color(108, 122, 137));
+        btnImport.addActionListener(e -> ImportManager.importiereEinsaetzeUeberDialog(frame));
+        // ---------------------------------
         
         btnTagBeenden = createStyledButton("TAG BEENDEN (ab 19 Uhr)", new Color(142, 68, 173));
         btnTagBeenden.setEnabled(false);
@@ -315,6 +335,7 @@ public class LogistikSimulator {
         
         pnlBottom.add(btnDisp); pnlBottom.add(btnNach); pnlBottom.add(btnAblehnen); pnlBottom.add(btnPostfach);
         pnlBottom.add(btnPers); pnlBottom.add(btnLog); pnlBottom.add(btnFuhr); pnlBottom.add(btnBau);
+        pnlBottom.add(btnImport);
         pnlBottom.add(btnSys); pnlBottom.add(btnKlinik); pnlBottom.add(btnBank); pnlBottom.add(btnTagBeenden);
         
         frame.add(pnlTop, BorderLayout.NORTH);
@@ -770,7 +791,7 @@ public class LogistikSimulator {
         }
 
         if(inGameSekunden >= 19*3600) {
-            lage.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Nachtruhe) ]</div>");
+            lage.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Schichtwechsel) ]</div>");
         }
 
         lage.append("<div class='header-mission'>LAUFENDE EINSAETZE</div>");
@@ -1366,7 +1387,9 @@ public class LogistikSimulator {
 
         verliehenesPersonal.clear(); 
 
-        JOptionPane.showMessageDialog(frame, sb.toString(), "Feierabend!", JOptionPane.INFORMATION_MESSAGE);
+        // RUF FÜR DIE NEUE TAGESZEITUNG (ersetzt das alte JOptionPane):
+        StatistikManager.zeigeTagesZeitung(tag, tagesStatistik, abgelehnteEinsaetzeHeute, tagesXP);
+
         inGameSekunden = 7 * 3600;
         tagesStatistik.clear();
         abgelehnteEinsaetzeHeute = 0;
@@ -1512,15 +1535,11 @@ public class LogistikSimulator {
         wachen.add(w);
         Fahrzeug f1 = new Fahrzeug(w.generiereFunkrufname("HLF"), "HLF"); w.addFahrzeug(f1);
         Fahrzeug f2 = new Fahrzeug(w.generiereFunkrufname("RTW"), "RTW"); w.addFahrzeug(f2);
-
-        vorlagenPool.add(new EinsatzVorlage("FW", "H1", "Tueröffnung", 0, 0, 0, 1, 0, 0, 0, 0, false, 0, "", 1));
-        vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Schnittverletzung", 1, 0, 0, 0, 0, 0, 0, 0, false, 0, "", 1));
-        vorlagenPool.add(new EinsatzVorlage("FW", "F3", "BMA Einkaufszentrum", 0, 0, 0, 2, 1, 1, 0, 0, true, 30, "RTW", 3));
-        vorlagenPool.add(new EinsatzVorlage("FW", "F2", "Wohnungsbrand", 1, 0, 0, 2, 1, 0, 0, 0, true, 50, "NEF", 2));
-        vorlagenPool.add(new EinsatzVorlage("RD", "R2N1", "Verkehrsunfall (THL)", 2, 1, 0, 1, 0, 0, 0, 0, true, 20, "ELW & HLF", 4));
-        vorlagenPool.add(new EinsatzVorlage("KTP", "KTP", "Krankentransport", 0, 0, 1, 0, 0, 0, 0, 0, false, 0, "", 1));
-        vorlagenPool.add(new EinsatzVorlage("RD", "R1", "Atemnot", 1, 0, 0, 0, 0, 0, 0, 0, true, 40, "NEF", 1));
-
+        
+        // ALTE EINSÄTZE LÖSCHEN und stattdessen die Datei laden!
+        vorlagenPool.clear();
+        ImportManager.ladeEinsaetze();
+        
         customMaterials.add(new CustomMaterial("Verbandsmaterial", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "HLF", "NEF")), 5, new ArrayList<>(), 500, 50, 10));
         customMaterials.add(new CustomMaterial("Medikamente", new ArrayList<>(java.util.Arrays.asList("RTW", "NEF")), 3, new ArrayList<>(), 1000, 20, 5));
         customMaterials.add(new CustomMaterial("Sauerstoff O²", new ArrayList<>(java.util.Arrays.asList("RTW", "KTW", "NEF", "HLF")), 1, new ArrayList<>(), 800, 10, 5));
