@@ -143,4 +143,83 @@ public class EventMails {
         d.add(btnPanel, BorderLayout.SOUTH);
         d.setVisible(true);
     }
+    
+    public static void zeigeGehaltsVerhandlung(Personal p, double forderung, Email mail) {
+        JDialog d = new JDialog(LogistikSimulator.frame, "Gehaltsverhandlung: " + p.name, true);
+        d.setSize(600, 400);
+        d.setLocationRelativeTo(null);
+        d.setLayout(new BorderLayout(10, 10));
+        
+        JTextArea txt = new JTextArea("Absender: " + p.name + " (" + String.join(", ", p.qualifikationen) + ")\n"
+                + "Betreff: Antrag auf Anpassung der Vergütung\n"
+                + "--------------------------------------------------------\n\n"
+                + "Hallo Leitstelle,\n\n"
+                + "ich bin nun seit geraumer Zeit auf der Wache tätig und habe bereits " + p.schichtenMonat + " Schichten diesen Monat absolviert.\n"
+                + "Mein aktueller Stundenlohn liegt bei " + String.format("%.2f", p.stundenLohn) + " EUR.\n\n"
+                + "Aufgrund meiner Leistungen beantrage ich eine Anpassung meines Stundenlohns auf " + String.format("%.2f", forderung) + " EUR.\n\n"
+                + "Mit freundlichen Grüßen,\n" + p.name);
+        txt.setEditable(false);
+        txt.setMargin(new Insets(15, 15, 15, 15));
+        txt.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        d.add(new JScrollPane(txt), BorderLayout.CENTER);
+        
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        
+        JButton btnGenehmigen = new JButton("Genehmigen (" + String.format("%.2f", forderung) + " €/h)");
+        btnGenehmigen.setBackground(new Color(39, 174, 96)); btnGenehmigen.setForeground(Color.WHITE);
+        
+        JButton btnGegenangebot = new JButton("Gegenangebot machen");
+        btnGegenangebot.setBackground(new Color(241, 196, 15)); btnGegenangebot.setForeground(Color.BLACK);
+        
+        JButton btnAblehnen = new JButton("Ablehnen");
+        btnAblehnen.setBackground(new Color(192, 57, 43)); btnAblehnen.setForeground(Color.WHITE);
+        
+        btnGenehmigen.addActionListener(e -> {
+            p.stundenLohn = forderung;
+            p.abgelehnteForderungen = 0;
+            JOptionPane.showMessageDialog(d, p.name + " freut sich über die Gehaltserhöhung auf " + String.format("%.2f", forderung) + " €/h!");
+            LogistikSimulator.postfach.remove(mail);
+            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+            d.dispose();
+        });
+        
+        btnGegenangebot.addActionListener(e -> {
+            double kompromiss = p.stundenLohn + ((forderung - p.stundenLohn) / 2.0);
+            String eingabe = JOptionPane.showInputDialog(d, "Dein Gegenangebot als Stundenlohn (in €):", String.format("%.2f", kompromiss).replace(",", "."));
+            if (eingabe != null) {
+                try {
+                    double gebot = Double.parseDouble(eingabe.replace(",", "."));
+                    if (gebot > p.stundenLohn && gebot < forderung) {
+                        p.stundenLohn = gebot;
+                        JOptionPane.showMessageDialog(d, "Einigung erzielt! Neuer Stundenlohn: " + String.format("%.2f", gebot) + " €/h.");
+                        LogistikSimulator.postfach.remove(mail);
+                        LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                        d.dispose();
+                    } else {
+                        JOptionPane.showMessageDialog(d, "Ungültiges Gegenangebot!");
+                    }
+                } catch(Exception ex) { JOptionPane.showMessageDialog(d, "Zahlenformat ungültig!"); }
+            }
+        });
+        
+        btnAblehnen.addActionListener(e -> {
+            p.abgelehnteForderungen++;
+            if (p.abgelehnteForderungen >= 2) {
+                JOptionPane.showMessageDialog(d, "Achtung: " + p.name + " ist sehr unzufrieden mit der erneuten Ablehnung!", "Unzufriedenheit", JOptionPane.WARNING_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(d, "Gehaltserhöhung abgelehnt.");
+            }
+            LogistikSimulator.postfach.remove(mail);
+            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+            d.dispose();
+        });
+        
+        btnPanel.add(btnGenehmigen);
+        btnPanel.add(btnGegenangebot);
+        btnPanel.add(btnAblehnen);
+        
+        d.add(btnPanel, BorderLayout.SOUTH);
+        d.setVisible(true);
+    }
+    
 }

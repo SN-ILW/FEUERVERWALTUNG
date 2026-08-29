@@ -31,8 +31,21 @@ public class Terminkalender {
         d.setLayout(new BorderLayout());
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
+        // --- HIER EINFÜGEN: ESC TASTE ZUM SCHLIESSEN & SPEICHERN ---
+        d.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeDialog");
+        d.getRootPane().getActionMap().put("closeDialog", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                SpeicherManager.speichern("savegame.properties");
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                d.dispose();
+            }
+        });
+        // -----------------------------------------------------------
+
         // --- TITELLEISTE ---
         JPanel titleBar = new JPanel(new BorderLayout());
+        // ... (hier geht dein normaler Code weiter)
         titleBar.setBackground(new Color(20, 20, 20));
         titleBar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
         JLabel lblTitle = new JLabel(" Terminkalender & Wach-Events (60-Tage Vorschau)");
@@ -149,6 +162,7 @@ public class Terminkalender {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
+                
                 if (val == null || val.isEmpty()) {
                     c.setBackground(new Color(50, 50, 50)); c.setForeground(Color.WHITE);
                 } else if (val.contains("KTP")) {
@@ -156,7 +170,24 @@ public class Terminkalender {
                 } else if (val.contains("Event") || val.contains("Schule") || val.contains("Firma")) {
                     c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); 
                 } else {
-                    c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); 
+                    // NEU: Dynamische Farberkennung des Fahrzeugs!
+                    boolean colorFound = false;
+                    for (Wache wache : LogistikSimulator.wachen) {
+                        for (Fahrzeug f : wache.fuhrpark) {
+                            if (val.contains(f.funkrufname)) {
+                                c.setBackground(f.stempelFarbe != null ? f.stempelFarbe : new Color(192, 57, 43));
+                                c.setForeground(Color.WHITE);
+                                colorFound = true;
+                                break;
+                            }
+                        }
+                        if (colorFound) break;
+                    }
+                    
+                    // Fallback, falls nur freier Text oder nur Personal eingetragen wurde
+                    if(!colorFound) {
+                        c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); 
+                    }
                 }
                 return c;
             }
@@ -164,7 +195,7 @@ public class Terminkalender {
 
         // --- STEMPEL-FUNKTION (Mit Texterkennung und Halten) ---
         MouseAdapter stampAdapter = new MouseAdapter() {
-            private String currentDragText = null; // Speichert den Text beim "Ziehen" der Maus
+            private String currentDragText = null; 
 
             @Override 
             public void mousePressed(MouseEvent e) {
@@ -180,20 +211,20 @@ public class Terminkalender {
                         String fz = cbFahrzeug.getSelectedItem().toString();
                         String pers = cbPersonal.getSelectedItem().toString();
                         
+                        String eintrag = "";
                         if (fz.startsWith("Kein") && pers.startsWith("Kein")) {
-                            // Freitext abfragen!
                             String input = JOptionPane.showInputDialog(d, "Bitte eigenen Text fuer diesen Termin eingeben:", "Eigener Termin", JOptionPane.PLAIN_MESSAGE);
                             if(input != null && !input.trim().isEmpty()) {
                                 currentDragText = input.trim();
                             } else {
-                                return; // Wenn der Spieler auf Abbrechen klickt
+                                return; 
                             }
                         } else if (fz.startsWith("Kein")) {
-                            currentDragText = pers; // Nur Person
+                            currentDragText = pers; 
                         } else if (pers.startsWith("Kein")) {
-                            currentDragText = fz + " (Dienstplan-Personal)"; // Nur Fahrzeug
+                            currentDragText = fz + " (Dienstplan-Personal)"; 
                         } else {
-                            currentDragText = fz + " (" + pers + ")"; // Beides
+                            currentDragText = fz + " (" + pers + ")"; 
                         }
                         
                         if(currentDragText != null && !currentDragText.isEmpty()) {
@@ -214,7 +245,6 @@ public class Terminkalender {
                         tableModel.setValueAt("", row, col); 
                         kalenderDaten[col][row] = "";
                     } else if (SwingUtilities.isLeftMouseButton(e) && currentDragText != null) {
-                        // Wenn die Maus gehalten und gezogen wird, einfach den Text aus dem initialen Klick weiterstempeln!
                         tableModel.setValueAt(currentDragText, row, col);
                         kalenderDaten[col][row] = currentDragText;
                     }

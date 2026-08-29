@@ -20,6 +20,10 @@ public class LogistikSimulator {
     //FUNK
     public static boolean cfgKiFunk = true;
     
+    // Wirtschaftssystem
+    public static boolean cfgWirtschaftsSystem = false;
+    public static int offeneGehaelterUndKosten = 0;
+    
     //hotkeys
     public static int hotkeyPause = java.awt.event.KeyEvent.VK_SPACE;
     public static int hotkeyPlay = java.awt.event.KeyEvent.VK_1;
@@ -31,7 +35,7 @@ public class LogistikSimulator {
     public static int hotkeyEinsatzErsteller = java.awt.event.KeyEvent.VK_F2;
     public static int hotkeyEinsatzEditor = java.awt.event.KeyEvent.VK_F3;
     public static int hotkeyPersonalEinstellen = java.awt.event.KeyEvent.VK_P;
-    public static int hotkeyKalender = java.awt.event.KeyEvent.VK_K; // NEUER HOTKEY
+    public static int hotkeyKalender = java.awt.event.KeyEvent.VK_K; 
     
     public static TagesMission aktuelleMission = null; 
     public static JButton btnPostfach, btnTagBeenden;
@@ -317,7 +321,7 @@ public class LogistikSimulator {
                     FensterManager.currentHotkeyBtn.setText(java.awt.event.KeyEvent.getKeyText(e.getKeyCode()));
                     FensterManager.hotkeyPopup.dispose();
                     FensterManager.hotkeyPopup = null;
-                    return true;
+                    return true; 
                 }
 
                 Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
@@ -337,7 +341,7 @@ public class LogistikSimulator {
                 else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
                 else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
                 else if (code == hotkeyPersonalEinstellen) personalEinstellen();
-                else if (code == hotkeyKalender) Terminkalender.oeffneKalender(); // HIER IST DIE TASTENABFRAGE AKTIVIERT
+                else if (code == hotkeyKalender) Terminkalender.oeffneKalender();
             }
             return false;
         });
@@ -414,7 +418,14 @@ public class LogistikSimulator {
                         
                         if (!cfgLogistikAktiv || ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
-                            budget += ein.belohnungGeld;
+                            
+                            // WIRTSCHAFTSYSTEM: 10% mehr Einsatzgeld
+                            int auszahlung = ein.belohnungGeld;
+                            if(cfgWirtschaftsSystem) {
+                                auszahlung = (int)(auszahlung * 1.10);
+                            }
+                            budget += auszahlung;
+                            
                             tagesStatistik.add(ein);
                             checkLevelUp();
                             
@@ -1085,6 +1096,46 @@ public class LogistikSimulator {
             }
         }
         
+        // --- TÄGLICHE GEHALTS- UND KOSTENBERECHNUNG ---
+        if (cfgWirtschaftsSystem) {
+            int tagesKosten = 0;
+            
+            for (Wache w : wachen) {
+                tagesKosten += 200; 
+                tagesKosten += (w.fuhrpark.size() * 30); 
+                
+                for (Personal p : w.personalPool) {
+                    if (p.status.equals("Bereit") || !p.zugewiesenesFahrzeug.equals("Keines")) {
+                        tagesKosten += (p.stundenLohn * 8); 
+                    }
+                }
+            }
+            
+            offeneGehaelterUndKosten += tagesKosten;
+            
+            java.time.LocalDate heute = getCurrentDate();
+            if (heute.getDayOfMonth() == heute.lengthOfMonth() - 1) {
+                postfach.add(0, new Email("Finanzamt / Bank", "DRINGEND: Gehaltsfreigabe erforderlich!", 
+                    "Sehr geehrte Leitstelle,\n\nbis morgen (Monatsende) muessen die aufgelaufenen Gehälter und Unterhaltskosten in Hoehe von " 
+                    + offeneGehaelterUndKosten + " EUR freigegeben werden.\n\nBitte oeffnen Sie das Bank-Menü zur Freigabe.", "Info", null, tag, tag));
+            }
+            
+            if (heute.getDayOfMonth() == heute.lengthOfMonth()) {
+                if (offeneGehaelterUndKosten > 0) {
+                    int strafe = (int)(offeneGehaelterUndKosten * 1.05);
+                    budget -= strafe;
+                    postfach.add(0, new Email("Bank", "Automatische Abbuchung Gehälter", 
+                        "Da die Gehälter nicht manuell freigegeben wurden, erfolgte die Abbuchung inkl. 5% Bearbeitungsgebuehr (" 
+                        + strafe + " EUR).", "Info", null, tag, tag));
+                    offeneGehaelterUndKosten = 0;
+                }
+            }
+            
+            if (Math.random() < 0.08) {
+                generiereGehaltsVerhandlung();
+            }
+        }
+        
         if (aktuellesEvent != null) {
             aktuellesEvent.dauerTage--;
             if (aktuellesEvent.dauerTage <= 0) {
@@ -1121,7 +1172,7 @@ public class LogistikSimulator {
         
         tag++;
         
-        Terminkalender.tagesWechselShift();
+        Terminkalender.tagesWechselShift(); 
         
         LocalDate neuerTag = getCurrentDate();
         int dayIndex = neuerTag.getDayOfMonth() - 1; 
@@ -1197,9 +1248,9 @@ public class LogistikSimulator {
                         
                         for (int t = tag + 1; t <= tag + dauer; t++) {
                             java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1);
-                            java.time.LocalDate heute = LogistikSimulator.getCurrentDate();
+                            java.time.LocalDate heuteTag = LogistikSimulator.getCurrentDate();
                             int dIndex = date.getDayOfMonth() - 1;
-                            if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) {
+                            if (date.getMonthValue() == heuteTag.getMonthValue() && date.getYear() == heuteTag.getYear()) {
                                 p.planAktuellerMonat[dIndex] = "Krank";
                             } else {
                                 p.planNaechsterMonat[dIndex] = "Krank";
@@ -1270,6 +1321,25 @@ public class LogistikSimulator {
         generiereTagesMission();
         uiAktualisieren(getUhrzeit());
     } 
+    
+    public static void generiereGehaltsVerhandlung() {
+        if (wachen.isEmpty()) return;
+        Wache w = wachen.get((int)(Math.random() * wachen.size()));
+        if (w.personalPool.isEmpty()) return;
+        
+        Personal p = w.personalPool.get((int)(Math.random() * w.personalPool.size()));
+        if (p.qualifikationen.contains("Anwaerter")) return; 
+        
+        double neueForderung = p.stundenLohn + (1.0 + (Math.random() * 2.5)); // Erhöhung um 1 bis 3,50 EUR
+        
+        Email mail = new Email("Personalabteilung", "Gehaltsanpassung: " + p.name, 
+            p.name + " fordert eine Erhoehung des Stundenlohns.\nBitte oeffne dieses Element zur Bearbeitung.", "Gehaltsverhandlung", p, tag, tag);
+        
+        // Speichere die Forderung vorübergehend im Text (Hack, da wir keine extra Variable in der Mail haben)
+        mail.text = String.valueOf(neueForderung);
+        
+        postfach.add(0, mail);
+    }
 
     public static boolean hatGenugMaterial(Fahrzeug f, Wache w) {
         if (!cfgLogistikAktiv) return true;
@@ -1669,6 +1739,4 @@ public class LogistikSimulator {
         d.setVisible(true);
     }
 
-    
-    
 }

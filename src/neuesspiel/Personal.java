@@ -2,6 +2,8 @@ package neuesspiel;
 
 import java.util.ArrayList;
 
+
+
 public class Personal {
     public String name;
     public ArrayList<String> qualifikationen = new ArrayList<>();
@@ -13,7 +15,8 @@ public class Personal {
     public int urlaubStart = -1;
     public int urlaubEnd = -1;
     public int krankBis = -1;
-    
+    public double stundenLohn = 13.50; 
+    public int abgelehnteForderungen = 0;
     public int schichtenMonat = 0;
     public int lehrgangDauerSec = 0;
     public String lehrgangThema = "";
@@ -37,6 +40,22 @@ public class Personal {
         for(int i = 0; i < 31; i++) {
             planAktuellerMonat[i] = "Frei";
             planNaechsterMonat[i] = "Frei";
+        }
+    }
+    
+    
+
+    // Im Konstruktor von Personal.java kannst du den Stundenlohn je nach Qualifikation setzen:
+    public void initStundenLohn() {
+        // Stundenlohn festlegen
+        if (qualifikationen.contains("NA") || qualifikationen.contains("EL")) {
+            stundenLohn = 22.50;
+        } else if (qualifikationen.contains("GF") || qualifikationen.contains("NFS")) {
+            stundenLohn = 17.00;
+        } else if (qualifikationen.contains("TF") || qualifikationen.contains("MA")) {
+            stundenLohn = 15.00;
+        } else {
+            stundenLohn = 13.00; // Anwaerter / TM / RS
         }
     }
     

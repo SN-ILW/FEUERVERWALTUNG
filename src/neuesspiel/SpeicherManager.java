@@ -64,6 +64,9 @@ public class SpeicherManager {
             setSafe(p, "aktuellerKredit", String.valueOf(LogistikSimulator.aktuellerKredit));
             setSafe(p, "taeglicheKreditRate", String.valueOf(LogistikSimulator.taeglicheKreditRate));
             
+            setSafe(p, "cfgWirtschaftsSystem", String.valueOf(LogistikSimulator.cfgWirtschaftsSystem));
+            setSafe(p, "offeneGehaelterUndKosten", String.valueOf(LogistikSimulator.offeneGehaelterUndKosten));
+            
             setSafe(p, "techGrossabnehmer", String.valueOf(LogistikSimulator.techGrossabnehmer));
             setSafe(p, "lehrerStufe", String.valueOf(LogistikSimulator.lehrerStufe));
             setSafe(p, "calltakerStufe", String.valueOf(LogistikSimulator.calltakerStufe));
@@ -94,7 +97,7 @@ public class SpeicherManager {
             setSafe(p, "hk_e_erst", String.valueOf(LogistikSimulator.hotkeyEinsatzErsteller));
             setSafe(p, "hk_e_edit", String.valueOf(LogistikSimulator.hotkeyEinsatzEditor));
             setSafe(p, "hk_pers", String.valueOf(LogistikSimulator.hotkeyPersonalEinstellen));
-
+            setSafe(p, "hotkeyKalender", String.valueOf(LogistikSimulator.hotkeyKalender));
             if (LogistikSimulator.aktuelleMission != null) {
                 setSafe(p, "miss_titel", LogistikSimulator.aktuelleMission.titel);
                 setSafe(p, "miss_desc", LogistikSimulator.aktuelleMission.beschreibung);
@@ -342,6 +345,12 @@ public class SpeicherManager {
             LogistikSimulator.cfgAutoTransfer = parseBoolSafe(p.getProperty("cfgAutoTransfer"), false);
             LogistikSimulator.cfgLogistikAktiv = parseBoolSafe(p.getProperty("cfgLogistikAktiv"), true);
             
+            LogistikSimulator.cfgWirtschaftsSystem = parseBoolSafe(p.getProperty("cfgWirtschaftsSystem"), true);
+            LogistikSimulator.offeneGehaelterUndKosten = parseIntSafe(p.getProperty("offeneGehaelterUndKosten"), 0);
+            LogistikSimulator.hotkeyKalender = parseIntSafe(p.getProperty("hotkeyKalender"), java.awt.event.KeyEvent.VK_K);
+            
+            
+            //Save-hotkeys
             LogistikSimulator.hotkeyPause = parseIntSafe(p.getProperty("hk_pause"), java.awt.event.KeyEvent.VK_SPACE);
             LogistikSimulator.hotkeyPlay = parseIntSafe(p.getProperty("hk_play"), java.awt.event.KeyEvent.VK_1);
             LogistikSimulator.hotkeyFast = parseIntSafe(p.getProperty("hk_fast"), java.awt.event.KeyEvent.VK_2);
