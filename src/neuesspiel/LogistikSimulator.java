@@ -1569,15 +1569,29 @@ public class LogistikSimulator {
     }
 
     public static boolean personErfuellt(Personal p, String req) {
+        // Direkter Treffer
         if(p.qualifikationen.contains(req)) return true;
+        
+        // --- Rettungsdienst-Hierarchie ---
         if(req.equals("RS") && (p.qualifikationen.contains("NFS") || p.qualifikationen.contains("NA"))) return true;
         if(req.equals("NFS") && p.qualifikationen.contains("NA")) return true;
-        if(req.equals("TM") && (p.qualifikationen.contains("TF") || p.qualifikationen.contains("GF") || p.qualifikationen.contains("EL"))) return true;
-        if(req.equals("TF") && (p.qualifikationen.contains("GF") || p.qualifikationen.contains("EL"))) return true;
+        
+        // --- Feuerwehr-Hierarchie ---
+        
+        // GF, FueAs und EL können auch als Maschinist (MA) fahren
+        if(req.equals("MA") && (p.qualifikationen.contains("GF") || p.qualifikationen.contains("FueAs") || p.qualifikationen.contains("EL"))) return true;
+        
+        // Ein Maschinist (MA), GF, EL oder FueAs darf auch als Truppmann (TM) eingesetzt werden
+        if(req.equals("TM") && (p.qualifikationen.contains("TF") || p.qualifikationen.contains("GF") || p.qualifikationen.contains("EL") || p.qualifikationen.contains("MA") || p.qualifikationen.contains("FueAs"))) return true;
+        
+        // Ein Maschinist (MA), GF, EL oder FueAs darf auch als Truppführer (TF) eingesetzt werden
+        if(req.equals("TF") && (p.qualifikationen.contains("GF") || p.qualifikationen.contains("EL") || p.qualifikationen.contains("MA") || p.qualifikationen.contains("FueAs"))) return true;
+        
+        // Ein Einsatzleiter (EL) kann auch als Gruppenführer (GF) fungieren
         if(req.equals("GF") && p.qualifikationen.contains("EL")) return true;
+        
         return false;
     }
-
     public static int getMaxWachenErlaubt() {
         return 1 + (level / 5); 
     }

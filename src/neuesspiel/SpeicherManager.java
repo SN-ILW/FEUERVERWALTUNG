@@ -99,7 +99,10 @@ public class SpeicherManager {
             if (p.containsKey("hotkeyEinsatzEditor")) LogistikSimulator.hotkeyEinsatzEditor = Integer.parseInt(p.getProperty("hotkeyEinsatzEditor"));
             if (p.containsKey("hotkeyPersonalEinstellen")) LogistikSimulator.hotkeyPersonalEinstellen = Integer.parseInt(p.getProperty("hotkeyPersonalEinstellen"));
             if (p.containsKey("hotkeyKalender")) LogistikSimulator.hotkeyKalender = Integer.parseInt(p.getProperty("hotkeyKalender"));
-            
+            // --- LAUTSTÄRKE LADEN ---
+            if (p.containsKey("volNotruf")) LogistikSimulator.volNotruf = Integer.parseInt(p.getProperty("volNotruf"));
+            if (p.containsKey("volStatus6")) LogistikSimulator.volStatus6 = Integer.parseInt(p.getProperty("volStatus6"));
+            if (p.containsKey("volStatus7")) LogistikSimulator.volStatus7 = Integer.parseInt(p.getProperty("volStatus7"));
             // --- NEUE HOTKEYS ---
             if (p.containsKey("hotkeySave")) LogistikSimulator.hotkeySave = Integer.parseInt(p.getProperty("hotkeySave"));
             if (p.containsKey("hotkeyLogistik")) LogistikSimulator.hotkeyLogistik = Integer.parseInt(p.getProperty("hotkeyLogistik"));
@@ -319,6 +322,7 @@ public class SpeicherManager {
         
         if (!file.exists()) return false;
 
+       
         try (FileInputStream in = new FileInputStream(file);
              InputStreamReader reader = new InputStreamReader(in, StandardCharsets.UTF_8)) {
              
@@ -360,6 +364,11 @@ public class SpeicherManager {
             LogistikSimulator.cfgWirtschaftsSystem = parseBoolSafe(p.getProperty("cfgWirtschaftsSystem"), true);
             LogistikSimulator.offeneGehaelterUndKosten = parseIntSafe(p.getProperty("offeneGehaelterUndKosten"), 0);
             LogistikSimulator.hotkeyKalender = parseIntSafe(p.getProperty("hotkeyKalender"), java.awt.event.KeyEvent.VK_K);
+            
+            // --- LAUTSTÄRKE SPEICHERN ---
+            p.setProperty("volNotruf", String.valueOf(LogistikSimulator.volNotruf));
+            p.setProperty("volStatus6", String.valueOf(LogistikSimulator.volStatus6));
+            p.setProperty("volStatus7", String.valueOf(LogistikSimulator.volStatus7));
             
             
             //Save-hotkeys

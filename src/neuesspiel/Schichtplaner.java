@@ -25,6 +25,47 @@ public class Schichtplaner {
     
     private static int ausgewaehlterTagIndex = 0; 
 
+    // --- HELFER FÜR DIE 2-TAGE REGEL ---
+    private static boolean isWorking(String s) {
+        return s != null && !s.equals("Frei") && !s.equals("Krank") && !s.equals("Urlaub") && !s.equals("Lehrgang");
+    }
+
+    private static boolean canWorkToday(String[] plan, int day) {
+        int max = plan.length;
+        
+        // Prüfe ob die 2 Tage davor gearbeitet wurde
+        if (day >= 2 && isWorking(plan[day - 1]) && isWorking(plan[day - 2])) return false;
+        
+        // Prüfe ob die 2 Tage danach gearbeitet wird (verhindert Block-Bildung bei manuellen Einträgen)
+        if (day <= max - 3 && isWorking(plan[day + 1]) && isWorking(plan[day + 2])) return false;
+        
+        // Prüfe ob 1 Tag davor und 1 Tag danach gearbeitet wird (wäre auch 3 am Stück)
+        if (day >= 1 && day <= max - 2 && isWorking(plan[day - 1]) && isWorking(plan[day + 1])) return false;
+        
+        return true; 
+    }
+
+    private static int getSchichtenImPlan(Personal p, boolean aktuell) {
+        String[] plan = aktuell ? p.planAktuellerMonat : p.planNaechsterMonat;
+        int count = 0;
+        for (String s : plan) {
+            if (isWorking(s)) count++; 
+        }
+        return count;
+    }
+    
+    private static void updateSchichtenAnzeige() {
+        if (rowHeaderModel == null || tableModel == null) return;
+        for (int r = 0; r < tableModel.getRowCount(); r++) {
+            int count = 0;
+            for (int c = 0; c < tableModel.getColumnCount(); c++) {
+                String val = (String) tableModel.getValueAt(r, c);
+                if (isWorking(val)) count++;
+            }
+            rowHeaderModel.setValueAt(count + "x", r, 2);
+        }
+    }
+
     public static void oeffneSchichtplan() {
         if (wachen.isEmpty()) { JOptionPane.showMessageDialog(frame, "Keine Wachen vorhanden!"); return; }
         aktuelleWache = wachen.get(0);
@@ -37,7 +78,7 @@ public class Schichtplaner {
         d.setLocationRelativeTo(frame);
         d.setLayout(new BorderLayout());
         d.getContentPane().setBackground(new Color(35, 35, 35));
-        // --- ESC TASTE ZUM SCHLIESSEN & SPEICHERN ---
+        
         d.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeDialog");
         d.getRootPane().getActionMap().put("closeDialog", new AbstractAction() {
             @Override
@@ -47,7 +88,6 @@ public class Schichtplaner {
                 d.dispose();
             }
         });
-        
         
         JPanel titleBar = new JPanel(new BorderLayout());
         titleBar.setBackground(new Color(20, 20, 20));
@@ -73,9 +113,13 @@ public class Schichtplaner {
         JButton btnAktuell = createBtn("Aktueller Monat", new Color(41, 128, 185));
         JButton btnFolge = createBtn("Folge-Monat", new Color(39, 174, 96));
         JButton btnCopy = createBtn("Aktuellen kopieren", new Color(211, 84, 0));
+        
+        JButton btnAutoTag = createBtn("Auto-Fill (Nur Tag)", new Color(155, 89, 182));
+        JButton btnAuto = createBtn("Auto-Fill (Ganzen Monat)", new Color(142, 68, 173));
 
         topMenu.add(lblMonat); topMenu.add(Box.createHorizontalStrut(20));
-        topMenu.add(btnAktuell); topMenu.add(btnFolge); topMenu.add(btnCopy);
+        topMenu.add(btnAktuell); topMenu.add(btnFolge); topMenu.add(btnCopy); 
+        topMenu.add(btnAutoTag); topMenu.add(btnAuto);
 
         JPanel leftPanel = new JPanel(new BorderLayout(5, 5));
         leftPanel.setPreferredSize(new Dimension(300, 0));
@@ -160,10 +204,10 @@ public class Schichtplaner {
             }
         });
         
-        rowHeaderModel = new DefaultTableModel(0, 2) {
+        rowHeaderModel = new DefaultTableModel(0, 3) {
             @Override public boolean isCellEditable(int row, int column) { return false; }
         };
-        rowHeaderModel.setColumnIdentifiers(new String[]{"Name", "Qualifikationen"});
+        rowHeaderModel.setColumnIdentifiers(new String[]{"Name", "Qualifikationen", "Schichten"});
         rowHeaderTable = new JTable(rowHeaderModel);
         rowHeaderTable.setRowHeight(28);
         rowHeaderTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
@@ -171,20 +215,34 @@ public class Schichtplaner {
         rowHeaderTable.getTableHeader().setForeground(Color.WHITE);
         rowHeaderTable.getTableHeader().setReorderingAllowed(false);
         
-        rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(150);
-        rowHeaderTable.getColumnModel().getColumn(0).setMinWidth(150);
-        rowHeaderTable.getColumnModel().getColumn(0).setMaxWidth(150);
+        rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(130);
+        rowHeaderTable.getColumnModel().getColumn(0).setMinWidth(130);
+        rowHeaderTable.getColumnModel().getColumn(0).setMaxWidth(130);
         
-        rowHeaderTable.getColumnModel().getColumn(1).setPreferredWidth(200);
-        rowHeaderTable.getColumnModel().getColumn(1).setMinWidth(200);
-        rowHeaderTable.getColumnModel().getColumn(1).setMaxWidth(200);
+        rowHeaderTable.getColumnModel().getColumn(1).setPreferredWidth(140);
+        rowHeaderTable.getColumnModel().getColumn(1).setMinWidth(140);
+        rowHeaderTable.getColumnModel().getColumn(1).setMaxWidth(140);
+        
+        rowHeaderTable.getColumnModel().getColumn(2).setPreferredWidth(80);
+        rowHeaderTable.getColumnModel().getColumn(2).setMinWidth(80);
+        rowHeaderTable.getColumnModel().getColumn(2).setMaxWidth(80);
         
         rowHeaderTable.setPreferredScrollableViewportSize(new Dimension(350, 0));
         
         rowHeaderTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                c.setBackground(new Color(40, 40, 40)); c.setForeground(Color.WHITE);
+                c.setBackground(new Color(40, 40, 40)); 
+                
+                if (column == 2) {
+                    c.setForeground(new Color(241, 196, 15));
+                    setHorizontalAlignment(SwingConstants.CENTER);
+                    setFont(new Font("Segoe UI", Font.BOLD, 12));
+                } else {
+                    c.setForeground(Color.WHITE);
+                    setHorizontalAlignment(SwingConstants.LEFT);
+                    setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                }
                 return c;
             }
         });
@@ -205,24 +263,20 @@ public class Schichtplaner {
                 else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Frei")) { c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); }
                 else { 
-                    // --- NEU: FARBE AUS DEM FAHRZEUG LADEN ---
                     boolean farbeGefunden = false;
                     for (Wache w : wachen) {
                         for (Fahrzeug f : w.fuhrpark) {
                             if (f.funkrufname.equals(val)) {
                                 if (f.stempelFarbe != null) {
                                     c.setBackground(f.stempelFarbe);
-                                    
-                                    // Berechnet die Helligkeit der Farbe (Luma-Formel)
-                                    // um automatisch weisse oder schwarze Schrift zu setzen
                                     double luma = (0.299 * f.stempelFarbe.getRed()) + (0.587 * f.stempelFarbe.getGreen()) + (0.114 * f.stempelFarbe.getBlue());
                                     if (luma > 140) {
-                                        c.setForeground(Color.BLACK); // Bei hellen Farben schwarze Schrift
+                                        c.setForeground(Color.BLACK); 
                                     } else {
-                                        c.setForeground(Color.WHITE); // Bei dunklen Farben weisse Schrift
+                                        c.setForeground(Color.WHITE); 
                                     }
                                 } else {
-                                    c.setBackground(new Color(46, 204, 113)); // Standardgruen, falls keine Farbe gesetzt
+                                    c.setBackground(new Color(46, 204, 113)); 
                                     c.setForeground(Color.BLACK);
                                 }
                                 farbeGefunden = true;
@@ -231,8 +285,6 @@ public class Schichtplaner {
                         }
                         if (farbeGefunden) break;
                     }
-                    
-                    // Fallback, falls das Fahrzeug geloescht wurde aber noch im Dienstplan steht
                     if (!farbeGefunden) {
                         c.setBackground(new Color(46, 204, 113)); 
                         c.setForeground(Color.BLACK);
@@ -261,6 +313,7 @@ public class Schichtplaner {
                     if(werkzeug != null) {
                         tableModel.setValueAt(werkzeug, row, col);
                         updateFahrzeugInfo();
+                        updateSchichtenAnzeige(); 
                     }
                 }
             }
@@ -312,6 +365,112 @@ public class Schichtplaner {
                 for (Personal p : aktuelleWache.personalPool) System.arraycopy(p.planAktuellerMonat, 0, p.planNaechsterMonat, 0, 31);
                 loadTableData();
             }
+        });
+        
+        btnAutoTag.addActionListener(e -> {
+            saveTableData(); 
+            int day = ausgewaehlterTagIndex;
+            
+            int heutigerTagIndex = LogistikSimulator.getCurrentDate().getDayOfMonth() - 1;
+            if (zeigeAktuellenMonat && day < heutigerTagIndex) {
+                JOptionPane.showMessageDialog(d, "Vergangene Schichten koennen nicht mehr automatisch geaendert werden!", "Fehler", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            for (Personal p : aktuelleWache.personalPool) {
+                String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                if (plan[day] == null) plan[day] = "Frei";
+                if (!plan[day].equals("Krank") && !plan[day].equals("Urlaub") && !plan[day].equals("Lehrgang")) {
+                    plan[day] = "Frei"; 
+                }
+            }
+            
+            ArrayList<Personal> fairesPersonal = new ArrayList<>(aktuelleWache.personalPool);
+            fairesPersonal.sort(java.util.Comparator.comparingInt(p -> getSchichtenImPlan(p, zeigeAktuellenMonat)));
+            
+            for (Fahrzeug f : aktuelleWache.fuhrpark) {
+                ArrayList<String> reqs = getRequiredRoles(f);
+                ArrayList<String> missing = new ArrayList<>(reqs);
+                
+                for (Personal p : fairesPersonal) { 
+                    String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                    if (plan[day].equals("Frei") && canWorkToday(plan, day)) { 
+                        for (int i = 0; i < missing.size(); i++) {
+                            if (personErfuellt(p, missing.get(i))) {
+                                missing.remove(i);
+                                plan[day] = f.funkrufname; 
+                                break; 
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Bereitschaft einteilen: Ignoriert die canWorkToday-Regel (darf auch am 3. Tag sein!)
+            int bereitschaftsZaehler = 0;
+            for (Personal p : fairesPersonal) {
+                String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                if (plan[day].equals("Frei")) {
+                    plan[day] = "Bereitschaft";
+                    bereitschaftsZaehler++;
+                    if (bereitschaftsZaehler >= 2) break;
+                }
+            }
+            
+            loadTableData(); 
+            JOptionPane.showMessageDialog(d, "Dienstplan fuer Tag " + (day + 1) + " fair befuellt!");
+        });
+
+        btnAuto.addActionListener(e -> {
+            saveTableData(); 
+            int tageImMonat = tableModel.getColumnCount();
+            
+            for (int day = 0; day < tageImMonat; day++) {
+                int heutigerTagIndex = LogistikSimulator.getCurrentDate().getDayOfMonth() - 1;
+                if (zeigeAktuellenMonat && day < heutigerTagIndex) continue;
+
+                for (Personal p : aktuelleWache.personalPool) {
+                    String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                    if (plan[day] == null) plan[day] = "Frei";
+                    if (!plan[day].equals("Krank") && !plan[day].equals("Urlaub") && !plan[day].equals("Lehrgang")) {
+                        plan[day] = "Frei"; 
+                    }
+                }
+                
+                ArrayList<Personal> fairesPersonal = new ArrayList<>(aktuelleWache.personalPool);
+                fairesPersonal.sort(java.util.Comparator.comparingInt(p -> getSchichtenImPlan(p, zeigeAktuellenMonat)));
+                
+                for (Fahrzeug f : aktuelleWache.fuhrpark) {
+                    ArrayList<String> reqs = getRequiredRoles(f);
+                    ArrayList<String> missing = new ArrayList<>(reqs);
+                    
+                    for (Personal p : fairesPersonal) { 
+                        String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                        if (plan[day].equals("Frei") && canWorkToday(plan, day)) { 
+                            for (int i = 0; i < missing.size(); i++) {
+                                if (personErfuellt(p, missing.get(i))) {
+                                    missing.remove(i);
+                                    plan[day] = f.funkrufname; 
+                                    break; 
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Bereitschaft einteilen: Ignoriert die canWorkToday-Regel!
+                int bereitschaftsZaehler = 0;
+                for (Personal p : fairesPersonal) {
+                    String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
+                    if (plan[day].equals("Frei")) {
+                        plan[day] = "Bereitschaft";
+                        bereitschaftsZaehler++;
+                        if (bereitschaftsZaehler >= 2) break;
+                    }
+                }
+            }
+            loadTableData(); 
+            JOptionPane.showMessageDialog(d, "Dienstplan fair generiert! Fahrzeug-Schichten mit Pausen & Bereitschaft verteilt.");
         });
 
         btnClose.addActionListener(e -> d.dispose());
@@ -403,7 +562,7 @@ public class Schichtplaner {
         rowHeaderModel.setRowCount(0);
 
         for (Personal p : aktuelleWache.personalPool) {
-            rowHeaderModel.addRow(new Object[]{ p.name, String.join(", ", p.qualifikationen) });
+            rowHeaderModel.addRow(new Object[]{ p.name, String.join(", ", p.qualifikationen), "0" });
             
             String[] row = new String[tageImMonat];
             String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
@@ -414,6 +573,7 @@ public class Schichtplaner {
         }
         
         updateFahrzeugInfo();
+        updateSchichtenAnzeige(); 
     }
 
     private static void saveTableData() {
