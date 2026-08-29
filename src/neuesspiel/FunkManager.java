@@ -45,7 +45,8 @@ public class FunkManager {
     }
 
     public static void logMessage(String absender, String nachricht) {
-        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
+        // HIER WURDE DIE ECHTE UHRZEIT DURCH DIE INGAME-UHRZEIT ERSETZT!
+        String time = LogistikSimulator.getUhrzeit();
         String text = "[" + time + "] " + absender + ": " + nachricht + "\n";
         
         funkHistorie.add(text);

@@ -63,22 +63,77 @@ public class MenuEinsatz {
     }
 
     public static void oeffneEinsatzDetails(Einsatz ein) {
-        JDialog d = createFramelessDialog("Einsatzakte: " + ein.vorlage.stichwort, 500, 400);
+        JDialog d = createFramelessDialog("EINSATZAKTE: " + ein.vorlage.stichwort + " - " + ein.beschreibung, 650, 550);
         
-        JTextArea txtLage = new JTextArea(ein.getLagemeldungText());
-        txtLage.setEditable(false); txtLage.setFont(new Font("Consolas", Font.PLAIN, 12));
-        txtLage.setMargin(new Insets(10, 10, 10, 10)); txtLage.setBackground(new Color(35, 35, 35)); txtLage.setForeground(Color.WHITE);
-        d.add(new JScrollPane(txtLage), BorderLayout.CENTER);
+        StringBuilder html = new StringBuilder();
+        html.append("<html><head><style>")
+            .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 10px; margin: 0; }")
+            .append(".box { background-color: #2a2a2a; border-left: 4px solid #3498db; padding: 8px; margin-bottom: 10px; }")
+            .append(".box-pat { border-left-color: #e74c3c; }")
+            .append(".box-lage { border-left-color: #f1c40f; }")
+            .append(".title { font-weight: bold; font-size: 13px; color: #ffffff; margin-bottom: 4px; }")
+            .append(".log-entry { font-family: 'Consolas', monospace; font-size: 11px; color: #bdc3c7; margin-bottom: 2px; }")
+            .append("</style></head><body>");
 
-        JPanel btnPanel = new JPanel(new FlowLayout()); btnPanel.setBackground(new Color(35, 35, 35));
+        // 1. Allgemein & Lage
+        html.append("<div class='box box-lage'>")
+            .append("<div class='title'>EINSATZLAGE & OBJEKT</div>")
+            .append("<b>Stichwort:</b> ").append(ein.vorlage.stichwort).append("<br>")
+            .append("<b>Objekt / Lage:</b> ").append(ein.schadensObjekt).append("<br>")
+            .append("<b>Lagemeldung:</b> ").append(ein.getLagemeldungText().replace("\n", "<br>"))
+            .append("</div>");
+
+        // 2. Patienten & Medizinische Daten
+        html.append("<div class='box box-pat'>")
+            .append("<div class='title'>PATIENTEN & MANV-STATUS</div>")
+            .append("<b>Betroffene Personen:</b> ").append(ein.patientenAnzahl).append("<br>")
+            .append("<b>Status:</b> ").append(ein.patientenStatusText)
+            .append("</div>");
+
+        // 3. Funksprueche / Einsatz-Protokoll
+        html.append("<div class='box'>")
+            .append("<div class='title'>EINSATZPROTOKOLL & FUNKVERLAUF</div>");
+        
+        if (ein.einsatzProtokoll.isEmpty()) {
+            html.append("<div class='log-entry'>Keine Funksprueche protokolliert.</div>");
+        } else {
+            for (String log : ein.einsatzProtokoll) {
+                html.append("<div class='log-entry'>&gt; ").append(log).append("</div>");
+            }
+        }
+        html.append("</div>");
+
+        html.append("</body></html>");
+
+        JEditorPane txtAkte = new JEditorPane("text/html", html.toString());
+        txtAkte.setEditable(false);
+        txtAkte.setBackground(new Color(35, 35, 35));
+
+        d.add(new JScrollPane(txtAkte), BorderLayout.CENTER);
+
+        // Buttons unten
+        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT)); 
+        btnPanel.setBackground(new Color(35, 35, 35));
+        
         JButton btnBeenden = new JButton("Einsatz sofort abbrechen (-250 XP)");
-        btnBeenden.setBackground(new Color(192, 57, 43)); btnBeenden.setForeground(Color.WHITE);
+        btnBeenden.setBackground(new Color(192, 57, 43)); 
+        btnBeenden.setForeground(Color.WHITE);
         btnBeenden.addActionListener(e -> {
-            ein.bereitZumLoeschen = true; xp -= 250; abgelehnteEinsaetzeHeute++; uiAktualisieren(getUhrzeit()); d.dispose();
+            ein.bereitZumLoeschen = true; 
+            LogistikSimulator.xp -= 250; 
+            LogistikSimulator.abgelehnteEinsaetzeHeute++; 
+            LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
+            d.dispose();
         });
-        btnPanel.add(btnBeenden);
 
-        d.add(btnPanel, BorderLayout.SOUTH); d.setVisible(true);
+        JButton btnClose = new JButton("Schliessen");
+        btnClose.addActionListener(e -> d.dispose());
+
+        btnPanel.add(btnBeenden);
+        btnPanel.add(btnClose);
+
+        d.add(btnPanel, BorderLayout.SOUTH);
+        d.setVisible(true);
     }
     
     public static void oeffneAlarmierungsFenster(Einsatz ein) {

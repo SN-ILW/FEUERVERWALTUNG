@@ -11,7 +11,8 @@ import java.util.HashMap;
 public class LogistikSimulator {
     
     public static JFrame frame;
-    public static JTextArea txtStatus, txtEinsatz;
+    public static JTextArea txtStatus;
+    public static JEditorPane txtEinsatz;
     public static JButton btnPause, btnPlay, btnFastForward;
     public static JLabel topUhrzeitLabel, playerInfoLabel, notrufLabel;
     public static JPanel notrufPanel;
@@ -237,16 +238,23 @@ public class LogistikSimulator {
         topRightWrapper.add(notrufPanel, BorderLayout.CENTER);
         pnlRight.add(topRightWrapper, BorderLayout.NORTH);
         
-        txtEinsatz = new JTextArea(); 
-        txtEinsatz.setEditable(false); 
-        txtEinsatz.setFont(new Font("Consolas", Font.PLAIN, 14));
-        txtEinsatz.setBackground(bgDark); 
-        txtEinsatz.setForeground(Color.WHITE);
-        txtEinsatz.setLineWrap(true);
-        txtEinsatz.setWrapStyleWord(true);
-        
+        txtEinsatz = new JEditorPane();
+        txtEinsatz.setContentType("text/html");
+        txtEinsatz.setEditable(false);
+        txtEinsatz.setBackground(bgDark);
+        txtEinsatz.addHyperlinkListener(e -> {
+            if(e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED) {
+                String desc = e.getDescription();
+                if(desc != null && desc.startsWith("AKTE:")) {
+                    int idx = Integer.parseInt(desc.substring(5));
+                    if (idx >= 0 && idx < aktiveEinsaetze.size()) {
+                        FensterManager.oeffneEinsatzDetails(aktiveEinsaetze.get(idx));
+                    }
+                }
+            }
+        });
         JScrollPane scrollEinsatz = new JScrollPane(txtEinsatz);
-        scrollEinsatz.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+        
         pnlRight.add(scrollEinsatz, BorderLayout.CENTER);
         
         pnlCenter.add(pnlLeft); 
@@ -616,16 +624,16 @@ public class LogistikSimulator {
             btnLog.setVisible(cfgLogistikAktiv);
         }
 
-        String rushHourText = isRushHour() ? " | RUSH-HOUR (Verkehr blockiert)" : "";
-        String eventText = aktuellesEvent != null ? " | EVENT: " + aktuellesEvent.name : "";
-        topUhrzeitLabel.setText(getDatumUndUhrzeit() + " " + zeit + " Uhr" + rushHourText + eventText + " | Leitstelle & Logistik");
+        String rushHourText = isRushHour() ? " Berufsverkehr" : "";
+        String eventText = aktuellesEvent != null ? " | " + aktuellesEvent.name : "";
+        topUhrzeitLabel.setText("" + getDatumUndUhrzeit() + " - " + zeit + " Uhr" + rushHourText + eventText);
         
         String missionText = "";
         if(aktuelleMission != null) {
-            String status = aktuelleMission.abgeschlossen ? "(ERFUELLT!)" : "(" + aktuelleMission.fortschritt + "/" + aktuelleMission.zielWert + ")";
-            missionText = "  |  Mission: " + aktuelleMission.titel + " " + status;
+            String status = aktuelleMission.abgeschlossen ? " (ERFÜLLT!)" : " (" + aktuelleMission.fortschritt + "/" + aktuelleMission.zielWert + ")";
+            missionText = "  |" + aktuelleMission.titel + status;
         }
-        playerInfoLabel.setText("Level: " + level + " | XP: " + xp + " / " + getRequiredXpForLevel(level) + " | Budget: " + budget + " \u20AC" + missionText);
+        playerInfoLabel.setText("Level " + level + "  |  XP: " + xp + " / " + getRequiredXpForLevel(level) + "  |  " + budget + " €" + missionText);
         
         long unread = postfach.stream().filter(m -> !m.gelesen).count();
         btnPostfach.setText("Postfach (" + unread + ")");
@@ -634,14 +642,28 @@ public class LogistikSimulator {
 
         if (inGameSekunden >= 19*3600) {
             btnTagBeenden.setEnabled(true);
-            btnTagBeenden.setBackground(new Color(211, 84, 0));
+            btnTagBeenden.setBackground(new Color(142, 68, 173));
         } else {
             btnTagBeenden.setEnabled(false);
-            btnTagBeenden.setBackground(new Color(100, 100, 100));
+            btnTagBeenden.setBackground(new Color(60, 60, 60));
         }
 
+        // --- MODERNES LEITSTELLEN-BOARD (HTML/CSS) ---
         StringBuilder fms = new StringBuilder();
-        fms.append("<html><body style='color:#a9b7c6; font-family:Consolas, sans-serif; font-size:12px; margin:5px;'>");
+        fms.append("<html><head><style>")
+           .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
+           .append(".wache-title { color: #f1c40f; font-size: 13px; font-weight: bold; padding: 4px 0; border-bottom: 1px solid #444; margin-top: 10px; }")
+           .append(".badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 11px; color: #ffffff; }")
+           .append(".st-1 { background-color: #2980b9; }") // Status 1: Blau
+           .append(".st-2 { background-color: #27ae60; }") // Status 2: Grün
+           .append(".st-3 { background-color: #e67e22; }") // Status 3: Orange
+           .append(".st-4 { background-color: #d35400; }") // Status 4: Dunkelorange
+           .append(".st-6 { background-color: #c0392b; }") // Status 6: Rot
+           .append(".st-7 { background-color: #8e44ad; }") // Status 7: Lila
+           .append(".st-8 { background-color: #16a085; }") // Status 8: Türkis
+           .append(".warn-box { background-color: #3d1c1d; border: 1px solid #e74c3c; color: #ff6b6b; padding: 6px; border-radius: 4px; margin-bottom: 8px; }")
+           .append("a { color: #f39c12; text-decoration: none; font-weight: bold; }")
+           .append("</style></head><body>");
         
         boolean hasWarnings = false;
         StringBuilder warnings = new StringBuilder();
@@ -651,95 +673,112 @@ public class LogistikSimulator {
                 int hLag = hauptlager.getOrDefault(cm.name, 0);
                 if(hLag <= (cm.warnSchwelle * 5)) {
                     hasWarnings = true;
-                    warnings.append("- Hauptlager: ").append(cm.name).append(" fast leer (").append(hLag).append(")<br>");
+                    warnings.append("• <b>Hauptlager:</b> ").append(cm.name).append(" fast leer (").append(hLag).append(")<br>");
                 }
             }
-            
             for(Wache w : wachen) {
                 for(CustomMaterial cm : customMaterials) {
                     int wLag = w.material.getOrDefault(cm.name, 0);
                     if(wLag <= cm.warnSchwelle) {
                         hasWarnings = true;
-                        warnings.append("- ").append(w.name).append(": ").append(cm.name).append(" fast leer (").append(wLag).append(")<br>");
+                        warnings.append("• <b>").append(w.name).append(":</b> ").append(cm.name).append(" kritisch (").append(wLag).append(")<br>");
                     }
                 }
             }
-            
             if(hasWarnings) {
-                fms.append("<div style='color:#e74c3c; margin-bottom:10px;'><b>MATERIAL-WARNUNGEN:</b><br>").append(warnings.toString()).append("</div>");
+                fms.append("<div class='warn-box'><b>MATERIAL-ENGPASS DETEKTIERT:</b><br>").append(warnings.toString()).append("</div>");
             }
         }
 
         for(Wache w : wachen) {
-            fms.append("<b style='color:#ffffff;'>=== ").append(w.name).append(" (Stufe ").append(w.stufe).append(") [").append(w.fuhrpark.size()).append("/").append(getFahrzeugLimit(w.stufe)).append("] ===</b><br>");
+            fms.append("<div class='wache-title'>").append(w.name.toUpperCase())
+               .append(" (Stufe ").append(w.stufe).append(") &nbsp;|&nbsp; Belegung: ")
+               .append(w.fuhrpark.size()).append("/").append(getFahrzeugLimit(w.stufe)).append("</div>")
+               .append("<table width='100%' cellpadding='2' cellspacing='0'>");
+            
             for(Fahrzeug f : w.fuhrpark) {
-                String color = "#ffffff";
-                if(f.status == 1) color = "#3498db";
-                else if(f.status == 2) color = "#2ecc71";
-                else if(f.status == 3 || f.status == 4) color = "#e67e22";
-                else if(f.status == 6) color = "#e74c3c";
-                else if(f.status == 7 || f.status == 8) color = "#9b59b6";
+                String stClass = "st-" + f.status;
+                fms.append("<tr>")
+                   .append("<td width='60'><b>[").append(f.typ).append("]</b></td>")
+                   .append("<td><b>").append(f.funkrufname).append("</b></td>")
+                   .append("<td width='70'><span class='badge ").append(stClass).append("'>Status ").append(f.status).append("</span></td>")
+                   .append("<td>");
                 
-                fms.append("<span style='color:#ffffff;'>[").append(f.typ).append("]</span> <b>").append(f.funkrufname).append("</b> | Status: <b style='color:").append(color).append(";'>").append(f.status).append("</b> ");
-                
-                if(f.status == 3) fms.append("-> Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
-                else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("-> Rueckfahrt: ").append(f.anfahrtsZeit/speed).append("s");
-                else if(f.status == 8) fms.append("-> Auf dem Weg zur Klinik: ").append(f.anfahrtsZeit/speed).append("s");
-                else if(f.status == 4 && f.aktuellerEinsatz != null) fms.append("-> <a href='FZG:").append(f.funkrufname).append("' style='color:#f1c40f; text-decoration:underline;'>Am Einsatzort (Akte oeffnen)</a>");
-                else if(f.status == 7) fms.append("-> <a href='HOSP:").append(f.funkrufname).append("' style='color:#9b59b6; text-decoration:underline;'>Patient geladen (Zielklinik waehlen)</a>");
+                if(f.status == 3) fms.append("Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
+                else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("Rückfahrt: ").append(f.anfahrtsZeit/speed).append("s");
+                else if(f.status == 8) fms.append("Anfahrt Klinik: ").append(f.anfahrtsZeit/speed).append("s");
+                else if(f.status == 4 && f.aktuellerEinsatz != null) fms.append("<a href='FZG:").append(f.funkrufname).append("'>Am Einsatzort (Akte)</a>");
+                else if(f.status == 7) fms.append("<a href='HOSP:").append(f.funkrufname).append("'>Patient geladen (Ziel wählen)</a>");
                 else if(f.status == 6) {
-                    fms.append("-> <span style='color:#e74c3c;'>GRUND: ").append(f.ausfallGrund).append("</span>");
-                    if (f.ausfallGrund.equals("Personalwechsel")) {
-                        fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
-                    } else if (f.ausfallGrund.equals("Beschadigung")) {
-                        fms.append(" (Wartet auf Werkstatt)");
-                    } 
-                    else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) {
-                        fms.append(" (In Werkstatt fuer ").append(f.reparaturDauer/speed).append(" Sec.)");
-                    }
+                    fms.append("<span style='color:#e74c3c;'>").append(f.ausfallGrund).append("</span>");
+                    if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
+                    else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) fms.append(" (").append(f.reparaturDauer/speed).append("s)");
                 }
-                fms.append("<br>");
+                fms.append("</td></tr>");
             }
-            fms.append("<br>");
+            fms.append("</table>");
         }
         fms.append("</body></html>");
         fmsBoard.setText(fms.toString());
 
         if (aktuellerNotruf != null) {
             notrufPanel.setBackground(new Color(192, 57, 43));
-            notrufLabel.setText("!!! NOTRUF: " + aktuellerNotruf.beschreibung + " !!!");
+            notrufLabel.setText("NOTRUF: " + aktuellerNotruf.beschreibung.toUpperCase());
         } else {
             notrufPanel.setBackground(new Color(40, 40, 40));
             notrufLabel.setText("Kein Notruf anliegend.");
         }
 
+// --- RECHTE SEITE: FUNK & EINSÄTZE (MODERNES DESIGN OHNE EMOJIS) ---
         StringBuilder lage = new StringBuilder();
-        
-        // --- OPTISCHE TRENNUNG: REGIONALER FUNKVERKEHR ---
-        lage.append("=================================================================\n");
-        lage.append("===                 REGIONALER FUNKVERKEHR                    ===\n");
-        lage.append("=================================================================\n\n");
-    
-        // FunkManager starten, falls noch nicht passiert
+        lage.append("<html><head><style>")
+            .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
+            .append(".header-funk { background-color: #1a252f; color: #3498db; padding: 6px 10px; font-weight: bold; border-left: 4px solid #3498db; margin-bottom: 10px; font-size: 14px; letter-spacing: 1px; }")
+            .append(".header-mission { color: #f1c40f; font-weight: bold; margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 4px; font-size: 13px; letter-spacing: 1px; }")
+            .append(".mission-box { background-color: #2a2a2a; border-left: 3px solid #e74c3c; padding: 8px; margin-top: 8px; font-size: 12px; }")
+            .append(".mission-title { color: #e74c3c; font-weight: bold; margin-bottom: 4px; font-size: 13px; }")
+            .append(".funk-msg { color: #bdc3c7; font-family: 'Consolas', monospace; font-size: 12px; margin-bottom: 4px; padding-left: 5px; }")
+            .append(".system-msg { color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 5px; }")
+            .append("</style></head><body>");
+
+        // -- Bereich: Funkverkehr --
+        lage.append("<div class='header-funk'>REGIONALER FUNKVERKEHR (MV)</div>");
+
         FunkManager.init();
-    
         if (cfgKiFunk) {
             for (String msg : FunkManager.funkHistorie) {
-                lage.append(msg);
+                // Konsolen-Look für den Funk (mit ">" als Prefix)
+                lage.append("<div class='funk-msg'>&gt; ").append(msg.replace("\n", "<br>")).append("</div>");
             }
         } else {
-            lage.append(" [ Funkueberwachung in den Gameplay-Einstellungen deaktiviert ]\n");
+            lage.append("<div class='system-msg'>[ System: Funküberwachung deaktiviert ]</div>");
         }
-        lage.append("\n\n\n");
-    
-        if(inGameSekunden >= 19*3600) lage.append("Leitstelle geschlossen.\n\n");
-        lage.append("=== LAUFENDE EINSAETZE ===\n");
 
-        if (aktiveEinsaetze.isEmpty()) lage.append("Aktuell keine Einsaetze.\n");
-        for (Einsatz e : aktiveEinsaetze) {
-            lage.append("Einsatz: ").append(e.beschreibung).append(" (Alarm: ").append(e.alarmUhrzeit).append(")\n");
-            lage.append(e.getLagemeldungText()).append("\n\n");
+        if(inGameSekunden >= 19*3600) {
+            lage.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Nachtruhe) ]</div>");
         }
+
+        // -- Bereich: Aktive Einsätze --
+        lage.append("<div class='header-mission'>LAUFENDE EINSÄTZE</div>");
+
+        if (aktiveEinsaetze.isEmpty()) {
+            lage.append("<div class='system-msg'>Aktuell keine aktiven Einsätze.</div>");
+        } else {
+            for (Einsatz e : aktiveEinsaetze) {
+                String lageText = e.getLagemeldungText().replace("\n", "<br>");
+                
+                lage.append("<div class='mission-box'>")
+                    .append("<div class='mission-title'>")
+                    // HIER IST DER LINK (<a> Tag), der den gesamten roten Titel umschließt!
+                    .append("<a href='AKTE:").append(aktiveEinsaetze.indexOf(e)).append("' style='color:#e74c3c; text-decoration:none;'>")
+                    .append("[").append(e.vorlage.stichwort).append("] ").append(e.beschreibung.toUpperCase()).append(" | Alarm: ").append(e.alarmUhrzeit)
+                    .append("</a></div>")
+                    .append("<div style='color:#cccccc;'>").append(lageText).append("</div>")
+                    .append("</div>");
+            }
+        }
+        
+        lage.append("</body></html>");
         txtEinsatz.setText(lage.toString());
     }
 
