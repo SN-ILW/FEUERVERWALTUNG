@@ -1883,4 +1883,25 @@ public class LogistikSimulator {
         d.setVisible(true);
     }
 
+    
+    // --- NEU: DATUM LOGIK ---
+    public static boolean istSonntag(java.time.LocalDate date) {
+        return date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY;
+    }
+
+    public static boolean istFeiertag(java.time.LocalDate date) {
+        int d = date.getDayOfMonth();
+        int m = date.getMonthValue();
+        
+        // Feste Feiertage in Deutschland (kann beliebig erweitert werden)
+        if (d == 1 && m == 1) return true;   // Neujahr
+        if (d == 1 && m == 5) return true;   // Tag der Arbeit
+        if (d == 3 && m == 10) return true;  // Tag der Deutschen Einheit
+        if (d == 25 && m == 12) return true; // 1. Weihnachtstag
+        if (d == 26 && m == 12) return true; // 2. Weihnachtstag
+        if (d == 31 && m == 10) return true; // Reformationstag
+        
+        return false;
+    }
+    
 }

@@ -32,16 +32,9 @@ public class Schichtplaner {
 
     private static boolean canWorkToday(String[] plan, int day) {
         int max = plan.length;
-        
-        // Prüfe ob die 2 Tage davor gearbeitet wurde
         if (day >= 2 && isWorking(plan[day - 1]) && isWorking(plan[day - 2])) return false;
-        
-        // Prüfe ob die 2 Tage danach gearbeitet wird (verhindert Block-Bildung bei manuellen Einträgen)
         if (day <= max - 3 && isWorking(plan[day + 1]) && isWorking(plan[day + 2])) return false;
-        
-        // Prüfe ob 1 Tag davor und 1 Tag danach gearbeitet wird (wäre auch 3 am Stück)
         if (day >= 1 && day <= max - 2 && isWorking(plan[day - 1]) && isWorking(plan[day + 1])) return false;
-        
         return true; 
     }
 
@@ -189,8 +182,8 @@ public class Schichtplaner {
         table = new JTable(tableModel);
         table.setRowHeight(28);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        table.getTableHeader().setBackground(new Color(20, 30, 48));
-        table.getTableHeader().setForeground(Color.WHITE);
+        
+        // --- HIER WURDE DER ALTE RENDERER ENTFERNT (WIRD JETZT IN loadTableData GESETZT) ---
         table.getTableHeader().setReorderingAllowed(false);
         
         table.getTableHeader().addMouseListener(new MouseAdapter() {
@@ -252,8 +245,21 @@ public class Schichtplaner {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
                 
+                LocalDate cDate = LogistikSimulator.getCurrentDate().withDayOfMonth(1);
+                if (!zeigeAktuellenMonat) cDate = cDate.plusMonths(1);
+                
+                Color bgFrei = new Color(52, 152, 219); 
+                if (column < cDate.lengthOfMonth()) {
+                    LocalDate cellDate = cDate.withDayOfMonth(column + 1);
+                    if (LogistikSimulator.istFeiertag(cellDate)) {
+                        bgFrei = new Color(146, 43, 33); 
+                    } else if (LogistikSimulator.istSonntag(cellDate)) {
+                        bgFrei = new Color(176, 58, 46); 
+                    }
+                }
+
                 if (val == null) {
-                    c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE);
+                    c.setBackground(bgFrei); c.setForeground(Color.WHITE);
                     return c;
                 }
                 
@@ -261,7 +267,7 @@ public class Schichtplaner {
                 else if (val.equals("Urlaub")) { c.setBackground(new Color(243, 156, 18)); c.setForeground(Color.BLACK); }
                 else if (val.equals("Lehrgang")) { c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); }
                 else if (val.equals("Bereitschaft")) { c.setBackground(new Color(241, 196, 15)); c.setForeground(Color.BLACK); }
-                else if (val.equals("Frei")) { c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); }
+                else if (val.equals("Frei")) { c.setBackground(bgFrei); c.setForeground(Color.WHITE); }
                 else { 
                     boolean farbeGefunden = false;
                     for (Wache w : wachen) {
@@ -406,7 +412,6 @@ public class Schichtplaner {
                 }
             }
             
-            // Bereitschaft einteilen: Ignoriert die canWorkToday-Regel (darf auch am 3. Tag sein!)
             int bereitschaftsZaehler = 0;
             for (Personal p : fairesPersonal) {
                 String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
@@ -458,7 +463,6 @@ public class Schichtplaner {
                     }
                 }
                 
-                // Bereitschaft einteilen: Ignoriert die canWorkToday-Regel!
                 int bereitschaftsZaehler = 0;
                 for (Personal p : fairesPersonal) {
                     String[] plan = zeigeAktuellenMonat ? p.planAktuellerMonat : p.planNaechsterMonat;
@@ -551,11 +555,44 @@ public class Schichtplaner {
         }
 
         String[] columns = new String[tageImMonat];
-        for (int i = 0; i < tageImMonat; i++) columns[i] = String.valueOf(i + 1);
+        for (int i = 0; i < tageImMonat; i++) {
+            LocalDate date = cDate.withDayOfMonth(i + 1);
+            // BONUS: Wochentag (Mo, Di, Mi...) in den Tabellenkopf schreiben
+            String wochentag = date.format(java.time.format.DateTimeFormatter.ofPattern("E", java.util.Locale.GERMAN));
+            columns[i] = (i + 1) + " (" + wochentag + ")";
+        }
 
         tableModel.setColumnIdentifiers(columns);
         for(int i = 0; i < tableModel.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setPreferredWidth(80);
+            table.getColumnModel().getColumn(i).setPreferredWidth(85); // Etwas breiter gemacht für den Wochentag
+            
+            // --- NEU: RENDERER WIRD BEIM LADEN DES MONATS FEST AN DIE SPALTE GEBUNDEN ---
+            table.getColumnModel().getColumn(i).setHeaderRenderer(new DefaultTableCellRenderer() {
+                @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+                    lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                    lbl.setOpaque(true); // WICHTIG: Erlaubt das Einfärben des Hintergrunds!
+                    lbl.setBorder(UIManager.getBorder("TableHeader.cellBorder"));
+                    
+                    LocalDate currentDate = LogistikSimulator.getCurrentDate().withDayOfMonth(1);
+                    if (!zeigeAktuellenMonat) currentDate = currentDate.plusMonths(1);
+                    
+                    if (column < currentDate.lengthOfMonth()) {
+                        LocalDate cellDate = currentDate.withDayOfMonth(column + 1);
+                        if (LogistikSimulator.istFeiertag(cellDate)) {
+                            lbl.setBackground(new Color(192, 57, 43)); // Starkes Rot für Feiertage
+                            lbl.setForeground(Color.WHITE);
+                        } else if (LogistikSimulator.istSonntag(cellDate)) {
+                            lbl.setBackground(new Color(231, 76, 60)); // Helles Rot für Sonntage
+                            lbl.setForeground(Color.WHITE);
+                        } else {
+                            lbl.setBackground(new Color(20, 30, 48)); // Standard Leitstellen-Blau
+                            lbl.setForeground(Color.WHITE);
+                        }
+                    }
+                    return lbl;
+                }
+            });
         }
 
         tableModel.setRowCount(0);

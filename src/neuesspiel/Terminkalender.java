@@ -31,7 +31,6 @@ public class Terminkalender {
         d.setLayout(new BorderLayout());
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
-        // --- HIER EINFÜGEN: ESC TASTE ZUM SCHLIESSEN & SPEICHERN ---
         d.getRootPane().getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "closeDialog");
         d.getRootPane().getActionMap().put("closeDialog", new AbstractAction() {
             @Override
@@ -41,11 +40,9 @@ public class Terminkalender {
                 d.dispose();
             }
         });
-        // -----------------------------------------------------------
 
         // --- TITELLEISTE ---
         JPanel titleBar = new JPanel(new BorderLayout());
-        // ... (hier geht dein normaler Code weiter)
         titleBar.setBackground(new Color(20, 20, 20));
         titleBar.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 5));
         JLabel lblTitle = new JLabel(" Terminkalender & Wach-Events (60-Tage Vorschau)");
@@ -63,7 +60,7 @@ public class Terminkalender {
         JPanel topMenu = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 10));
         topMenu.setBackground(new Color(25, 25, 25));
         
-        // Monat waehlen (Scrollt automatisch in der Tabelle)
+        // Monat waehlen
         LinkedHashMap<String, Integer> monthToCol = new LinkedHashMap<>();
         for(int i = 0; i < 62; i++) {
             LocalDate date = LogistikSimulator.getCurrentDate().plusDays(i);
@@ -97,7 +94,7 @@ public class Terminkalender {
         lblHint.setForeground(Color.GRAY); lblHint.setFont(new Font("Segoe UI", Font.ITALIC, 12));
 
         topMenu.add(lblMonat); topMenu.add(cbMonat);
-        topMenu.add(new JLabel("  |  ")); // Optischer Trenner
+        topMenu.add(new JLabel("  |  ")); 
         topMenu.add(lblFz); topMenu.add(cbFahrzeug);
         topMenu.add(lblPers); topMenu.add(cbPersonal);
         topMenu.add(lblHint);
@@ -109,9 +106,30 @@ public class Terminkalender {
         table = new JTable(tableModel);
         table.setRowHeight(35);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        table.getTableHeader().setBackground(new Color(20, 30, 48));
-        table.getTableHeader().setForeground(Color.WHITE);
         table.getTableHeader().setReorderingAllowed(false);
+        
+        // --- NEU: FARBIGER TABELLENKOPF ---
+        table.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
+                lbl.setHorizontalAlignment(SwingConstants.CENTER);
+                lbl.setBorder(UIManager.getBorder("TableHeader.cellBorder"));
+                
+                LocalDate cellDate = LogistikSimulator.getCurrentDate().plusDays(column);
+                
+                if (LogistikSimulator.istFeiertag(cellDate)) {
+                    lbl.setBackground(new Color(192, 57, 43)); // Starkes Rot für Feiertage
+                    lbl.setForeground(Color.WHITE);
+                } else if (LogistikSimulator.istSonntag(cellDate)) {
+                    lbl.setBackground(new Color(231, 76, 60)); // Helles Rot für Sonntage
+                    lbl.setForeground(Color.WHITE);
+                } else {
+                    lbl.setBackground(new Color(20, 30, 48)); // Standard Leitstellen-Blau
+                    lbl.setForeground(Color.WHITE);
+                }
+                return lbl;
+            }
+        });
         
         // Spalten (62 rollierende Tage)
         String[] tage = new String[62];
@@ -163,14 +181,23 @@ public class Terminkalender {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
                 
+                // --- NEU: HINTERGRUNDFARBEN FÜR SONN- & FEIERTAEGE IM KALENDER ---
+                LocalDate cellDate = LogistikSimulator.getCurrentDate().plusDays(column);
+                Color bgEmpty = new Color(50, 50, 50); // Standard Frei
+                
+                if (LogistikSimulator.istFeiertag(cellDate)) {
+                    bgEmpty = new Color(146, 43, 33); // Dunkles Rot
+                } else if (LogistikSimulator.istSonntag(cellDate)) {
+                    bgEmpty = new Color(176, 58, 46); // Helles Rot
+                }
+
                 if (val == null || val.isEmpty()) {
-                    c.setBackground(new Color(50, 50, 50)); c.setForeground(Color.WHITE);
+                    c.setBackground(bgEmpty); c.setForeground(Color.WHITE);
                 } else if (val.contains("KTP")) {
                     c.setBackground(new Color(52, 152, 219)); c.setForeground(Color.WHITE); 
                 } else if (val.contains("Event") || val.contains("Schule") || val.contains("Firma")) {
                     c.setBackground(new Color(155, 89, 182)); c.setForeground(Color.WHITE); 
                 } else {
-                    // NEU: Dynamische Farberkennung des Fahrzeugs!
                     boolean colorFound = false;
                     for (Wache wache : LogistikSimulator.wachen) {
                         for (Fahrzeug f : wache.fuhrpark) {
@@ -184,7 +211,6 @@ public class Terminkalender {
                         if (colorFound) break;
                     }
                     
-                    // Fallback, falls nur freier Text oder nur Personal eingetragen wurde
                     if(!colorFound) {
                         c.setBackground(new Color(46, 204, 113)); c.setForeground(Color.BLACK); 
                     }
@@ -193,7 +219,7 @@ public class Terminkalender {
             }
         });
 
-        // --- STEMPEL-FUNKTION (Mit Texterkennung und Halten) ---
+        // --- STEMPEL-FUNKTION ---
         MouseAdapter stampAdapter = new MouseAdapter() {
             private String currentDragText = null; 
 
