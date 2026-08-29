@@ -254,6 +254,8 @@ public class LogistikSimulator {
             }
         });
         JScrollPane scrollEinsatz = new JScrollPane(txtEinsatz);
+        scrollEinsatz.setBorder(BorderFactory.createEmptyBorder());
+        scrollEinsatz.getViewport().setBackground(bgDark);
         
         pnlRight.add(scrollEinsatz, BorderLayout.CENTER);
         
@@ -449,39 +451,45 @@ public class LogistikSimulator {
                                 }
                             }
                             
+                            // --- HIER IST DER GEFIXTE NULL-POINTER BEREICH ---
                             for(Wache w : wachen) {
                                 for(Fahrzeug f : w.fuhrpark) {
                                     if (f.aktuellerEinsatz == ein) { 
-                                        f.aktuellerEinsatz = null;
-                                        
                                         if(f.typ.equals("RTW")) {
-            if(calltakerStufe >= 2 && Math.random() > 0.5) {
-                f.status = 8;
-                f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
-                f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 8 (Fahrt ins Krankenhaus)");
-            } else {
-                f.status = 7; 
-                playSound("status7.wav");
-                f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 7 (Patient geladen)");
-            }
-        } else {
-            f.status = 1; 
-            f.aktuellerEinsatz.addProtokoll(f.funkrufname + " funkt: Status 1 (Wieder Frei)");
-        }
-                                        
-                                        if (cfgBeschaedigung) {
+                                            if(calltakerStufe >= 2 && Math.random() > 0.5) {
+                                                f.status = 8;
+                                                f.anfahrtsZeit = 60; f.originalAnfahrt = 60;
+                                                ein.addProtokoll(f.funkrufname + " funkt: Status 8 (Fahrt ins Krankenhaus)");
+                                            } else {
+                                                f.status = 7; 
+                                                playSound("status7.wav");
+                                                ein.addProtokoll(f.funkrufname + " funkt: Status 7 (Patient geladen)");
+                                            }
+                                        } else {
+                                            f.status = 1; 
+                                            ein.addProtokoll(f.funkrufname + " funkt: Status 1 (Wieder Frei)");
+                                        }
+                                        f.aktuellerEinsatz = null; 
+                                    }
+                                }
+                            }
+                            // --- ENDE DES FIXES ---
+                            
+                            if (cfgBeschaedigung) {
+                                for(Wache wCheck : wachen) {
+                                    for(Fahrzeug f : wCheck.fuhrpark) {
+                                        // Nur Fahrzeuge prüfen, die gerade im Einsatz waren (vorher auf status 1 gesetzt)
+                                        if (f.status == 1) {
                                             double baseChance = 0.05;
                                             if (f.kilometer >= f.naechsteInspektion) {
                                                 baseChance += 0.15; 
                                             }
                                             double damageChance = baseChance * Math.pow(0.95, level - 1); 
                                             
-                                            for(Wache wCheck : wachen) {
-                                                for(Personal pCheck : wCheck.personalPool) {
-                                                    if(pCheck.zugewiesenesFahrzeug.equals(f.funkrufname)) {
-                                                        for(MitarbeiterEigenschaft eig : pCheck.eigenschaften) {
-                                                            if(eig.typ.equals("TECHNIK")) damageChance *= eig.effektWert;
-                                                        }
+                                            for(Personal pCheck : wCheck.personalPool) {
+                                                if(pCheck.zugewiesenesFahrzeug.equals(f.funkrufname)) {
+                                                    for(MitarbeiterEigenschaft eig : pCheck.eigenschaften) {
+                                                        if(eig.typ.equals("TECHNIK")) damageChance *= eig.effektWert;
                                                     }
                                                 }
                                             }
@@ -633,10 +641,10 @@ public class LogistikSimulator {
         
         String missionText = "";
         if(aktuelleMission != null) {
-            String status = aktuelleMission.abgeschlossen ? " (ERFÜLLT!)" : " (" + aktuelleMission.fortschritt + "/" + aktuelleMission.zielWert + ")";
+            String status = aktuelleMission.abgeschlossen ? " (ERFUELLT!)" : " (" + aktuelleMission.fortschritt + "/" + aktuelleMission.zielWert + ")";
             missionText = "  |" + aktuelleMission.titel + status;
         }
-        playerInfoLabel.setText("Level " + level + "  |  XP: " + xp + " / " + getRequiredXpForLevel(level) + "  |  " + budget + " €" + missionText);
+        playerInfoLabel.setText("Level " + level + "  |  XP: " + xp + " / " + getRequiredXpForLevel(level) + "  |  " + budget + " EUR" + missionText);
         
         long unread = postfach.stream().filter(m -> !m.gelesen).count();
         btnPostfach.setText("Postfach (" + unread + ")");
@@ -651,19 +659,18 @@ public class LogistikSimulator {
             btnTagBeenden.setBackground(new Color(60, 60, 60));
         }
 
-        // --- MODERNES LEITSTELLEN-BOARD (HTML/CSS) ---
         StringBuilder fms = new StringBuilder();
         fms.append("<html><head><style>")
            .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
            .append(".wache-title { color: #f1c40f; font-size: 13px; font-weight: bold; padding: 4px 0; border-bottom: 1px solid #444; margin-top: 10px; }")
            .append(".badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-weight: bold; font-size: 11px; color: #ffffff; }")
-           .append(".st-1 { background-color: #2980b9; }") // Status 1: Blau
-           .append(".st-2 { background-color: #27ae60; }") // Status 2: Grün
-           .append(".st-3 { background-color: #e67e22; }") // Status 3: Orange
-           .append(".st-4 { background-color: #d35400; }") // Status 4: Dunkelorange
-           .append(".st-6 { background-color: #c0392b; }") // Status 6: Rot
-           .append(".st-7 { background-color: #8e44ad; }") // Status 7: Lila
-           .append(".st-8 { background-color: #16a085; }") // Status 8: Türkis
+           .append(".st-1 { background-color: #2980b9; }") 
+           .append(".st-2 { background-color: #27ae60; }") 
+           .append(".st-3 { background-color: #e67e22; }") 
+           .append(".st-4 { background-color: #d35400; }") 
+           .append(".st-6 { background-color: #c0392b; }") 
+           .append(".st-7 { background-color: #8e44ad; }") 
+           .append(".st-8 { background-color: #16a085; }") 
            .append(".warn-box { background-color: #3d1c1d; border: 1px solid #e74c3c; color: #ff6b6b; padding: 6px; border-radius: 4px; margin-bottom: 8px; }")
            .append("a { color: #f39c12; text-decoration: none; font-weight: bold; }")
            .append("</style></head><body>");
@@ -707,19 +714,24 @@ public class LogistikSimulator {
                    .append("<td width='70'><span class='badge ").append(stClass).append("'>Status ").append(f.status).append("</span></td>")
                    .append("<td>");
                 
+                // --- HIER IST DER GEFIXTE TEILEN-DURCH-NULL BEREICH ---
+                int anzeigeSpeed = Math.max(1, speed);
+                
                 if(f.ausrueckeVerzoegerung > 0) {
-                    fms.append("Alarm! Ausruecken in: ").append(f.ausrueckeVerzoegerung/speed).append("s");
+                    fms.append("Alarm! Ausruecken in: ").append(f.ausrueckeVerzoegerung/anzeigeSpeed).append("s");
                 }
-                else if(f.status == 3) fms.append("Anfahrt: ").append(f.anfahrtsZeit/speed).append("s");
-                else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("Rückfahrt: ").append(f.anfahrtsZeit/speed).append("s");
-                else if(f.status == 8) fms.append("Anfahrt Klinik: ").append(f.anfahrtsZeit/speed).append("s");
+                else if(f.status == 3) fms.append("Anfahrt: ").append(f.anfahrtsZeit/anzeigeSpeed).append("s");
+                else if(f.status == 1 && f.anfahrtsZeit > 0) fms.append("Rueckfahrt: ").append(f.anfahrtsZeit/anzeigeSpeed).append("s");
+                else if(f.status == 8) fms.append("Anfahrt Klinik: ").append(f.anfahrtsZeit/anzeigeSpeed).append("s");
                 else if(f.status == 4 && f.aktuellerEinsatz != null) fms.append("<a href='FZG:").append(f.funkrufname).append("'>Am Einsatzort (Akte)</a>");
                 else if(f.status == 7) fms.append("<a href='HOSP:").append(f.funkrufname).append("'>Patient geladen (Ziel)</a>");
                 else if(f.status == 6) {
                     fms.append("<span style='color:#e74c3c;'>").append(f.ausfallGrund).append("</span>");
-                    if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/speed).append("s)");
-                    else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) fms.append(" (").append(f.reparaturDauer/speed).append("s)");
+                    if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/anzeigeSpeed).append("s)");
+                    else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) fms.append(" (").append(f.reparaturDauer/anzeigeSpeed).append("s)");
                 }
+                // --- ENDE DES FIXES ---
+                
                 fms.append("</td></tr>");
             }
             fms.append("</table>");
@@ -735,7 +747,6 @@ public class LogistikSimulator {
             notrufLabel.setText("Kein Notruf anliegend.");
         }
 
-// --- RECHTE SEITE: FUNK & EINSÄTZE (MODERNES DESIGN OHNE EMOJIS) ---
         StringBuilder lage = new StringBuilder();
         lage.append("<html><head><style>")
             .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
@@ -747,35 +758,31 @@ public class LogistikSimulator {
             .append(".system-msg { color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 5px; }")
             .append("</style></head><body>");
 
-        // -- Bereich: Funkverkehr --
         lage.append("<div class='header-funk'>REGIONALER FUNKVERKEHR (MV)</div>");
 
         FunkManager.init();
         if (cfgKiFunk) {
             for (String msg : FunkManager.funkHistorie) {
-                // Konsolen-Look für den Funk (mit ">" als Prefix)
                 lage.append("<div class='funk-msg'>&gt; ").append(msg.replace("\n", "<br>")).append("</div>");
             }
         } else {
-            lage.append("<div class='system-msg'>[ System: Funküberwachung deaktiviert ]</div>");
+            lage.append("<div class='system-msg'>[ System: Funkueberwachung deaktiviert ]</div>");
         }
 
         if(inGameSekunden >= 19*3600) {
             lage.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Nachtruhe) ]</div>");
         }
 
-        // -- Bereich: Aktive Einsätze --
-        lage.append("<div class='header-mission'>LAUFENDE EINSÄTZE</div>");
+        lage.append("<div class='header-mission'>LAUFENDE EINSAETZE</div>");
 
         if (aktiveEinsaetze.isEmpty()) {
-            lage.append("<div class='system-msg'>Aktuell keine aktiven Einsätze.</div>");
+            lage.append("<div class='system-msg'>Aktuell keine aktiven Einsaetze.</div>");
         } else {
             for (Einsatz e : aktiveEinsaetze) {
                 String lageText = e.getLagemeldungText().replace("\n", "<br>");
                 
                 lage.append("<div class='mission-box'>")
                     .append("<div class='mission-title'>")
-                    // HIER IST DER LINK (<a> Tag), der den gesamten roten Titel umschließt!
                     .append("<a href='AKTE:").append(aktiveEinsaetze.indexOf(e)).append("' style='color:#e74c3c; text-decoration:none;'>")
                     .append("[").append(e.vorlage.stichwort).append("] ").append(e.beschreibung.toUpperCase()).append(" | Alarm: ").append(e.alarmUhrzeit)
                     .append("</a></div>")
@@ -1117,10 +1124,10 @@ public class LogistikSimulator {
             for (Vertrag v : aktiveVertraege) {
                 if (v.aktuelleMenge >= v.zielMenge) {
                     budget += v.belohnungProTag;
-                    sb.append("✅ ").append(v.auftraggeber).append(" erfuellt! (+").append(v.belohnungProTag).append(" EUR)\n");
+                    sb.append(" ").append(v.auftraggeber).append(" erfuellt! (+").append(v.belohnungProTag).append(" EUR)\n");
                 } else {
                     budget -= v.strafeBeiFehlschlag;
-                    sb.append("❌ ").append(v.auftraggeber).append(" verfehlt! (-").append(v.strafeBeiFehlschlag).append(" EUR)\n");
+                    sb.append(" ").append(v.auftraggeber).append(" verfehlt! (-").append(v.strafeBeiFehlschlag).append(" EUR)\n");
                 }
                 v.aktuelleMenge = 0; 
             }
@@ -1138,7 +1145,7 @@ public class LogistikSimulator {
                 }
             } else {
                 aktuellerKredit += (taeglicheKreditRate / 2); 
-                sb.append("⚠️ KREDITRATE KONNTE NICHT ABGEBUCHT WERDEN!\nStrafzinsen berechnet.\n\n");
+                sb.append(" KREDITRATE KONNTE NICHT ABGEBUCHT WERDEN!\nStrafzinsen berechnet.\n\n");
             }
         }
         
