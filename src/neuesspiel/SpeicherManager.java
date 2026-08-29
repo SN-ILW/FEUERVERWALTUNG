@@ -87,17 +87,29 @@ public class SpeicherManager {
             setSafe(p, "volStatus6", String.valueOf(LogistikSimulator.volStatus6));
             setSafe(p, "volStatus7", String.valueOf(LogistikSimulator.volStatus7));
 
-            setSafe(p, "hk_pause", String.valueOf(LogistikSimulator.hotkeyPause));
-            setSafe(p, "hk_play", String.valueOf(LogistikSimulator.hotkeyPlay));
-            setSafe(p, "hk_fast", String.valueOf(LogistikSimulator.hotkeyFast));
-            setSafe(p, "hk_disp", String.valueOf(LogistikSimulator.hotkeyDisp));
-            setSafe(p, "hk_dienst", String.valueOf(LogistikSimulator.hotkeyDienstplan));
-            setSafe(p, "hk_post", String.valueOf(LogistikSimulator.hotkeyPostfach));
-            setSafe(p, "hk_fuhr", String.valueOf(LogistikSimulator.hotkeyFuhrpark));
-            setSafe(p, "hk_e_erst", String.valueOf(LogistikSimulator.hotkeyEinsatzErsteller));
-            setSafe(p, "hk_e_edit", String.valueOf(LogistikSimulator.hotkeyEinsatzEditor));
-            setSafe(p, "hk_pers", String.valueOf(LogistikSimulator.hotkeyPersonalEinstellen));
-            setSafe(p, "hotkeyKalender", String.valueOf(LogistikSimulator.hotkeyKalender));
+            
+            if (p.containsKey("hotkeyPause")) LogistikSimulator.hotkeyPause = Integer.parseInt(p.getProperty("hotkeyPause"));
+            if (p.containsKey("hotkeyPlay")) LogistikSimulator.hotkeyPlay = Integer.parseInt(p.getProperty("hotkeyPlay"));
+            if (p.containsKey("hotkeyFast")) LogistikSimulator.hotkeyFast = Integer.parseInt(p.getProperty("hotkeyFast"));
+            if (p.containsKey("hotkeyDisp")) LogistikSimulator.hotkeyDisp = Integer.parseInt(p.getProperty("hotkeyDisp"));
+            if (p.containsKey("hotkeyDienstplan")) LogistikSimulator.hotkeyDienstplan = Integer.parseInt(p.getProperty("hotkeyDienstplan"));
+            if (p.containsKey("hotkeyPostfach")) LogistikSimulator.hotkeyPostfach = Integer.parseInt(p.getProperty("hotkeyPostfach"));
+            if (p.containsKey("hotkeyFuhrpark")) LogistikSimulator.hotkeyFuhrpark = Integer.parseInt(p.getProperty("hotkeyFuhrpark"));
+            if (p.containsKey("hotkeyEinsatzErsteller")) LogistikSimulator.hotkeyEinsatzErsteller = Integer.parseInt(p.getProperty("hotkeyEinsatzErsteller"));
+            if (p.containsKey("hotkeyEinsatzEditor")) LogistikSimulator.hotkeyEinsatzEditor = Integer.parseInt(p.getProperty("hotkeyEinsatzEditor"));
+            if (p.containsKey("hotkeyPersonalEinstellen")) LogistikSimulator.hotkeyPersonalEinstellen = Integer.parseInt(p.getProperty("hotkeyPersonalEinstellen"));
+            if (p.containsKey("hotkeyKalender")) LogistikSimulator.hotkeyKalender = Integer.parseInt(p.getProperty("hotkeyKalender"));
+            
+            // --- NEUE HOTKEYS ---
+            if (p.containsKey("hotkeySave")) LogistikSimulator.hotkeySave = Integer.parseInt(p.getProperty("hotkeySave"));
+            if (p.containsKey("hotkeyLogistik")) LogistikSimulator.hotkeyLogistik = Integer.parseInt(p.getProperty("hotkeyLogistik"));
+            if (p.containsKey("hotkeyBauen")) LogistikSimulator.hotkeyBauen = Integer.parseInt(p.getProperty("hotkeyBauen"));
+            if (p.containsKey("hotkeyKlinik")) LogistikSimulator.hotkeyKlinik = Integer.parseInt(p.getProperty("hotkeyKlinik"));
+            if (p.containsKey("hotkeyBank")) LogistikSimulator.hotkeyBank = Integer.parseInt(p.getProperty("hotkeyBank"));
+            if (p.containsKey("hotkeySystem")) LogistikSimulator.hotkeySystem = Integer.parseInt(p.getProperty("hotkeySystem"));
+            
+            
+            
             if (LogistikSimulator.aktuelleMission != null) {
                 setSafe(p, "miss_titel", LogistikSimulator.aktuelleMission.titel);
                 setSafe(p, "miss_desc", LogistikSimulator.aktuelleMission.beschreibung);
@@ -351,16 +363,25 @@ public class SpeicherManager {
             
             
             //Save-hotkeys
-            LogistikSimulator.hotkeyPause = parseIntSafe(p.getProperty("hk_pause"), java.awt.event.KeyEvent.VK_SPACE);
-            LogistikSimulator.hotkeyPlay = parseIntSafe(p.getProperty("hk_play"), java.awt.event.KeyEvent.VK_1);
-            LogistikSimulator.hotkeyFast = parseIntSafe(p.getProperty("hk_fast"), java.awt.event.KeyEvent.VK_2);
-            LogistikSimulator.hotkeyDisp = parseIntSafe(p.getProperty("hk_disp"), java.awt.event.KeyEvent.VK_D);
-            LogistikSimulator.hotkeyDienstplan = parseIntSafe(p.getProperty("hk_dienst"), java.awt.event.KeyEvent.VK_F1);
-            LogistikSimulator.hotkeyPostfach = parseIntSafe(p.getProperty("hk_post"), java.awt.event.KeyEvent.VK_M);
-            LogistikSimulator.hotkeyFuhrpark = parseIntSafe(p.getProperty("hk_fuhr"), java.awt.event.KeyEvent.VK_F);
-            LogistikSimulator.hotkeyEinsatzErsteller = parseIntSafe(p.getProperty("hk_e_erst"), java.awt.event.KeyEvent.VK_F2);
-            LogistikSimulator.hotkeyEinsatzEditor = parseIntSafe(p.getProperty("hk_e_edit"), java.awt.event.KeyEvent.VK_F3);
-            LogistikSimulator.hotkeyPersonalEinstellen = parseIntSafe(p.getProperty("hk_pers"), java.awt.event.KeyEvent.VK_P);
+            p.setProperty("hotkeyPause", String.valueOf(LogistikSimulator.hotkeyPause));
+            p.setProperty("hotkeyPlay", String.valueOf(LogistikSimulator.hotkeyPlay));
+            p.setProperty("hotkeyFast", String.valueOf(LogistikSimulator.hotkeyFast));
+            p.setProperty("hotkeyDisp", String.valueOf(LogistikSimulator.hotkeyDisp));
+            p.setProperty("hotkeyDienstplan", String.valueOf(LogistikSimulator.hotkeyDienstplan));
+            p.setProperty("hotkeyPostfach", String.valueOf(LogistikSimulator.hotkeyPostfach));
+            p.setProperty("hotkeyFuhrpark", String.valueOf(LogistikSimulator.hotkeyFuhrpark));
+            p.setProperty("hotkeyEinsatzErsteller", String.valueOf(LogistikSimulator.hotkeyEinsatzErsteller));
+            p.setProperty("hotkeyEinsatzEditor", String.valueOf(LogistikSimulator.hotkeyEinsatzEditor));
+            p.setProperty("hotkeyPersonalEinstellen", String.valueOf(LogistikSimulator.hotkeyPersonalEinstellen));
+            p.setProperty("hotkeyKalender", String.valueOf(LogistikSimulator.hotkeyKalender));
+            
+            // --- NEUE HOTKEYS ---
+            p.setProperty("hotkeySave", String.valueOf(LogistikSimulator.hotkeySave));
+            p.setProperty("hotkeyLogistik", String.valueOf(LogistikSimulator.hotkeyLogistik));
+            p.setProperty("hotkeyBauen", String.valueOf(LogistikSimulator.hotkeyBauen));
+            p.setProperty("hotkeyKlinik", String.valueOf(LogistikSimulator.hotkeyKlinik));
+            p.setProperty("hotkeyBank", String.valueOf(LogistikSimulator.hotkeyBank));
+            p.setProperty("hotkeySystem", String.valueOf(LogistikSimulator.hotkeySystem));
             
             if (p.containsKey("miss_titel")) {
                 LogistikSimulator.aktuelleMission = new TagesMission(p.getProperty("miss_titel", "Mission"), p.getProperty("miss_desc", ""), p.getProperty("miss_typ", "ALLE"), parseIntSafe(p.getProperty("miss_ziel"), 1), parseIntSafe(p.getProperty("miss_geld"), 0), parseIntSafe(p.getProperty("miss_xp"), 0));

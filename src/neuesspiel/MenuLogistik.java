@@ -227,8 +227,8 @@ public class MenuLogistik {
         JButton b2 = new JButton("Beschaedigtes Fahrzeug reparieren"); b2.addActionListener(e -> { d.dispose(); FensterManager.fahrzeugeReparieren(); });
         JButton b3 = new JButton("Fahrzeug umstationieren"); b3.addActionListener(e -> { d.dispose(); FensterManager.oeffneFahrzeugTransfer(); });
         JButton b4 = new JButton("TÜV & Inspektion durchfuehren"); b4.addActionListener(e -> { d.dispose(); LogistikSimulator.fahrzeugeInspektion(); });
-        JButton b5 = new JButton("Fahrzeug-Uebersicht & Dienstplan-Farben"); b5.addActionListener(e -> { d.dispose(); LogistikSimulator.oeffneFahrzeugVerwaltung(); });
-
+        JButton b5 = new JButton("Fahrzeug-Uebersicht & Inspektion"); b5.addActionListener(e -> { d.dispose(); oeffneFahrzeugVerwaltung(); });
+        
         content.add(b1); content.add(b2); content.add(b3); content.add(b4); content.add(b5); 
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
@@ -337,4 +337,179 @@ public class MenuLogistik {
             } else { JOptionPane.showMessageDialog(frame, "Nicht genug Budget!"); }
         }
     }
+
+        public static void oeffneFahrzeugVerwaltung () {
+        JDialog d = createFramelessDialog("Fahrzeug-Uebersicht & Inspektion", 1000, 500);
+        JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        content.setBackground(new Color(35,35,35));
+
+        String[] columns = {"Funkkennung", "Fahrzeugart", "Zustand (KM-Stand)", "Dienstplan-Farbe (Klick)"};
+        DefaultTableModel model = new DefaultTableModel(columns, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+            @Override public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 2) return Integer.class; // Fuer den Fortschrittsbalken
+                if (columnIndex == 3) return Color.class;   // Fuer das Farb-Kaestchen
+                return String.class;
+            }
+        };
+
+        // Liste zum Zwischenspeichern der Objekte
+        ArrayList<Fahrzeug> fzList = new ArrayList<>();
+        
+        for (Wache w : wachen) {
+            for (Fahrzeug f : w.fuhrpark) {
+                fzList.add(f);
+                // Tausche "kilometerStand" gegen deine Variable aus, falls sie anders heisst!
+                model.addRow(new Object[]{f.funkrufname, f.typ, f.kilometer, f.stempelFarbe});
+            }
+        }
+
+        JTable table = new JTable(model);
+        
+        // --- MODERNES DESIGN ---
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(34);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setSelectionBackground(new Color(41, 128, 185));
+        table.setSelectionForeground(Color.WHITE);
+
+        // Standard-Renderer (Zebra-Muster) fuer Text-Spalten
+        DefaultTableCellRenderer defaultRenderer = new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                if (!isSelected) c.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                c.setForeground(Color.WHITE);
+                return c;
+            }
+        };
+        table.getColumnModel().getColumn(0).setCellRenderer(defaultRenderer);
+        table.getColumnModel().getColumn(1).setCellRenderer(defaultRenderer);
+
+        // --- FORTSCHRITTSBALKEN FUER KM-STAND ---
+        table.getColumnModel().getColumn(2).setCellRenderer(new TableCellRenderer() {
+            private final JProgressBar pb = new JProgressBar(0, 10000); // Inspektion bei 10.000km
+            private final JPanel pnl = new JPanel(new BorderLayout());
+            {
+                pnl.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
+                pb.setStringPainted(true);
+                pb.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                pb.setBackground(new Color(30, 30, 30));
+                pnl.add(pb, BorderLayout.CENTER);
+            }
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                if (isSelected) pnl.setBackground(new Color(41, 128, 185));
+                else pnl.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                
+                int km = (value instanceof Integer) ? (Integer) value : 0;
+                pb.setValue(km);
+                pb.setString(km + " / 10.000 km");
+                
+                // Faerbt sich von Gruen zu Rot, je naeher die Inspektion rueckt
+                if(km > 8000) pb.setForeground(new Color(231, 76, 60)); // Rot
+                else if(km > 5000) pb.setForeground(new Color(243, 156, 18)); // Orange
+                else pb.setForeground(new Color(46, 204, 113)); // Gruen
+                return pnl;
+            }
+        });
+
+        // --- FARB-KAESTCHEN FUER STEMPELFARBE ---
+        table.getColumnModel().getColumn(3).setCellRenderer(new TableCellRenderer() {
+            private final JPanel pnl = new JPanel();
+            private final JPanel wrapper = new JPanel(new BorderLayout());
+            {
+                wrapper.setBorder(BorderFactory.createEmptyBorder(4, 10, 4, 10));
+                pnl.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+                wrapper.add(pnl, BorderLayout.CENTER);
+            }
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                if (isSelected) wrapper.setBackground(new Color(41, 128, 185));
+                else wrapper.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                
+                if (value instanceof Color) pnl.setBackground((Color) value);
+                else pnl.setBackground(new Color(46, 204, 113)); // Standard Gruen
+                return wrapper;
+            }
+        });
+
+        // Klick-Erkennung, um die Farbe zu aendern
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = table.rowAtPoint(e.getPoint());
+                int col = table.columnAtPoint(e.getPoint());
+                if (row >= 0 && col == 3) {
+                    Fahrzeug f = fzList.get(table.convertRowIndexToModel(row));
+                    Color newColor = JColorChooser.showDialog(d, "Stempelfarbe fuer " + f.funkrufname, f.stempelFarbe);
+                    if (newColor != null) {
+                        f.stempelFarbe = newColor;
+                        model.setValueAt(newColor, row, col);
+                        SpeicherManager.speichern("savegame.properties");
+                    }
+                }
+            }
+        });
+
+        table.getTableHeader().setBackground(new Color(25, 25, 25)); 
+        table.getTableHeader().setForeground(Color.LIGHT_GRAY); 
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        table.getTableHeader().setPreferredSize(new Dimension(0, 35));
+
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomPanel.setBackground(new Color(35, 35, 35));
+        
+        JButton btnInspektion = LogistikSimulator.createStyledButton("Fahrzeug warten & Inspektion (1.500 EUR)", new Color(243, 156, 18));
+        btnInspektion.setForeground(Color.BLACK);
+        
+        btnInspektion.addActionListener(e -> {
+            int viewRow = table.getSelectedRow();
+            if (viewRow == -1) {
+                JOptionPane.showMessageDialog(d, "Bitte waehle zuerst ein Fahrzeug aus!");
+                return;
+            }
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            Fahrzeug f = fzList.get(modelRow);
+            
+            if (f.status == 6) {
+                JOptionPane.showMessageDialog(d, "Das Fahrzeug steht bereits in der Werkstatt!");
+                return;
+            }
+            if (budget < 1500) {
+                JOptionPane.showMessageDialog(d, "Nicht genug Budget! (1.500 EUR benoetigt)");
+                return;
+            }
+            
+            int wahl = JOptionPane.showConfirmDialog(d, "Inspektion fuer " + f.funkrufname + " durchfuehren?\nDas Fahrzeug geht fuer 120 Sekunden in Status 6.", "Werkstatt", JOptionPane.YES_NO_OPTION);
+            if (wahl == JOptionPane.YES_OPTION) {
+                budget -= 1500;
+                f.kilometer = 0; // KM-Stand wird auf 0 gesetzt
+                f.status = 6;
+                f.ausfallGrund = "Inspektion";
+                f.reparaturDauer = 120; // 120 Sekunden offline
+                model.setValueAt(0, modelRow, 2); // UI Tabelle aktualisieren
+                
+                SpeicherManager.speichern("savegame.properties");
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+                JOptionPane.showMessageDialog(d, f.funkrufname + " ist jetzt in der Werkstatt!");
+            }
+        });
+
+        JButton btnClose = LogistikSimulator.createStyledButton("Schliessen", new Color(108, 122, 137));
+        btnClose.addActionListener(e -> d.dispose());
+
+        bottomPanel.add(btnInspektion);
+        bottomPanel.add(btnClose);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(new Color(35, 35, 35));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+
+        content.add(scrollPane, BorderLayout.CENTER);
+        content.add(bottomPanel, BorderLayout.SOUTH);
+        
+        d.add(content, BorderLayout.CENTER); d.setVisible(true);
+    }
+        
 }

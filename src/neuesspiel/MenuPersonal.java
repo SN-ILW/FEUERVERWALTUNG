@@ -32,16 +32,30 @@ public class MenuPersonal {
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 
-    public static void oeffneMitarbeiterVerwaltung() {
-        JDialog d = createFramelessDialog("Mitarbeiter Historie", 1000, 500);
+  public static void oeffneMitarbeiterVerwaltung() {
+        JDialog d = createFramelessDialog("Mitarbeiter Historie", 1150, 550);
         JPanel content = new JPanel(new BorderLayout(10, 10));
+        content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
         content.setBackground(new Color(35,35,35));
 
-        String[] columns = {"Name", "Personalnummer", "Wache", "Schichten (Monat)", "Qualifikationen", "Eigenschaften", "Ereignisse"};
-        DefaultTableModel model = new DefaultTableModel(columns, 0) { @Override public boolean isCellEditable(int row, int column) { return false; } };
+        String[] columns = {"Name", "Personalnummer", "Wache", "Schichten (Monat)", "Zufriedenheit", "Qualifikationen", "Eigenschaften", "Ereignisse"};
+        
+        // Model erstellen
+        DefaultTableModel model = new DefaultTableModel(columns, 0) { 
+            @Override public boolean isCellEditable(int row, int column) { return false; } 
+            @Override public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 4) return Integer.class; // Wichtig für den Balken und die Sortierung
+                if (columnIndex == 3) return Integer.class; // Schichten als Zahl sortieren
+                return String.class;
+            }
+        };
+
+        ArrayList<Personal> tableData = new ArrayList<>();
 
         for (Wache w : wachen) {
             for (Personal p : w.personalPool) {
+                tableData.add(p); 
+
                 String ereignis = "Keine Ereignisse";
                 if (p.krankBis != -1) ereignis = "Krank bis " + getShortDatumString(p.krankBis);
                 else if (p.urlaubStart != -1) ereignis = "Urlaub: " + getShortDatumString(p.urlaubStart) + " - " + getShortDatumString(p.urlaubEnd);
@@ -51,24 +65,97 @@ public class MenuPersonal {
                     for(MitarbeiterEigenschaft e : p.eigenschaften) eig.append(e.name).append(", ");
                     eig.setLength(eig.length() - 2); 
                 } else { eig.append("Keine"); }
-                model.addRow(new Object[]{ p.name, p.getPersonalNummer(), w.name, p.schichtenMonat, String.join(", ", p.qualifikationen), eig.toString(), ereignis });
+                
+                // Wir übergeben p.zufriedenheit jetzt als echte Zahl (nicht mehr als Text mit %)
+                model.addRow(new Object[]{ p.name, p.getPersonalNummer(), w.name, p.schichtenMonat, p.zufriedenheit, String.join(", ", p.qualifikationen), eig.toString(), ereignis });
             }
         }
 
         JTable table = new JTable(model);
-        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
-            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+        
+        // --- MODERNES TABELLEN-DESIGN ---
+        table.setShowGrid(false); // Gitterlinien ausblenden
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(34); // Höhere Zeilen für mehr Platz
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setSelectionBackground(new Color(41, 128, 185)); // Schönes Blau beim Anklicken
+        table.setSelectionForeground(Color.WHITE);
+
+        // Standard-Renderer (Zebra-Muster & Padding)
+        DefaultTableCellRenderer defaultRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-                c.setBackground(isSelected ? new Color(60, 60, 60) : new Color(43, 43, 43)); c.setForeground(Color.WHITE); return c;
+                setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10)); // Abstand links und rechts
+                if (!isSelected) {
+                    // Zeilen abwechselnd dunkelgrau und etwas heller grau faerben
+                    c.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50)); 
+                }
+                c.setForeground(Color.WHITE);
+                return c;
+            }
+        };
+        
+        // Den Standard-Renderer auf fast alle Spalten anwenden
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            if (i != 4) table.getColumnModel().getColumn(i).setCellRenderer(defaultRenderer);
+        }
+
+        // --- SPEZIAL-RENDERER FÜR DIE ZUFRIEDENHEIT (FORTSCHRITTSBALKEN) ---
+        table.getColumnModel().getColumn(4).setCellRenderer(new TableCellRenderer() {
+            private final JProgressBar pb = new JProgressBar(0, 100);
+            private final JPanel pnl = new JPanel(new BorderLayout());
+            {
+                pnl.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10)); // Balken etwas kleiner machen als die Zeile
+                pb.setStringPainted(true);
+                pb.setFont(new Font("Segoe UI", Font.BOLD, 11));
+                pb.setBackground(new Color(30, 30, 30));
+                pnl.add(pb, BorderLayout.CENTER);
+            }
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                if (isSelected) pnl.setBackground(new Color(41, 128, 185));
+                else pnl.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                
+                int val = (value instanceof Integer) ? (Integer) value : 0;
+                pb.setValue(val);
+                pb.setString(val + "%");
+                
+                // Farbe setzen
+                if(val < 30) pb.setForeground(new Color(231, 76, 60)); // Rot
+                else if(val < 70) pb.setForeground(new Color(243, 156, 18)); // Orange
+                else pb.setForeground(new Color(46, 204, 113)); // Grün
+                
+                return pnl;
             }
         });
-        table.getTableHeader().setBackground(new Color(20, 30, 48)); table.getTableHeader().setForeground(Color.WHITE); table.setRowHeight(25);
-        table.getColumnModel().getColumn(0).setPreferredWidth(150); table.getColumnModel().getColumn(5).setPreferredWidth(150); 
-        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model); table.setRowSorter(sorter);
 
-        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); topPanel.setBackground(new Color(35, 35, 35));
-        JLabel lblSearch = new JLabel("Suchen: "); lblSearch.setForeground(Color.WHITE);
+        // Header Design
+        table.getTableHeader().setBackground(new Color(25, 25, 25)); 
+        table.getTableHeader().setForeground(Color.LIGHT_GRAY); 
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        table.getTableHeader().setPreferredSize(new Dimension(0, 35));
+        
+        // Spaltenbreiten anpassen
+        table.getColumnModel().getColumn(0).setPreferredWidth(140); // Name
+        table.getColumnModel().getColumn(1).setPreferredWidth(100); // Personalnummer
+        table.getColumnModel().getColumn(3).setPreferredWidth(110); // Schichten
+        table.getColumnModel().getColumn(4).setPreferredWidth(120); // Zufriedenheit
+        table.getColumnModel().getColumn(6).setPreferredWidth(180); // Eigenschaften
+        
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(model); 
+        table.setRowSorter(sorter);
+
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.LEFT)); 
+        topPanel.setBackground(new Color(35, 35, 35));
+        JLabel lblSearch = new JLabel("Mitarbeiter suchen: "); 
+        lblSearch.setForeground(Color.WHITE);
+        lblSearch.setFont(new Font("Segoe UI", Font.BOLD, 13));
         JTextField txtSearch = new JTextField(20);
+        txtSearch.setBackground(new Color(50, 50, 50));
+        txtSearch.setForeground(Color.WHITE);
+        txtSearch.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        
         topPanel.add(lblSearch); topPanel.add(txtSearch);
         
         txtSearch.getDocument().addDocumentListener(new DocumentListener() {
@@ -76,7 +163,46 @@ public class MenuPersonal {
             private void filter() { sorter.setRowFilter(txtSearch.getText().trim().isEmpty() ? null : RowFilter.regexFilter("(?i)" + txtSearch.getText().trim())); }
         });
 
-        content.add(topPanel, BorderLayout.NORTH); content.add(new JScrollPane(table), BorderLayout.CENTER);
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        bottomPanel.setBackground(new Color(35, 35, 35));
+        
+        JButton btnKuendigen = LogistikSimulator.createStyledButton("Ausgewaehlten Mitarbeiter kuendigen", new Color(192, 57, 43));
+        
+        btnKuendigen.addActionListener(e -> {
+            int viewRow = table.getSelectedRow();
+            if (viewRow == -1) {
+                JOptionPane.showMessageDialog(d, "Bitte waehle zuerst einen Mitarbeiter aus der Tabelle aus!");
+                return;
+            }
+            
+            int modelRow = table.convertRowIndexToModel(viewRow);
+            Personal pToFire = tableData.get(modelRow);
+            
+            int wahl = JOptionPane.showConfirmDialog(d, "Willst du " + pToFire.name + " wirklich fristlos entlassen?\nEr/Sie verlaesst die Wache sofort.", "Kuendigung", JOptionPane.YES_NO_OPTION);
+            if (wahl == JOptionPane.YES_OPTION) {
+                for (Wache w : wachen) {
+                    if (w.personalPool.contains(pToFire)) {
+                        w.personalPool.remove(pToFire);
+                        break;
+                    }
+                }
+                tableData.remove(modelRow);
+                model.removeRow(modelRow);
+                SpeicherManager.speichern("savegame.properties");
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
+            }
+        });
+        
+        bottomPanel.add(btnKuendigen);
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(new Color(35, 35, 35));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+
+        content.add(topPanel, BorderLayout.NORTH); 
+        content.add(scrollPane, BorderLayout.CENTER);
+        content.add(bottomPanel, BorderLayout.SOUTH);
+        
         d.add(content, BorderLayout.CENTER); d.setVisible(true);
     }
 

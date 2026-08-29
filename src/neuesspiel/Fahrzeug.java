@@ -31,7 +31,7 @@ public class Fahrzeug {
     public Color stempelFarbe = new Color(192, 57, 43); // Standardmaessig ein schickes Rot
     
     public void tick(int speed, String uhrzeit) {
-        // --- NEU: AUSRÜCKEVERZÖGERUNG ---
+        // --- AUSRÜCKEVERZÖGERUNG ---
         if (ausrueckeVerzoegerung > 0) {
             ausrueckeVerzoegerung -= speed;
             if (ausrueckeVerzoegerung <= 0) {
@@ -67,12 +67,13 @@ public class Fahrzeug {
             }
         }
 
-        // --- REPARATUR ---
-        if (status == 6 && reparaturDauer > 0 && (ausfallGrund.equals("In Bearbeitung") || ausfallGrund.equals("Personalwechsel"))) {
+        // --- REPARATUR, INSPEKTION & WARTEN ---
+        // (Wird IMMER heruntergezählt, egal wie der Ausfallgrund heißt!)
+        if (status == 6 && reparaturDauer > 0) {
             reparaturDauer -= speed;
             if (reparaturDauer <= 0) {
                 reparaturDauer = 0;
-                status = 2;
+                status = 2; // Fahrzeug ist wieder einsatzbereit
                 ausfallGrund = "";
             }
         }

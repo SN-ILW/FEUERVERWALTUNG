@@ -144,9 +144,49 @@ public class MenuEinsatz {
             }
         }
 
-        JTable table = new JTable(model); table.setRowHeight(25); table.setBackground(new Color(43, 43, 43)); table.setForeground(Color.WHITE);
-        table.getTableHeader().setBackground(new Color(20, 30, 48)); table.getTableHeader().setForeground(Color.WHITE); table.getColumnModel().getColumn(0).setMaxWidth(80);
-        d.add(new JScrollPane(table), BorderLayout.CENTER);
+        JTable table = new JTable(model); 
+        
+        // --- MODERNES TABELLEN-DESIGN ---
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(34);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        table.setSelectionBackground(new Color(41, 128, 185));
+        table.setSelectionForeground(Color.WHITE);
+
+        // Zebra-Renderer fuer normalen Text
+        table.setDefaultRenderer(String.class, new DefaultTableCellRenderer() {
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                setBorder(BorderFactory.createEmptyBorder(0, 10, 0, 10));
+                if (!isSelected) c.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                c.setForeground(Color.WHITE);
+                return c;
+            }
+        });
+        
+        // Zebra-Renderer fuer die Checkboxen (damit die nicht haesslich weiss leuchten)
+        table.setDefaultRenderer(Boolean.class, new TableCellRenderer() {
+            JCheckBox cb = new JCheckBox();
+            { cb.setHorizontalAlignment(SwingConstants.CENTER); }
+            @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                cb.setSelected((value != null && (Boolean)value));
+                if (isSelected) cb.setBackground(new Color(41, 128, 185));
+                else cb.setBackground(row % 2 == 0 ? new Color(43, 43, 43) : new Color(50, 50, 50));
+                return cb;
+            }
+        });
+
+        table.getTableHeader().setBackground(new Color(25, 25, 25)); 
+        table.getTableHeader().setForeground(Color.LIGHT_GRAY); 
+        table.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+        table.getTableHeader().setPreferredSize(new Dimension(0, 35));
+        table.getColumnModel().getColumn(0).setMaxWidth(90);
+        
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(new Color(35, 35, 35));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+        d.add(scrollPane, BorderLayout.CENTER);
 
         JPanel pnlBottom = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10)); pnlBottom.setBackground(new Color(35, 35, 35));
         JButton btnAAO = new JButton("AAO nutzen (Auto-Auswahl)"); btnAAO.setBackground(new Color(41, 128, 185)); btnAAO.setForeground(Color.WHITE);
@@ -159,6 +199,7 @@ public class MenuEinsatz {
             int needRTW = ein.vorlage.reqRTW, needNEF = ein.vorlage.reqNEF, needKTW = ein.vorlage.reqKTW;
             int needTLF = ein.vorlage.reqTLF, needMTW = ein.vorlage.reqMTW;
             
+            // 1. Durchlauf: Exakte Treffer auswaehlen
             for(int i = 0; i < verfuegbar.size(); i++) {
                 Fahrzeug f = verfuegbar.get(i);
                 if(f.typ.equals("ELW") && needELW > 0) { model.setValueAt(true, i, 0); needELW--; }
@@ -170,10 +211,20 @@ public class MenuEinsatz {
                 else if(f.typ.equals("TLF") && needTLF > 0) { model.setValueAt(true, i, 0); needTLF--; }
                 else if(f.typ.equals("MTW") && needMTW > 0) { model.setValueAt(true, i, 0); needMTW--; }
             }
+            
+            // 2. Durchlauf: Fallback KTW -> RTW
             if(needKTW > 0) {
                 for(int i = 0; i < verfuegbar.size(); i++) {
                     Fahrzeug f = verfuegbar.get(i);
                     if(f.typ.equals("RTW") && !(Boolean)model.getValueAt(i, 0) && needKTW > 0) { model.setValueAt(true, i, 0); needKTW--; }
+                }
+            }
+            
+            // 3. Durchlauf: Fallback TLF -> HLF
+            if(needTLF > 0) {
+                for(int i = 0; i < verfuegbar.size(); i++) {
+                    Fahrzeug f = verfuegbar.get(i);
+                    if(f.typ.equals("HLF") && !(Boolean)model.getValueAt(i, 0) && needTLF > 0) { model.setValueAt(true, i, 0); needTLF--; }
                 }
             }
         });
@@ -193,16 +244,24 @@ public class MenuEinsatz {
                 }
             }
             
-            int mELW = Math.max(0, ein.vorlage.reqELW - sELW); int mHLF = Math.max(0, ein.vorlage.reqHLF - sHLF);
-            int mDLK = Math.max(0, ein.vorlage.reqDLK - sDLK); int mNEF = Math.max(0, ein.vorlage.reqNEF - sNEF);
-            int mTLF = Math.max(0, ein.vorlage.reqTLF - sTLF); int mMTW = Math.max(0, ein.vorlage.reqMTW - sMTW);
+            int mELW = Math.max(0, ein.vorlage.reqELW - sELW); 
+            int mDLK = Math.max(0, ein.vorlage.reqDLK - sDLK); 
+            int mNEF = Math.max(0, ein.vorlage.reqNEF - sNEF);
+            int mMTW = Math.max(0, ein.vorlage.reqMTW - sMTW);
             
+            // Logik-Update: Erkennt, wenn KTW durch RTW ersetzt wurde
             int fehlendeKTW = Math.max(0, ein.vorlage.reqKTW - sKTW);
             int ueberschussRTW = Math.max(0, sRTW - ein.vorlage.reqRTW);
             fehlendeKTW = Math.max(0, fehlendeKTW - ueberschussRTW);
             int mRTW = Math.max(0, ein.vorlage.reqRTW - sRTW);
             
-            int totalMissing = mELW + mHLF + mDLK + mNEF + mTLF + mMTW + mRTW + fehlendeKTW;
+            // Logik-Update: Erkennt, wenn TLF durch HLF ersetzt wurde
+            int fehlendeTLF = Math.max(0, ein.vorlage.reqTLF - sTLF);
+            int ueberschussHLF = Math.max(0, sHLF - ein.vorlage.reqHLF);
+            fehlendeTLF = Math.max(0, fehlendeTLF - ueberschussHLF);
+            int mHLF = Math.max(0, ein.vorlage.reqHLF - sHLF);
+            
+            int totalMissing = mELW + mHLF + mDLK + mNEF + fehlendeTLF + mMTW + mRTW + fehlendeKTW;
             
             boolean ueberlandHilfeAktiv = false;
             if(totalMissing > 0) {
@@ -227,7 +286,7 @@ public class MenuEinsatz {
             int xpBel = 0; int multiplier = isRushHour() ? 3 : 1;
             
             for (Fahrzeug f : selectedFz) {
-                int ruestZeit = 15; // 15 Sekunden Rüstzeit, wenn die Leute auf Wache sind
+                int ruestZeit = 15; // 15 Sekunden Ruestzeit, wenn die Leute auf Wache sind
                 for(Wache wCheck : wachen) { for(Personal p : wCheck.personalPool) { if(p.zugewiesenesFahrzeug.equals(f.funkrufname) && p.status.equals("Frei")) { ruestZeit = 45; break; } } }
                 
                 f.aktuellerEinsatz = ein; 

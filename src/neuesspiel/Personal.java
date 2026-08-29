@@ -20,7 +20,7 @@ public class Personal {
     public int schichtenMonat = 0;
     public int lehrgangDauerSec = 0;
     public String lehrgangThema = "";
-    
+    public int zufriedenheit = 100;
     public boolean praeferenzGesendet = false;
 
     // --- NEU: Der 31-Tage Schichtplan ---

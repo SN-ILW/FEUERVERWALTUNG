@@ -12,7 +12,7 @@ public class LogistikSimulator {
     
     public static JFrame frame;
     public static JTextArea txtStatus;
-    public static JEditorPane txtEinsatz;
+    public static JEditorPane txtEinsatz, txtFunk;
     public static JButton btnPause, btnPlay, btnFastForward;
     public static JLabel topUhrzeitLabel, playerInfoLabel, notrufLabel;
     public static JPanel notrufPanel;
@@ -22,21 +22,34 @@ public class LogistikSimulator {
     public static boolean cfgKiFunk = true;
     
     // Wirtschaftssystem
-    public static boolean cfgWirtschaftsSystem = false;
+    public static boolean cfgWirtschaftsSystem = true;
     public static int offeneGehaelterUndKosten = 0;
+    public static boolean cfgZufriedenheit = true;
+    
     
     //hotkeys
+    // --- HOTKEYS ---
     public static int hotkeyPause = java.awt.event.KeyEvent.VK_SPACE;
     public static int hotkeyPlay = java.awt.event.KeyEvent.VK_1;
     public static int hotkeyFast = java.awt.event.KeyEvent.VK_2;
     public static int hotkeyDisp = java.awt.event.KeyEvent.VK_D;
+    
+    // F-Tasten fuer System & Editoren
+    public static int hotkeySave = java.awt.event.KeyEvent.VK_F5; // Schnellspeichern
     public static int hotkeyDienstplan = java.awt.event.KeyEvent.VK_F1;
-    public static int hotkeyPostfach = java.awt.event.KeyEvent.VK_M;
-    public static int hotkeyFuhrpark = java.awt.event.KeyEvent.VK_F;
     public static int hotkeyEinsatzErsteller = java.awt.event.KeyEvent.VK_F2;
     public static int hotkeyEinsatzEditor = java.awt.event.KeyEvent.VK_F3;
-    public static int hotkeyPersonalEinstellen = java.awt.event.KeyEvent.VK_P;
-    public static int hotkeyKalender = java.awt.event.KeyEvent.VK_K; 
+    
+    // Buchstaben fuer die Menues
+    public static int hotkeyPostfach = java.awt.event.KeyEvent.VK_M; // Mail
+    public static int hotkeyKalender = java.awt.event.KeyEvent.VK_K; // Kalender
+    public static int hotkeyFuhrpark = java.awt.event.KeyEvent.VK_F; // Fuhrpark
+    public static int hotkeyPersonalEinstellen = java.awt.event.KeyEvent.VK_P; // Personal
+    public static int hotkeyLogistik = java.awt.event.KeyEvent.VK_L; // Lager & Logistik
+    public static int hotkeyBauen = java.awt.event.KeyEvent.VK_B; // Bauen / Wachen
+    public static int hotkeyKlinik = java.awt.event.KeyEvent.VK_H; // Hospital / Kliniken
+    public static int hotkeyBank = java.awt.event.KeyEvent.VK_G; // Geld / Bank
+    public static int hotkeySystem = java.awt.event.KeyEvent.VK_O; // Optionen / System
     
     public static TagesMission aktuelleMission = null; 
     public static JButton btnPostfach, btnTagBeenden;
@@ -253,6 +266,7 @@ public class LogistikSimulator {
         topRightWrapper.add(notrufPanel, BorderLayout.CENTER);
         pnlRight.add(topRightWrapper, BorderLayout.NORTH);
         
+        // --- EINSATZ BEREICH ---
         txtEinsatz = new JEditorPane();
         txtEinsatz.setContentType("text/html");
         txtEinsatz.setEditable(false);
@@ -272,7 +286,24 @@ public class LogistikSimulator {
         scrollEinsatz.setBorder(BorderFactory.createEmptyBorder());
         scrollEinsatz.getViewport().setBackground(bgDark);
         
-        pnlRight.add(scrollEinsatz, BorderLayout.CENTER);
+        // --- NEU: FUNK BEREICH ---
+        txtFunk = new JEditorPane();
+        txtFunk.setContentType("text/html");
+        txtFunk.setEditable(false);
+        txtFunk.setBackground(bgDark);
+        
+        JScrollPane scrollFunk = new JScrollPane(txtFunk);
+        scrollFunk.setBorder(BorderFactory.createEmptyBorder());
+        scrollFunk.getViewport().setBackground(bgDark);
+        
+        // --- NEU: DER GETEILTE BILDSCHIRM (SPLIT PANE) ---
+        JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollFunk, scrollEinsatz);
+        splitPane.setDividerLocation(300); // Start-Position des Balkens (300 Pixel von oben)
+        splitPane.setResizeWeight(0.5);    // Beim Vergrößern des Fensters wachsen beide Hälften gleichmäßig
+        splitPane.setBorder(BorderFactory.createEmptyBorder());
+        splitPane.setDividerSize(6);       // Ein 6-Pixel dicker Balken zum Greifen mit der Maus
+        
+        pnlRight.add(splitPane, BorderLayout.CENTER);
         
         pnlCenter.add(pnlLeft); 
         pnlCenter.add(pnlRight);
@@ -358,18 +389,34 @@ public class LogistikSimulator {
                 if (focus instanceof JTextField || focus instanceof JTextArea || focus instanceof JEditorPane) return false; 
                 
                 int code = e.getKeyCode();
+                
+                // Zeit-Steuerung & Alarmierung
                 if (code == hotkeyPause) btnPause.doClick();
                 else if (code == hotkeyPlay) btnPlay.doClick();
                 else if (code == hotkeyFast) btnFastForward.doClick();
                 else if (code == hotkeyDisp && aktuellerNotruf != null) FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
+                
+                // System & Speichern
+                else if (code == hotkeySave) { 
+                    SpeicherManager.speichern("savegame.properties"); 
+                    JOptionPane.showMessageDialog(frame, "Spiel erfolgreich gespeichert!"); 
+                }
+                else if (code == hotkeySystem) FensterManager.oeffneSystemHauptmenu();
+                else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
+                else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
+                
+                // Fenster & Menues
                 else if (code == hotkeyDienstplan) Schichtplaner.oeffneSchichtplan();
                 else if (code == hotkeyPostfach) FensterManager.oeffnePostfach();
                 else if (code == hotkeyFuhrpark) FensterManager.oeffneFuhrparkHauptmenu();
-                else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
-                else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
-                else if (code == hotkeyPersonalEinstellen) personalEinstellen();
+                else if (code == hotkeyPersonalEinstellen) FensterManager.oeffnePersonalHauptmenu();
                 else if (code == hotkeyKalender) Terminkalender.oeffneKalender();
+                else if (code == hotkeyLogistik) FensterManager.oeffneLogistikHauptmenu();
+                else if (code == hotkeyBauen) FensterManager.oeffneWachenAusbau();
+                else if (code == hotkeyKlinik) FensterManager.oeffneBettenUebersicht();
+                else if (code == hotkeyBank) FensterManager.oeffneBank();
             }
+            
             return false;
         });
         
@@ -764,31 +811,46 @@ public class LogistikSimulator {
             notrufLabel.setText("Kein Notruf anliegend.");
         }
 
-        StringBuilder lage = new StringBuilder();
-        lage.append("<html><head><style>")
+        // ==========================================
+        // 1. REGIONALER FUNKVERKEHR (Oberer Bereich)
+        // ==========================================
+        StringBuilder funk = new StringBuilder();
+        funk.append("<html><head><style>")
             .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
             .append(".header-funk { background-color: #1a252f; color: #3498db; padding: 6px 10px; font-weight: bold; border-left: 4px solid #3498db; margin-bottom: 10px; font-size: 14px; letter-spacing: 1px; }")
-            .append(".header-mission { color: #f1c40f; font-weight: bold; margin-top: 20px; border-bottom: 1px solid #444; padding-bottom: 4px; font-size: 13px; letter-spacing: 1px; }")
-            .append(".mission-box { background-color: #2a2a2a; border-left: 3px solid #e74c3c; padding: 8px; margin-top: 8px; font-size: 12px; }")
-            .append(".mission-title { color: #e74c3c; font-weight: bold; margin-bottom: 4px; font-size: 13px; }")
             .append(".funk-msg { color: #bdc3c7; font-family: 'Consolas', monospace; font-size: 12px; margin-bottom: 4px; padding-left: 5px; }")
             .append(".system-msg { color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 5px; }")
             .append("</style></head><body>");
 
-        lage.append("<div class='header-funk'>REGIONALER FUNKVERKEHR (MV)</div>");
+        funk.append("<div class='header-funk'>REGIONALER FUNKVERKEHR (MV)</div>");
 
         FunkManager.init();
         if (cfgKiFunk) {
             for (String msg : FunkManager.funkHistorie) {
-                lage.append("<div class='funk-msg'>&gt; ").append(msg.replace("\n", "<br>")).append("</div>");
+                funk.append("<div class='funk-msg'>&gt; ").append(msg.replace("\n", "<br>")).append("</div>");
             }
         } else {
-            lage.append("<div class='system-msg'>[ System: Funkueberwachung deaktiviert ]</div>");
+            funk.append("<div class='system-msg'>[ System: Funkueberwachung deaktiviert ]</div>");
         }
 
         if(inGameSekunden >= 19*3600) {
-            lage.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Schichtwechsel) ]</div>");
+            funk.append("<div class='system-msg' style='color:#e74c3c; font-weight:bold;'><br>[ SYSTEM: Leitstelle geschlossen (Schichtwechsel) ]</div>");
         }
+        funk.append("</body></html>");
+        txtFunk.setText(funk.toString());
+
+        // ==========================================
+        // 2. LAUFENDE EINSÄTZE (Unterer Bereich)
+        // ==========================================
+        StringBuilder lage = new StringBuilder();
+        lage.append("<html><head><style>")
+            .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
+            .append(".header-mission { color: #f1c40f; font-weight: bold; margin-top: 5px; border-bottom: 1px solid #444; padding-bottom: 4px; font-size: 13px; letter-spacing: 1px; }")
+            .append(".mission-box { background-color: #2a2a2a; border-left: 3px solid #e74c3c; padding: 8px; margin-top: 8px; font-size: 12px; }")
+            .append(".mission-title { color: #e74c3c; font-weight: bold; margin-bottom: 4px; font-size: 13px; }")
+            .append(".system-msg { color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 5px; }")
+            .append("a { color: #e74c3c; text-decoration: none; }") // Entfernt den blauen Link-Strich
+            .append("</style></head><body>");
 
         lage.append("<div class='header-mission'>LAUFENDE EINSAETZE</div>");
 
@@ -800,7 +862,7 @@ public class LogistikSimulator {
                 
                 lage.append("<div class='mission-box'>")
                     .append("<div class='mission-title'>")
-                    .append("<a href='AKTE:").append(aktiveEinsaetze.indexOf(e)).append("' style='color:#e74c3c; text-decoration:none;'>")
+                    .append("<a href='AKTE:").append(aktiveEinsaetze.indexOf(e)).append("'>")
                     .append("[").append(e.vorlage.stichwort).append("] ").append(e.beschreibung.toUpperCase()).append(" | Alarm: ").append(e.alarmUhrzeit)
                     .append("</a></div>")
                     .append("<div style='color:#cccccc;'>").append(lageText).append("</div>")
@@ -811,7 +873,6 @@ public class LogistikSimulator {
         lage.append("</body></html>");
         txtEinsatz.setText(lage.toString());
     }
-
     public static void generiereNotruf(String uhrzeit) {
         ArrayList<EinsatzVorlage> moegliche = new ArrayList<>();
         for (EinsatzVorlage v : vorlagenPool) {
@@ -1380,7 +1441,8 @@ public class LogistikSimulator {
                 }
             } 
         } 
-
+        // NEU: Zieht Zufriedenheit ab und feuert Leute, die auf 0 sinken
+        PersonalManager.tagesAuswertung();
         verliehenesPersonal.clear(); 
 
         // RUF FÜR DIE NEUE TAGESZEITUNG (ersetzt das alte JOptionPane):

@@ -88,12 +88,13 @@ public static void importiereEinsaetzeUeberDialog(JFrame parentFrame) {
                             }
 
                             // Nur hinzufügen, wenn er neu ist!
+                            
                             if (!existiertBereits) {
-                                EinsatzVorlage neueVorlage = new EinsatzVorlage(
-                                        art, stichwort, beschreibung, 
-                                        reqELW, reqHLF, reqDLK, reqRTW, reqNEF, reqKTW, reqTLF, reqMTW, 
-                                        hatNachforderung, nachforderungProzent, nachforderungTyp, minLevel
-                                );
+                            EinsatzVorlage neueVorlage = new EinsatzVorlage(
+                            art, stichwort, beschreibung, 
+                            reqRTW, reqNEF, reqKTW, reqHLF, reqDLK, reqELW, reqTLF, reqMTW, 
+                            hatNachforderung, nachforderungProzent, nachforderungTyp, minLevel
+                            );
                                 
                                 LogistikSimulator.vorlagenPool.add(neueVorlage);
                                 importiert++;
