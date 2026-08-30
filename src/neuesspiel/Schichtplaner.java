@@ -6,6 +6,7 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -119,14 +120,34 @@ public class Schichtplaner {
         leftPanel.setBackground(new Color(30, 30, 30));
         leftPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JPanel pnlWahl = new JPanel(new GridLayout(4, 1, 0, 5));
+        JPanel pnlWahl = new JPanel();
+        pnlWahl.setLayout(new BoxLayout(pnlWahl, BoxLayout.Y_AXIS));
         pnlWahl.setOpaque(false);
-        JLabel l1 = new JLabel("1. Wache waehlen:"); l1.setForeground(Color.WHITE); l1.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        
+        JLabel l1 = new JLabel("1. Wache waehlen:"); 
+        l1.setForeground(Color.WHITE); 
+        l1.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        l1.setAlignmentX(Component.LEFT_ALIGNMENT);
         
         JComboBox<String> cbWachen = new JComboBox<>();
         for (Wache w : wachen) cbWachen.addItem(w.name);
+        cbWachen.setBackground(new Color(60, 60, 60));
+        cbWachen.setForeground(Color.WHITE);
+        cbWachen.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        cbWachen.setAlignmentX(Component.LEFT_ALIGNMENT);
+        cbWachen.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         
-        JLabel l2 = new JLabel("2. Stempel waehlen:"); l2.setForeground(Color.WHITE); l2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        JLabel l2 = new JLabel("2. Stempel waehlen:"); 
+        l2.setForeground(Color.WHITE); 
+        l2.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        l2.setAlignmentX(Component.LEFT_ALIGNMENT);
+        
+        pnlWahl.add(l1);
+        pnlWahl.add(Box.createVerticalStrut(5));
+        pnlWahl.add(cbWachen);
+        pnlWahl.add(Box.createVerticalStrut(15));
+        pnlWahl.add(l2);
+        pnlWahl.add(Box.createVerticalStrut(5));
         
         DefaultListModel<String> stempelModel = new DefaultListModel<>();
         stempelModel.addElement("Frei"); 
@@ -158,22 +179,47 @@ public class Schichtplaner {
         };
         stempelListe.setSelectedIndex(0);
         stempelListe.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        stempelListe.setBackground(new Color(43, 43, 43));
+        stempelListe.setForeground(Color.WHITE);
+        stempelListe.setSelectionBackground(new Color(52, 152, 219)); 
+        stempelListe.setSelectionForeground(Color.WHITE);
+        stempelListe.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(8, 10, 8, 10)); 
+                return label;
+            }
+        });
         
-        pnlWahl.add(l1); pnlWahl.add(cbWachen); pnlWahl.add(l2);
         leftPanel.add(pnlWahl, BorderLayout.NORTH);
         
         JPanel pnlListenWrapper = new JPanel(new BorderLayout());
         pnlListenWrapper.setOpaque(false);
-        pnlListenWrapper.add(new JScrollPane(stempelListe), BorderLayout.CENTER);
+        JScrollPane scrollStempel = new JScrollPane(stempelListe);
+        scrollStempel.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
+        styleScrollPane(scrollStempel); // Flache Scrollbars
+        pnlListenWrapper.add(scrollStempel, BorderLayout.CENTER);
         
         pnlFahrzeugBoxen = new JPanel();
         pnlFahrzeugBoxen.setLayout(new BoxLayout(pnlFahrzeugBoxen, BoxLayout.Y_AXIS));
         pnlFahrzeugBoxen.setBackground(new Color(35, 35, 35));
         
         scrollBoxen = new JScrollPane(pnlFahrzeugBoxen);
-        scrollBoxen.setPreferredSize(new Dimension(300, 200));
-        scrollBoxen.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Einteilung Tag 1", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14), Color.WHITE));
-        pnlListenWrapper.add(scrollBoxen, BorderLayout.SOUTH);
+        scrollBoxen.setPreferredSize(new Dimension(300, 250));
+        scrollBoxen.setBackground(new Color(30, 30, 30));
+        scrollBoxen.getViewport().setBackground(new Color(35, 35, 35));
+        scrollBoxen.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Einteilung", javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14), Color.WHITE));
+        styleScrollPane(scrollBoxen); // Flache Scrollbars
+        
+        pnlListenWrapper.add(Box.createVerticalStrut(10), BorderLayout.SOUTH);
+        
+        JPanel bottomContainer = new JPanel(new BorderLayout());
+        bottomContainer.setOpaque(false);
+        bottomContainer.setBorder(BorderFactory.createEmptyBorder(10, 0, 0, 0));
+        bottomContainer.add(scrollBoxen, BorderLayout.CENTER);
+        
+        pnlListenWrapper.add(bottomContainer, BorderLayout.SOUTH);
         leftPanel.add(pnlListenWrapper, BorderLayout.CENTER);
 
         tableModel = new DefaultTableModel(0, 0) {
@@ -182,8 +228,8 @@ public class Schichtplaner {
         table = new JTable(tableModel);
         table.setRowHeight(28);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
-        
-        // --- HIER WURDE DER ALTE RENDERER ENTFERNT (WIRD JETZT IN loadTableData GESETZT) ---
+        table.setGridColor(new Color(60, 60, 60)); // Sanfteres Grau fuer Gitter
+        table.setBackground(new Color(40, 40, 40));
         table.getTableHeader().setReorderingAllowed(false);
         
         table.getTableHeader().addMouseListener(new MouseAdapter() {
@@ -204,37 +250,31 @@ public class Schichtplaner {
         rowHeaderTable = new JTable(rowHeaderModel);
         rowHeaderTable.setRowHeight(28);
         rowHeaderTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+        rowHeaderTable.setGridColor(new Color(60, 60, 60));
+        rowHeaderTable.setBackground(new Color(40, 40, 40));
         rowHeaderTable.getTableHeader().setBackground(new Color(20, 30, 48));
         rowHeaderTable.getTableHeader().setForeground(Color.WHITE);
         rowHeaderTable.getTableHeader().setReorderingAllowed(false);
         
         rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(130);
-        rowHeaderTable.getColumnModel().getColumn(0).setMinWidth(130);
-        rowHeaderTable.getColumnModel().getColumn(0).setMaxWidth(130);
-        
         rowHeaderTable.getColumnModel().getColumn(1).setPreferredWidth(140);
-        rowHeaderTable.getColumnModel().getColumn(1).setMinWidth(140);
-        rowHeaderTable.getColumnModel().getColumn(1).setMaxWidth(140);
-        
         rowHeaderTable.getColumnModel().getColumn(2).setPreferredWidth(80);
-        rowHeaderTable.getColumnModel().getColumn(2).setMinWidth(80);
-        rowHeaderTable.getColumnModel().getColumn(2).setMaxWidth(80);
-        
         rowHeaderTable.setPreferredScrollableViewportSize(new Dimension(350, 0));
         
         rowHeaderTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 c.setBackground(new Color(40, 40, 40)); 
                 
                 if (column == 2) {
                     c.setForeground(new Color(241, 196, 15));
-                    setHorizontalAlignment(SwingConstants.CENTER);
-                    setFont(new Font("Segoe UI", Font.BOLD, 12));
+                    c.setHorizontalAlignment(SwingConstants.CENTER);
+                    c.setFont(new Font("Segoe UI", Font.BOLD, 12));
                 } else {
                     c.setForeground(Color.WHITE);
-                    setHorizontalAlignment(SwingConstants.LEFT);
-                    setFont(new Font("Segoe UI", Font.PLAIN, 12));
+                    c.setHorizontalAlignment(SwingConstants.LEFT);
+                    c.setBorder(BorderFactory.createEmptyBorder(0, 5, 0, 0)); // Etwas Abstand nach Links
+                    c.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                 }
                 return c;
             }
@@ -242,8 +282,11 @@ public class Schichtplaner {
 
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
+                
+                // --- TEXT ZENTRIEREN ---
+                c.setHorizontalAlignment(SwingConstants.CENTER);
                 
                 LocalDate cDate = LogistikSimulator.getCurrentDate().withDayOfMonth(1);
                 if (!zeigeAktuellenMonat) cDate = cDate.plusMonths(1);
@@ -331,8 +374,15 @@ public class Schichtplaner {
         table.addMouseMotionListener(stampAdapter);
 
         JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(new Color(35, 35, 35));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
         scrollPane.setRowHeaderView(rowHeaderTable);
         scrollPane.setCorner(JScrollPane.UPPER_LEFT_CORNER, rowHeaderTable.getTableHeader());
+        
+        // Ecke oben Rechts dunkel faerben
+        JPanel cornerTR = new JPanel(); cornerTR.setBackground(new Color(20, 30, 48));
+        scrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cornerTR);
+        styleScrollPane(scrollPane);
 
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         bottomPanel.setBackground(new Color(25, 25, 25));
@@ -557,37 +607,39 @@ public class Schichtplaner {
         String[] columns = new String[tageImMonat];
         for (int i = 0; i < tageImMonat; i++) {
             LocalDate date = cDate.withDayOfMonth(i + 1);
-            // BONUS: Wochentag (Mo, Di, Mi...) in den Tabellenkopf schreiben
             String wochentag = date.format(java.time.format.DateTimeFormatter.ofPattern("E", java.util.Locale.GERMAN));
             columns[i] = (i + 1) + " (" + wochentag + ")";
         }
 
         tableModel.setColumnIdentifiers(columns);
         for(int i = 0; i < tableModel.getColumnCount(); i++) {
-            table.getColumnModel().getColumn(i).setPreferredWidth(85); // Etwas breiter gemacht für den Wochentag
+            table.getColumnModel().getColumn(i).setPreferredWidth(85); 
             
-            // --- NEU: RENDERER WIRD BEIM LADEN DES MONATS FEST AN DIE SPALTE GEBUNDEN ---
             table.getColumnModel().getColumn(i).setHeaderRenderer(new DefaultTableCellRenderer() {
                 @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                     JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                     lbl.setHorizontalAlignment(SwingConstants.CENTER);
-                    lbl.setOpaque(true); // WICHTIG: Erlaubt das Einfärben des Hintergrunds!
-                    lbl.setBorder(UIManager.getBorder("TableHeader.cellBorder"));
+                    lbl.setOpaque(true); 
+                    lbl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(60, 60, 60))); // Dezentere Randlinien
+                    
+                    lbl.setForeground(Color.WHITE); // Wieder auf Weiss für besseren Kontrast
+                    lbl.setFont(new Font("Segoe UI", Font.BOLD, 13));
                     
                     LocalDate currentDate = LogistikSimulator.getCurrentDate().withDayOfMonth(1);
                     if (!zeigeAktuellenMonat) currentDate = currentDate.plusMonths(1);
                     
                     if (column < currentDate.lengthOfMonth()) {
                         LocalDate cellDate = currentDate.withDayOfMonth(column + 1);
-                        if (LogistikSimulator.istFeiertag(cellDate)) {
-                            lbl.setBackground(new Color(192, 57, 43)); // Starkes Rot für Feiertage
-                            lbl.setForeground(Color.WHITE);
+                        LocalDate heute = LogistikSimulator.getCurrentDate();
+                        
+                        if (cellDate.equals(heute)) {
+                            lbl.setBackground(new Color(39, 174, 96)); // Gruen fuer das aktuelle Datum
+                        } else if (LogistikSimulator.istFeiertag(cellDate)) {
+                            lbl.setBackground(new Color(192, 57, 43)); // Starkes Rot
                         } else if (LogistikSimulator.istSonntag(cellDate)) {
-                            lbl.setBackground(new Color(231, 76, 60)); // Helles Rot für Sonntage
-                            lbl.setForeground(Color.WHITE);
+                            lbl.setBackground(new Color(231, 76, 60)); // Helles Rot
                         } else {
                             lbl.setBackground(new Color(20, 30, 48)); // Standard Leitstellen-Blau
-                            lbl.setForeground(Color.WHITE);
                         }
                     }
                     return lbl;
@@ -631,7 +683,20 @@ public class Schichtplaner {
         
         pnlFahrzeugBoxen.removeAll();
         
-        scrollBoxen.setBorder(BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.GRAY), "Einteilung Tag " + (ausgewaehlterTagIndex + 1), javax.swing.border.TitledBorder.LEFT, javax.swing.border.TitledBorder.TOP, new Font("Segoe UI", Font.BOLD, 14), Color.WHITE));
+        LocalDate cDate = LogistikSimulator.getCurrentDate().withDayOfMonth(1);
+        if (!zeigeAktuellenMonat) cDate = cDate.plusMonths(1);
+        
+        LocalDate targetDate = cDate.withDayOfMonth(ausgewaehlterTagIndex + 1);
+        String datumFormatted = targetDate.format(DateTimeFormatter.ofPattern("EEEE, dd.MM.yyyy", java.util.Locale.GERMAN));
+        
+        scrollBoxen.setBorder(BorderFactory.createTitledBorder(
+            BorderFactory.createLineBorder(Color.GRAY), 
+            "Einteilung fuer " + datumFormatted, 
+            javax.swing.border.TitledBorder.LEFT, 
+            javax.swing.border.TitledBorder.TOP, 
+            new Font("Segoe UI", Font.BOLD, 13), 
+            Color.WHITE
+        ));
 
         for (Fahrzeug f : aktuelleWache.fuhrpark) {
             ArrayList<String> reqs = getRequiredRoles(f);
@@ -650,19 +715,24 @@ public class Schichtplaner {
             
             JPanel fzPanel = new JPanel();
             fzPanel.setLayout(new BoxLayout(fzPanel, BoxLayout.Y_AXIS));
-            fzPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(30, 30, 30)));
+            fzPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0)); 
+            fzPanel.setOpaque(false);
             
-            JButton btnHeader = new JButton(f.funkrufname + ": " + besatzung.size() + "/" + reqs.size() + " Mann");
+            JButton btnHeader = new JButton(f.funkrufname + "  |  " + besatzung.size() + "/" + reqs.size() + " Mann");
             btnHeader.setAlignmentX(Component.LEFT_ALIGNMENT);
             btnHeader.setFocusPainted(false);
-            btnHeader.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnHeader.setBorderPainted(false); 
+            btnHeader.setOpaque(true);
+            btnHeader.setFont(new Font("Segoe UI", Font.BOLD, 13));
             btnHeader.setForeground(Color.WHITE);
             btnHeader.setBackground(isReady ? new Color(39, 174, 96) : new Color(192, 57, 43));
-            btnHeader.setMaximumSize(new Dimension(300, 35));
+            btnHeader.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+            btnHeader.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
             btnHeader.setCursor(new Cursor(Cursor.HAND_CURSOR));
             
             JPanel detailsPanel = new JPanel(new GridLayout(0, 1));
             detailsPanel.setBackground(new Color(40, 40, 40));
+            detailsPanel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
             detailsPanel.setVisible(false);
             
             if (!isReady) {
@@ -675,13 +745,13 @@ public class Schichtplaner {
                 HashMap<String, Integer> mCount = new HashMap<>();
                 for(String m : missing) mCount.put(m, mCount.getOrDefault(m, 0) + 1);
                 for(String k : mCount.keySet()) {
-                    JLabel lblFehlt = new JLabel(" FEHLT: " + mCount.get(k) + "x " + k);
+                    JLabel lblFehlt = new JLabel("FEHLT: " + mCount.get(k) + "x " + k);
                     lblFehlt.setForeground(Color.ORANGE);
-                    lblFehlt.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+                    lblFehlt.setFont(new Font("Segoe UI", Font.PLAIN, 12));
                     detailsPanel.add(lblFehlt);
                 }
             } else {
-                JLabel lblOk = new JLabel(" Alle Positionen besetzt.");
+                JLabel lblOk = new JLabel("Alle Positionen besetzt.");
                 lblOk.setForeground(Color.LIGHT_GRAY);
                 detailsPanel.add(lblOk);
             }
@@ -704,5 +774,27 @@ public class Schichtplaner {
         JButton b = new JButton(t); b.setBackground(c); b.setForeground(Color.WHITE);
         b.setFocusPainted(false); b.setFont(new Font("Segoe UI", Font.BOLD, 12));
         return b;
+    }
+    
+    // --- HILFSMETHODE FÜR DUNKLEN SCROLLBAR ---
+    private static void styleScrollPane(JScrollPane scrollPane) {
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override protected void configureScrollBarColors() {
+                this.thumbColor = new Color(80, 80, 80);
+                this.trackColor = new Color(35, 35, 35);
+            }
+            @Override protected JButton createDecreaseButton(int orientation) { return createZeroBtn(); }
+            @Override protected JButton createIncreaseButton(int orientation) { return createZeroBtn(); }
+            private JButton createZeroBtn() { JButton btn = new JButton(); btn.setPreferredSize(new Dimension(0, 0)); return btn; }
+        });
+        scrollPane.getHorizontalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override protected void configureScrollBarColors() {
+                this.thumbColor = new Color(80, 80, 80);
+                this.trackColor = new Color(35, 35, 35);
+            }
+            @Override protected JButton createDecreaseButton(int orientation) { return createZeroBtn(); }
+            @Override protected JButton createIncreaseButton(int orientation) { return createZeroBtn(); }
+            private JButton createZeroBtn() { JButton btn = new JButton(); btn.setPreferredSize(new Dimension(0, 0)); return btn; }
+        });
     }
 }

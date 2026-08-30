@@ -77,4 +77,14 @@ public class MailGenerator {
         m.text += "##" + vorhandenerLehrgang; 
         return m;
     }
+    
+    public static Email generiereWunschfrei(Personal p, int wunschTag) {
+        String[] gruende = {"einen dringenden Arzttermin", "einen wichtigen runden Geburtstag in der Familie", "einen unaufschiebbaren privaten Termin", "einen Handwerker im Haus"};
+        String grund = gruende[(int)(Math.random() * gruende.length)];
+        String datum = LogistikSimulator.getShortDatumString(wunschTag);
+        
+        String text = "Hallo Chef,\n\nich braeuchte am " + datum + " unbedingt eine Schicht frei. Ich habe an diesem Tag leider " + grund + ".\n\nWaere super, wenn sich das im Dienstplan einrichten laesst!\n\nGruss,\n" + p.name;
+        return new Email(p.name, "Wunschfrei am " + datum, text, "Wunschfrei", p, wunschTag, wunschTag);
+    }
+    
 }

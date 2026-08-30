@@ -52,6 +52,7 @@ public class Terminkalender {
         
         JButton btnCloseTop = new JButton("X");
         btnCloseTop.setBackground(new Color(192, 57, 43)); btnCloseTop.setForeground(Color.WHITE);
+        btnCloseTop.setFocusPainted(false);
         btnCloseTop.addActionListener(e -> d.dispose());
         titleBar.add(btnCloseTop, BorderLayout.EAST);
         d.add(titleBar, BorderLayout.NORTH);
@@ -72,6 +73,7 @@ public class Terminkalender {
         
         JLabel lblMonat = new JLabel("Monat:"); lblMonat.setForeground(Color.WHITE);
         JComboBox<String> cbMonat = new JComboBox<>(monthToCol.keySet().toArray(new String[0]));
+        cbMonat.setBackground(new Color(60, 60, 60)); cbMonat.setForeground(Color.WHITE); cbMonat.setFont(new Font("Segoe UI", Font.BOLD, 13));
         cbMonat.addActionListener(e -> {
             String sel = (String) cbMonat.getSelectedItem();
             if(sel != null && monthToCol.containsKey(sel)) {
@@ -84,11 +86,13 @@ public class Terminkalender {
         JComboBox<String> cbFahrzeug = new JComboBox<>();
         cbFahrzeug.addItem("Kein Fahrzeug");
         for (Fahrzeug f : w.fuhrpark) cbFahrzeug.addItem(f.funkrufname);
+        cbFahrzeug.setBackground(new Color(60, 60, 60)); cbFahrzeug.setForeground(Color.WHITE); cbFahrzeug.setFont(new Font("Segoe UI", Font.BOLD, 13));
         
         JLabel lblPers = new JLabel("2. Personal:"); lblPers.setForeground(Color.WHITE);
         JComboBox<String> cbPersonal = new JComboBox<>();
         cbPersonal.addItem("Kein Personal"); 
         for (Personal p : w.personalPool) cbPersonal.addItem(p.name);
+        cbPersonal.setBackground(new Color(60, 60, 60)); cbPersonal.setForeground(Color.WHITE); cbPersonal.setFont(new Font("Segoe UI", Font.BOLD, 13));
         
         JLabel lblHint = new JLabel(" (Ohne Fz/Pers: Eigener Text! Links=Eintragen, Rechts=Loeschen)");
         lblHint.setForeground(Color.GRAY); lblHint.setFont(new Font("Segoe UI", Font.ITALIC, 12));
@@ -107,25 +111,30 @@ public class Terminkalender {
         table.setRowHeight(35);
         table.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         table.getTableHeader().setReorderingAllowed(false);
+        table.setGridColor(new Color(60, 60, 60)); 
+        table.setBackground(new Color(40, 40, 40));
         
-        // --- NEU: FARBIGER TABELLENKOPF ---
         table.getTableHeader().setDefaultRenderer(new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable t, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 JLabel lbl = (JLabel) super.getTableCellRendererComponent(t, value, isSelected, hasFocus, row, column);
                 lbl.setHorizontalAlignment(SwingConstants.CENTER);
-                lbl.setBorder(UIManager.getBorder("TableHeader.cellBorder"));
+                lbl.setOpaque(true); 
+                lbl.setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(60, 60, 60))); 
+                
+                lbl.setForeground(Color.BLACK);
+                lbl.setFont(new Font("Segoe UI", Font.BOLD, 12));
                 
                 LocalDate cellDate = LogistikSimulator.getCurrentDate().plusDays(column);
+                LocalDate heute = LogistikSimulator.getCurrentDate();
                 
-                if (LogistikSimulator.istFeiertag(cellDate)) {
-                    lbl.setBackground(new Color(192, 57, 43)); // Starkes Rot für Feiertage
-                    lbl.setForeground(Color.WHITE);
+                if (cellDate.equals(heute)) {
+                    lbl.setBackground(new Color(39, 174, 96)); 
+                } else if (LogistikSimulator.istFeiertag(cellDate)) {
+                    lbl.setBackground(new Color(192, 57, 43)); 
                 } else if (LogistikSimulator.istSonntag(cellDate)) {
-                    lbl.setBackground(new Color(231, 76, 60)); // Helles Rot für Sonntage
-                    lbl.setForeground(Color.WHITE);
+                    lbl.setBackground(new Color(231, 76, 60)); 
                 } else {
-                    lbl.setBackground(new Color(20, 30, 48)); // Standard Leitstellen-Blau
-                    lbl.setForeground(Color.WHITE);
+                    lbl.setBackground(new Color(180, 190, 200)); 
                 }
                 return lbl;
             }
@@ -149,9 +158,19 @@ public class Terminkalender {
         rowHeaderModel.setColumnIdentifiers(new String[]{"Uhrzeit"});
         rowHeaderTable = new JTable(rowHeaderModel);
         rowHeaderTable.setRowHeight(35);
-        rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(80);
+        
+        // --- HIER IST DIE ANPASSUNG FÜR DIE BREITE ---
+        rowHeaderTable.getColumnModel().getColumn(0).setPreferredWidth(90);
+        rowHeaderTable.getColumnModel().getColumn(0).setMinWidth(90);
+        rowHeaderTable.getColumnModel().getColumn(0).setMaxWidth(90);
+        rowHeaderTable.setPreferredScrollableViewportSize(new Dimension(90, 0));
+        // ---------------------------------------------
+        
         rowHeaderTable.getTableHeader().setBackground(new Color(20, 30, 48));
         rowHeaderTable.getTableHeader().setForeground(Color.WHITE);
+        rowHeaderTable.getTableHeader().setReorderingAllowed(false);
+        rowHeaderTable.setGridColor(new Color(60, 60, 60));
+        rowHeaderTable.setBackground(new Color(40, 40, 40));
         
         // Uhrzeiten generieren (07:00 bis 19:00 = 25 Slots)
         for(int i = 0; i <= 24; i++) {
@@ -172,23 +191,26 @@ public class Terminkalender {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 c.setBackground(new Color(45, 45, 45)); c.setForeground(new Color(241, 196, 15));
                 ((JLabel)c).setHorizontalAlignment(SwingConstants.CENTER);
+                ((JLabel)c).setFont(new Font("Segoe UI", Font.BOLD, 12));
                 return c;
             }
         });
 
         table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
             @Override public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                JLabel c = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 String val = (String) value;
                 
-                // --- NEU: HINTERGRUNDFARBEN FÜR SONN- & FEIERTAEGE IM KALENDER ---
+                c.setHorizontalAlignment(SwingConstants.CENTER);
+                c.setFont(new Font("Segoe UI", Font.BOLD, 12));
+                
                 LocalDate cellDate = LogistikSimulator.getCurrentDate().plusDays(column);
-                Color bgEmpty = new Color(50, 50, 50); // Standard Frei
+                Color bgEmpty = new Color(50, 50, 50); 
                 
                 if (LogistikSimulator.istFeiertag(cellDate)) {
-                    bgEmpty = new Color(146, 43, 33); // Dunkles Rot
+                    bgEmpty = new Color(146, 43, 33); 
                 } else if (LogistikSimulator.istSonntag(cellDate)) {
-                    bgEmpty = new Color(176, 58, 46); // Helles Rot
+                    bgEmpty = new Color(176, 58, 46); 
                 }
 
                 if (val == null || val.isEmpty()) {
@@ -281,8 +303,14 @@ public class Terminkalender {
         table.addMouseMotionListener(stampAdapter);
 
         JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.getViewport().setBackground(new Color(35, 35, 35));
+        scrollPane.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 60)));
         scrollPane.setRowHeaderView(rowHeaderTable);
         scrollPane.setCorner(JScrollPane.UPPER_LEFT_CORNER, rowHeaderTable.getTableHeader());
+        
+        JPanel cornerTR = new JPanel(); cornerTR.setBackground(new Color(20, 30, 48));
+        scrollPane.setCorner(JScrollPane.UPPER_RIGHT_CORNER, cornerTR);
+        styleScrollPane(scrollPane);
 
         JPanel centerContainer = new JPanel(new BorderLayout());
         centerContainer.add(topMenu, BorderLayout.NORTH);
@@ -294,6 +322,8 @@ public class Terminkalender {
         bottomPanel.setBackground(new Color(25, 25, 25));
         JButton btnSave = new JButton("Speichern & Schliessen");
         btnSave.setBackground(new Color(39, 174, 96)); btnSave.setForeground(Color.WHITE);
+        btnSave.setFocusPainted(false);
+        btnSave.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnSave.addActionListener(e -> d.dispose());
         bottomPanel.add(btnSave);
         d.add(bottomPanel, BorderLayout.SOUTH);
@@ -321,5 +351,26 @@ public class Terminkalender {
         for(int row = 0; row < 25; row++) {
             kalenderDaten[61][row] = "";
         }
+    }
+    
+    private static void styleScrollPane(JScrollPane scrollPane) {
+        scrollPane.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override protected void configureScrollBarColors() {
+                this.thumbColor = new Color(80, 80, 80);
+                this.trackColor = new Color(35, 35, 35);
+            }
+            @Override protected JButton createDecreaseButton(int orientation) { return createZeroBtn(); }
+            @Override protected JButton createIncreaseButton(int orientation) { return createZeroBtn(); }
+            private JButton createZeroBtn() { JButton btn = new JButton(); btn.setPreferredSize(new Dimension(0, 0)); return btn; }
+        });
+        scrollPane.getHorizontalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override protected void configureScrollBarColors() {
+                this.thumbColor = new Color(80, 80, 80);
+                this.trackColor = new Color(35, 35, 35);
+            }
+            @Override protected JButton createDecreaseButton(int orientation) { return createZeroBtn(); }
+            @Override protected JButton createIncreaseButton(int orientation) { return createZeroBtn(); }
+            private JButton createZeroBtn() { JButton btn = new JButton(); btn.setPreferredSize(new Dimension(0, 0)); return btn; }
+        });
     }
 }

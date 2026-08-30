@@ -187,16 +187,13 @@ public class LogistikSimulator {
         btnPlay = createStyledButton("Play", new Color(39, 174, 96)); 
         btnFastForward = createStyledButton(">> 5x Spulen", new Color(60, 63, 65));
         
-        // --- NEUER BUTTON: Sprung zu 18 Uhr ---
         JButton btnFeierabend = createStyledButton(">> 18 Uhr", new Color(142, 68, 173));
-        
         JButton btnExit = createStyledButton("X Beenden", new Color(192, 57, 43));
         
         btnPause.addActionListener(e -> setSpeed(0));
         btnPlay.addActionListener(e -> setSpeed(1));
         btnFastForward.addActionListener(e -> setSpeed(3));
         
-        // --- NEUE AKTION FÜR DEN BUTTON ---
         btnFeierabend.addActionListener(e -> {
             if (inGameSekunden < 18 * 3600) {
                 inGameSekunden = 18 * 3600;
@@ -208,7 +205,7 @@ public class LogistikSimulator {
         
         pnlTime.add(lblRate); pnlTime.add(cbRate);
         pnlTime.add(btnPause); pnlTime.add(btnPlay); pnlTime.add(btnFastForward); 
-        pnlTime.add(btnFeierabend); // Hier wird er dem Panel hinzugefügt
+        pnlTime.add(btnFeierabend);
         pnlTime.add(btnExit);
         pnlTop.add(pnlTime, BorderLayout.EAST);
         
@@ -266,7 +263,6 @@ public class LogistikSimulator {
         topRightWrapper.add(notrufPanel, BorderLayout.CENTER);
         pnlRight.add(topRightWrapper, BorderLayout.NORTH);
         
-        // --- EINSATZ BEREICH ---
         txtEinsatz = new JEditorPane();
         txtEinsatz.setContentType("text/html");
         txtEinsatz.setEditable(false);
@@ -286,7 +282,6 @@ public class LogistikSimulator {
         scrollEinsatz.setBorder(BorderFactory.createEmptyBorder());
         scrollEinsatz.getViewport().setBackground(bgDark);
         
-        // --- NEU: FUNK BEREICH ---
         txtFunk = new JEditorPane();
         txtFunk.setContentType("text/html");
         txtFunk.setEditable(false);
@@ -296,20 +291,17 @@ public class LogistikSimulator {
         scrollFunk.setBorder(BorderFactory.createEmptyBorder());
         scrollFunk.getViewport().setBackground(bgDark);
         
-        // --- NEU: DER GETEILTE BILDSCHIRM (SPLIT PANE) ---
         JSplitPane splitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT, scrollFunk, scrollEinsatz);
-        splitPane.setDividerLocation(300); // Start-Position des Balkens (300 Pixel von oben)
-        splitPane.setResizeWeight(0.5);    // Beim Vergrößern des Fensters wachsen beide Hälften gleichmäßig
+        splitPane.setDividerLocation(300);
+        splitPane.setResizeWeight(0.5);   
         splitPane.setBorder(BorderFactory.createEmptyBorder());
-        splitPane.setDividerSize(6);       // Ein 6-Pixel dicker Balken zum Greifen mit der Maus
+        splitPane.setDividerSize(6);       
         
         pnlRight.add(splitPane, BorderLayout.CENTER);
         
         pnlCenter.add(pnlLeft); 
         pnlCenter.add(pnlRight);
         
-        // Raster auf 4x4 vergrößern, um Platz zu machen!
-        // Raster wieder zurueck auf 3 Zeilen, 4 Spalten (12 Buttons insgesamt)
         JPanel pnlBottom = new JPanel(new GridLayout(3, 4, 5, 5));
         pnlBottom.setBackground(bgDark);
         pnlBottom.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
@@ -390,13 +382,11 @@ public class LogistikSimulator {
                 
                 int code = e.getKeyCode();
                 
-                // Zeit-Steuerung & Alarmierung
                 if (code == hotkeyPause) btnPause.doClick();
                 else if (code == hotkeyPlay) btnPlay.doClick();
                 else if (code == hotkeyFast) btnFastForward.doClick();
                 else if (code == hotkeyDisp && aktuellerNotruf != null) FensterManager.oeffneAlarmierungsFenster(aktuellerNotruf);
                 
-                // System & Speichern
                 else if (code == hotkeySave) { 
                     SpeicherManager.speichern("savegame.properties"); 
                     JOptionPane.showMessageDialog(frame, "Spiel erfolgreich gespeichert!"); 
@@ -405,7 +395,6 @@ public class LogistikSimulator {
                 else if (code == hotkeyEinsatzErsteller) FensterManager.oeffneEinsatzErsteller();
                 else if (code == hotkeyEinsatzEditor) FensterManager.oeffneEinsatzBearbeiter();
                 
-                // Fenster & Menues
                 else if (code == hotkeyDienstplan) Schichtplaner.oeffneSchichtplan();
                 else if (code == hotkeyPostfach) FensterManager.oeffnePostfach();
                 else if (code == hotkeyFuhrpark) FensterManager.oeffneFuhrparkHauptmenu();
@@ -493,11 +482,21 @@ public class LogistikSimulator {
                         if (!cfgLogistikAktiv || ressourcenDa || ein.reqMaterial.isEmpty()) {
                             xp += ein.xpBelohnung;
                             
-                            // WIRTSCHAFTSYSTEM: 10% mehr Einsatzgeld
                             int auszahlung = ein.belohnungGeld;
-                            if(cfgWirtschaftsSystem) {
-                                auszahlung = (int)(auszahlung * 1.10);
+                            
+                            // --- WOCHENEND & FEIERTGS ZUSCHLÄGE EINSÄTZE ---
+                            double multiplikator = 1.0;
+                            if (istFeiertag(getCurrentDate())) {
+                                multiplikator = 2.5; // +150% an Feiertagen
+                                ein.addProtokoll("Abrechnung: Feiertags-Zuschlag (+150%)");
+                            } else if (istSonntag(getCurrentDate())) {
+                                multiplikator = 1.4; // +40% an Sonntagen
+                                ein.addProtokoll("Abrechnung: Sonntags-Zuschlag (+40%)");
+                            } else if (cfgWirtschaftsSystem) {
+                                multiplikator = 1.10; // Standard +10% 
                             }
+                            
+                            auszahlung = (int)(auszahlung * multiplikator);
                             budget += auszahlung;
                             
                             tagesStatistik.add(ein);
@@ -515,7 +514,6 @@ public class LogistikSimulator {
                                 }
                             }
                             
-                            // --- HIER IST DER GEFIXTE NULL-POINTER BEREICH ---
                             for(Wache w : wachen) {
                                 for(Fahrzeug f : w.fuhrpark) {
                                     if (f.aktuellerEinsatz == ein) { 
@@ -537,12 +535,10 @@ public class LogistikSimulator {
                                     }
                                 }
                             }
-                            // --- ENDE DES FIXES ---
                             
                             if (cfgBeschaedigung) {
                                 for(Wache wCheck : wachen) {
                                     for(Fahrzeug f : wCheck.fuhrpark) {
-                                        // Nur Fahrzeuge prüfen, die gerade im Einsatz waren (vorher auf status 1 gesetzt)
                                         if (f.status == 1) {
                                             double baseChance = 0.05;
                                             if (f.kilometer >= f.naechsteInspektion) {
@@ -778,7 +774,6 @@ public class LogistikSimulator {
                    .append("<td width='70'><span class='badge ").append(stClass).append("'>Status ").append(f.status).append("</span></td>")
                    .append("<td>");
                 
-                // --- HIER IST DER GEFIXTE TEILEN-DURCH-NULL BEREICH ---
                 int anzeigeSpeed = Math.max(1, speed);
                 
                 if(f.ausrueckeVerzoegerung > 0) {
@@ -794,7 +789,6 @@ public class LogistikSimulator {
                     if (f.ausfallGrund.equals("Personalwechsel")) fms.append(" (Wartezeit: ").append(f.reparaturDauer/anzeigeSpeed).append("s)");
                     else if (f.ausfallGrund.equals("Wartet auf Reparatur") || f.ausfallGrund.equals("In Bearbeitung")) fms.append(" (").append(f.reparaturDauer/anzeigeSpeed).append("s)");
                 }
-                // --- ENDE DES FIXES ---
                 
                 fms.append("</td></tr>");
             }
@@ -811,9 +805,6 @@ public class LogistikSimulator {
             notrufLabel.setText("Kein Notruf anliegend.");
         }
 
-        // ==========================================
-        // 1. REGIONALER FUNKVERKEHR (Oberer Bereich)
-        // ==========================================
         StringBuilder funk = new StringBuilder();
         funk.append("<html><head><style>")
             .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
@@ -839,9 +830,6 @@ public class LogistikSimulator {
         funk.append("</body></html>");
         txtFunk.setText(funk.toString());
 
-        // ==========================================
-        // 2. LAUFENDE EINSÄTZE (Unterer Bereich)
-        // ==========================================
         StringBuilder lage = new StringBuilder();
         lage.append("<html><head><style>")
             .append("body { font-family: 'Segoe UI', sans-serif; background-color: #232323; color: #e0e0e0; padding: 8px; margin: 0; }")
@@ -849,7 +837,7 @@ public class LogistikSimulator {
             .append(".mission-box { background-color: #2a2a2a; border-left: 3px solid #e74c3c; padding: 8px; margin-top: 8px; font-size: 12px; }")
             .append(".mission-title { color: #e74c3c; font-weight: bold; margin-bottom: 4px; font-size: 13px; }")
             .append(".system-msg { color: #7f8c8d; font-style: italic; font-size: 11px; margin-top: 5px; }")
-            .append("a { color: #e74c3c; text-decoration: none; }") // Entfernt den blauen Link-Strich
+            .append("a { color: #e74c3c; text-decoration: none; }") 
             .append("</style></head><body>");
 
         lage.append("<div class='header-mission'>LAUFENDE EINSAETZE</div>");
@@ -1231,18 +1219,31 @@ public class LogistikSimulator {
         if (cfgWirtschaftsSystem) {
             int tagesKosten = 0;
             
+            // --- NEU: GEHALTSZUSCHLÄGE BERECHNEN ---
+            double gehaltsMultiplikator = 1.0;
+            String zuschlagText = "";
+            if (istFeiertag(getCurrentDate())) {
+                gehaltsMultiplikator = 1.5; // +50% an Feiertagen
+                zuschlagText = " (inkl. 50% Feiertags-Zuschlag)";
+            } else if (istSonntag(getCurrentDate())) {
+                gehaltsMultiplikator = 1.1; // +10% an Sonntagen
+                zuschlagText = " (inkl. 10% Sonntags-Zuschlag)";
+            }
+            
             for (Wache w : wachen) {
                 tagesKosten += 200; 
                 tagesKosten += (w.fuhrpark.size() * 30); 
                 
                 for (Personal p : w.personalPool) {
                     if (p.status.equals("Bereit") || !p.zugewiesenesFahrzeug.equals("Keines")) {
-                        tagesKosten += (p.stundenLohn * 8); 
+                        tagesKosten += (int)((p.stundenLohn * 8) * gehaltsMultiplikator); 
                     }
                 }
             }
             
             offeneGehaelterUndKosten += tagesKosten;
+            
+            sb.append("Tageskosten (Personal & Wache): ").append(tagesKosten).append(" EUR").append(zuschlagText).append("\n\n");
             
             java.time.LocalDate heute = getCurrentDate();
             if (heute.getDayOfMonth() == heute.lengthOfMonth() - 1) {
@@ -1441,11 +1442,9 @@ public class LogistikSimulator {
                 }
             } 
         } 
-        // NEU: Zieht Zufriedenheit ab und feuert Leute, die auf 0 sinken
         PersonalManager.tagesAuswertung();
         verliehenesPersonal.clear(); 
 
-        // RUF FÜR DIE NEUE TAGESZEITUNG (ersetzt das alte JOptionPane):
         StatistikManager.zeigeTagesZeitung(tag, tagesStatistik, abgelehnteEinsaetzeHeute, tagesXP);
 
         inGameSekunden = 7 * 3600;
@@ -1464,12 +1463,11 @@ public class LogistikSimulator {
         Personal p = w.personalPool.get((int)(Math.random() * w.personalPool.size()));
         if (p.qualifikationen.contains("Anwaerter")) return; 
         
-        double neueForderung = p.stundenLohn + (1.0 + (Math.random() * 2.5)); // Erhöhung um 1 bis 3,50 EUR
+        double neueForderung = p.stundenLohn + (1.0 + (Math.random() * 2.5)); 
         
         Email mail = new Email("Personalabteilung", "Gehaltsanpassung: " + p.name, 
             p.name + " fordert eine Erhoehung des Stundenlohns.\nBitte oeffne dieses Element zur Bearbeitung.", "Gehaltsverhandlung", p, tag, tag);
         
-        // Speichere die Forderung vorübergehend im Text (Hack, da wir keine extra Variable in der Mail haben)
         mail.text = String.valueOf(neueForderung);
         
         postfach.add(0, mail);
@@ -1608,7 +1606,6 @@ public class LogistikSimulator {
         Fahrzeug f1 = new Fahrzeug(w.generiereFunkrufname("HLF"), "HLF"); w.addFahrzeug(f1);
         Fahrzeug f2 = new Fahrzeug(w.generiereFunkrufname("RTW"), "RTW"); w.addFahrzeug(f2);
         
-        // ALTE EINSÄTZE LÖSCHEN und stattdessen die Datei laden!
         vorlagenPool.clear();
         ImportManager.ladeEinsaetze();
         
@@ -1884,7 +1881,7 @@ public class LogistikSimulator {
     }
 
     
-    // --- NEU: DATUM LOGIK ---
+    // --- DATUM LOGIK ---
     public static boolean istSonntag(java.time.LocalDate date) {
         return date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY;
     }

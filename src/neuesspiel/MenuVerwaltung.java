@@ -12,7 +12,6 @@ public class MenuVerwaltung {
 
     public static void oeffneSystemHauptmenu() {
         JDialog d = createFramelessDialog("System & Editor", 400, 450); 
-        // Raster auf 8 verkleinert, da der Kündigungs-Button weg ist
         JPanel content = new JPanel(new GridLayout(8, 1, 10, 10)); 
         content.setBorder(BorderFactory.createEmptyBorder(10,10,10,10));
         content.setBackground(new Color(35,35,35));
@@ -38,7 +37,6 @@ public class MenuVerwaltung {
     }
 
     public static void oeffneEinstellungen() {
-        // Fenster etwas höher gemacht, damit alles gut reinpasst
         JDialog d = createFramelessDialog("Spieleinstellungen & System", 550, 750);
         JTabbedPane tabbedPane = new JTabbedPane();
         tabbedPane.setBackground(new Color(45, 45, 45));
@@ -92,7 +90,6 @@ public class MenuVerwaltung {
         scrollKeys.getVerticalScrollBar().setUnitIncrement(16);
         tabbedPane.addTab("Steuerung & Hotkeys", scrollKeys);
 
-
         // ==========================================
         // TAB 2: SYSTEM & GAMEPLAY
         // ==========================================
@@ -138,7 +135,6 @@ public class MenuVerwaltung {
         scrollSys.getVerticalScrollBar().setUnitIncrement(16);
         tabbedPane.addTab("Spielregeln & Sounds", scrollSys);
 
-
         // ==========================================
         // TAB 3: DATENVERWALTUNG & EDITOREN
         // ==========================================
@@ -146,7 +142,6 @@ public class MenuVerwaltung {
         pnlDaten.setBackground(new Color(35, 35, 35));
         pnlDaten.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        // Block: Spielstand
         JLabel lblSpeicher = new JLabel("Spielstandverwaltung:");
         lblSpeicher.setForeground(new Color(241, 196, 15)); // Gelb
         lblSpeicher.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -164,7 +159,6 @@ public class MenuVerwaltung {
             } 
         });
 
-        // --- NEU: BACKUP EXPORT / IMPORT ---
         JButton btnExportSave = LogistikSimulator.createStyledButton("Backup Exportieren (Ordner waehlen)", new Color(52, 73, 94));
         btnExportSave.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -295,13 +289,6 @@ public class MenuVerwaltung {
         d.add(pnlBottom, BorderLayout.SOUTH);
         d.setVisible(true);
     }
-        
-      
-
-    // ... (restliche Methoden wie oeffneEinsatzErsteller, etc. bleiben exakt gleich)
-
-
-    
 
     public static void oeffneEinsatzErsteller() {
         JDialog d = createFramelessDialog("Einsatz-Vorlagen Ersteller", 600, 550);
@@ -609,33 +596,101 @@ public class MenuVerwaltung {
     }
 
     public static void oeffnePostfach() {
-        JDialog d = createFramelessDialog("E-Mail Postfach", 900, 500); d.setLayout(new BorderLayout());
+        JDialog d = createFramelessDialog("E-Mail Postfach & Antraege", 1000, 600); 
+        d.setLayout(new BorderLayout());
+        d.getContentPane().setBackground(new Color(35, 35, 35));
 
         DefaultListModel<String> listModel = new DefaultListModel<>();
-        for (int i = postfach.size() - 1; i >= 0; i--) { Email e = postfach.get(i); String prefix = e.gelesen ? "[Gelesen] " : "[NEU] "; String typ = e.typ.equals("Info") ? "[Info]" : "[Bearbeitet]"; listModel.addElement(prefix + typ + " " + e.betreff + " - von: " + e.absender); }
+        for (int i = postfach.size() - 1; i >= 0; i--) { 
+            Email e = postfach.get(i); 
+            String prefix = e.gelesen ? "[Gelesen] " : "[NEU] "; 
+            String typ = e.typ.equals("Info") ? "[Info]" : "[" + e.typ + "]"; 
+            listModel.addElement(prefix + typ + " " + e.betreff + " - von: " + e.absender); 
+        }
 
-        JList<String> list = new JList<>(listModel); list.setBackground(new Color(43, 43, 43)); list.setForeground(Color.WHITE);
-        JTextArea txt = new JTextArea(); txt.setEditable(false); txt.setBackground(new Color(35, 35, 35)); txt.setForeground(Color.WHITE); txt.setMargin(new Insets(10, 10, 10, 10)); txt.setLineWrap(true); txt.setWrapStyleWord(true);
+        // --- MODERNES DESIGN FÜR DIE LISTEN ---
+        JList<String> list = new JList<>(listModel); 
+        list.setBackground(new Color(43, 43, 43)); 
+        list.setForeground(Color.WHITE);
+        list.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        list.setSelectionBackground(new Color(52, 152, 219));
+        list.setSelectionForeground(Color.WHITE);
+        list.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Macht die Einträge höher
+                if (value.toString().contains("[NEU]")) label.setForeground(new Color(241, 196, 15)); // Neue Mails in Gelb
+                return label;
+            }
+        });
 
-        JPanel pnlBtns = new JPanel(new FlowLayout()); pnlBtns.setBackground(new Color(35, 35, 35));
-        JButton btnGenehmigen = new JButton("Urlaub Genehmigen"); JButton btnAblehnen = new JButton("Ablehnen"); JButton btnTM = new JButton("Als TM ausbilden"); JButton btnRS = new JButton("Als RS ausbilden"); JButton btnLehrgang = new JButton("Lehrgang Bezahlen"); JButton btnAnerkennen = new JButton("Anerkennen"); JButton btnLoeschen = new JButton("Loeschen");
-        btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false);
+        JTextArea txt = new JTextArea("Bitte waehle eine E-Mail aus der Liste links aus."); 
+        txt.setEditable(false); 
+        txt.setBackground(new Color(30, 30, 30)); 
+        txt.setForeground(Color.WHITE); 
+        txt.setMargin(new Insets(20, 20, 20, 20)); 
+        txt.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        txt.setLineWrap(true); 
+        txt.setWrapStyleWord(true);
+
+        JPanel pnlBtns = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 15)); 
+        pnlBtns.setBackground(new Color(25, 25, 25));
+        
+        // --- BUTTONS IM FLAT-DESIGN ---
+        JButton btnGenehmigen = LogistikSimulator.createStyledButton("Antrag Genehmigen", new Color(39, 174, 96)); 
+        JButton btnAblehnen = LogistikSimulator.createStyledButton("Antrag Ablehnen", new Color(192, 57, 43)); 
+        JButton btnTM = LogistikSimulator.createStyledButton("Als TM ausbilden", new Color(41, 128, 185)); 
+        JButton btnRS = LogistikSimulator.createStyledButton("Als RS ausbilden", new Color(41, 128, 185)); 
+        JButton btnLehrgang = LogistikSimulator.createStyledButton("Lehrgang Bezahlen", new Color(39, 174, 96)); 
+        JButton btnAnerkennen = LogistikSimulator.createStyledButton("Vorwissen Anerkennen", new Color(39, 174, 96)); 
+        
+        // --- NEUER KNOPF FÜR DEN DIENSTAUSWEIS ---
+        JButton btnAusweis = LogistikSimulator.createStyledButton("Ausweis erstellen", new Color(142, 68, 173));
+
+        JButton btnLoeschen = LogistikSimulator.createStyledButton("Mail Loeschen", new Color(100, 100, 100));
+
+        btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
 
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && list.getSelectedIndex() != -1) {
-                int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx); mail.gelesen = true;
-                String prefix = "[Gelesen] "; String typStr = mail.typ.equals("Info") ? "[Info]" : "[Bearbeitet]";
-                listModel.set(list.getSelectedIndex(), prefix + typStr + " " + mail.betreff + " - von: " + mail.absender);
-                txt.setText("Von: " + mail.absender + "\nBetreff: " + mail.betreff + "\n\n" + mail.text);
-                btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false);
+                int idx = postfach.size() - 1 - list.getSelectedIndex(); 
+                Email mail = postfach.get(idx); 
+                mail.gelesen = true;
                 
-                if (mail.typ.equals("Urlaub") || mail.typ.equals("Urlaubsverlaengerung")) { btnGenehmigen.setVisible(true); btnAblehnen.setVisible(true); } 
+                String prefix = "[Gelesen] "; 
+                String typStr = mail.typ.equals("Info") ? "[Info]" : "[" + mail.typ + "]";
+                listModel.set(list.getSelectedIndex(), prefix + typStr + " " + mail.betreff + " - von: " + mail.absender);
+                
+                txt.setText("Von: " + mail.absender + "\nBetreff: " + mail.betreff + "\n-----------------------------------------------------------\n\n" + mail.text);
+                
+                btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
+                
+                if (mail.typ.equals("Urlaub") || mail.typ.equals("Wunschfrei") || mail.typ.equals("Urlaubsverlaengerung")) { 
+                    btnGenehmigen.setVisible(true); btnAblehnen.setVisible(true); 
+                } 
+                else if (mail.typ.equals("Dienstausweis")) {
+                    btnAusweis.setVisible(true); 
+                }
                 else if (mail.typ.equals("Anwaerter")) { btnTM.setVisible(true); btnRS.setVisible(true); } 
                 else if (mail.typ.equals("Lehrgang_Anfrage")) { btnLehrgang.setVisible(true); btnAblehnen.setVisible(true); } 
                 else if (mail.typ.equals("Vorwissen")) { btnAnerkennen.setVisible(true); btnAblehnen.setVisible(true); } 
                 else if (mail.typ.equals("Gehaltsverhandlung")) {
-                    d.dispose(); try { double forderung = Double.parseDouble(mail.text); FensterManager.zeigeGehaltsVerhandlung(mail.person, forderung, mail); } catch(Exception ex) {}
+                    d.dispose(); 
+                    try { 
+                        double forderung = Double.parseDouble(mail.text); 
+                        FensterManager.zeigeGehaltsVerhandlung(mail.person, forderung, mail); 
+                    } catch(Exception ex) {}
                 }
+            }
+        });
+
+        // --- AKTION FÜR DEN DIENSTAUSWEIS ---
+        btnAusweis.addActionListener(e -> {
+            int idx = postfach.size() - 1 - list.getSelectedIndex(); 
+            Email mail = postfach.get(idx);
+            if (mail.person != null) {
+                DienstausweisGenerator.oeffneAusweisErsteller(mail.person, mail, d);
             }
         });
 
@@ -657,25 +712,113 @@ public class MenuVerwaltung {
 
         btnGenehmigen.addActionListener(e -> {
             int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx);
-            if (mail.person != null) { mail.person.urlaubStart = mail.startTag; mail.person.urlaubEnd = mail.endTag; mail.person.geplanterStatus = "Bereit";
-                for (int t = mail.startTag; t <= mail.endTag; t++) { java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); int dIndex = date.getDayOfMonth() - 1; if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { mail.person.planAktuellerMonat[dIndex] = "Urlaub"; } else { mail.person.planNaechsterMonat[dIndex] = "Urlaub"; } }
-                mail.typ = "Info"; mail.betreff = "[Genehmigt] " + mail.betreff; JOptionPane.showMessageDialog(d, "Urlaub eingetragen und im Dienstplan vermerkt!"); uiAktualisieren(getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); }
+            if (mail.person != null) { 
+                mail.person.urlaubStart = mail.startTag; 
+                mail.person.urlaubEnd = mail.endTag; 
+                mail.person.geplanterStatus = "Bereit";
+                
+                String eintragsTyp = mail.typ.equals("Wunschfrei") ? "Frei" : "Urlaub";
+                
+                for (int t = mail.startTag; t <= mail.endTag; t++) { 
+                    java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); 
+                    java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); 
+                    int dIndex = date.getDayOfMonth() - 1; 
+                    
+                    if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { 
+                        mail.person.planAktuellerMonat[dIndex] = eintragsTyp; 
+                    } else { 
+                        mail.person.planNaechsterMonat[dIndex] = eintragsTyp; 
+                    } 
+                    
+                    int kalenderCol = t - LogistikSimulator.tag;
+                    if (kalenderCol >= 0 && kalenderCol < 62) {
+                        for(int slot = 0; slot < 25; slot++) {
+                            Terminkalender.kalenderDaten[kalenderCol][slot] = eintragsTyp + " (" + mail.person.name + ")";
+                        }
+                    }
+                }
+                
+                mail.typ = "Info"; 
+                mail.betreff = "[Genehmigt] " + mail.betreff; 
+                JOptionPane.showMessageDialog(d, eintragsTyp + " eingetragen und im Dienstplan & Kalender geblockt!"); 
+                uiAktualisieren(getUhrzeit()); 
+                d.dispose(); 
+                FensterManager.oeffnePostfach(); 
+            }
         });
 
         btnAblehnen.addActionListener(e -> {
             int idx = list.getSelectedIndex();
-            if(idx != -1) { Email mail = postfach.get(idx); 
-                if (mail.typ.equals("Urlaub") && cfgKrankheit) { if (Math.random() < 0.025) { int dauer = 2 + (int)(Math.random() * 4); mail.person.krankBis = tag + dauer; if (tag == mail.person.krankBis - dauer) { mail.person.status = "Krank"; mail.person.zugewiesenesFahrzeug = "Keines"; } for (int t = tag + 1; t <= tag + dauer; t++) { java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); int dIndex = date.getDayOfMonth() - 1; if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { mail.person.planAktuellerMonat[dIndex] = "Krank"; } else { mail.person.planNaechsterMonat[dIndex] = "Krank"; } } postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer)); JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Hoffen wir mal, dass das keine Konsequenzen hat...", "Info", JOptionPane.INFORMATION_MESSAGE); } }
-                mail.typ = "Info"; listModel.set(idx, "[Abgelehnt] " + mail.betreff + " - von: " + mail.absender); btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); uiAktualisieren(getUhrzeit()); }
+            if(idx != -1) { 
+                Email mail = postfach.get(postfach.size() - 1 - idx); 
+                
+                if (mail.typ.equals("Urlaub") && cfgKrankheit) { 
+                    if (Math.random() < 0.05) { 
+                        int dauer = 2 + (int)(Math.random() * 4); 
+                        mail.person.krankBis = tag + dauer; 
+                        if (tag == mail.person.krankBis - dauer) { 
+                            mail.person.status = "Krank"; mail.person.zugewiesenesFahrzeug = "Keines"; 
+                        } 
+                        for (int t = tag + 1; t <= tag + dauer; t++) { 
+                            java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); 
+                            java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); 
+                            int dIndex = date.getDayOfMonth() - 1; 
+                            if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { 
+                                mail.person.planAktuellerMonat[dIndex] = "Krank"; 
+                            } else { 
+                                mail.person.planNaechsterMonat[dIndex] = "Krank"; 
+                            } 
+                        } 
+                        postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer)); 
+                        JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Die Laune ist im Keller...", "Info", JOptionPane.INFORMATION_MESSAGE); 
+                    } else {
+                        JOptionPane.showMessageDialog(d, "Antrag abgelehnt.");
+                    }
+                } else if (mail.typ.equals("Wunschfrei")) {
+                     JOptionPane.showMessageDialog(d, "Wunschfrei verwehrt. Mitarbeiter muss planmaessig erscheinen.");
+                }
+                
+                mail.typ = "Info"; 
+                listModel.set(idx, "[Gelesen] [Abgelehnt] " + mail.betreff + " - von: " + mail.absender); 
+                btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
+                uiAktualisieren(getUhrzeit()); 
+            }
         });
 
-        btnLoeschen.addActionListener(e -> { int selectedIndex = list.getSelectedIndex(); if (selectedIndex != -1) { int echterIndex = LogistikSimulator.postfach.size() - 1 - selectedIndex; LogistikSimulator.postfach.remove(echterIndex); ((DefaultListModel) list.getModel()).remove(selectedIndex); txt.setText("Keine E-Mail ausgewaehlt."); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); } });
+        btnLoeschen.addActionListener(e -> { 
+            int selectedIndex = list.getSelectedIndex(); 
+            if (selectedIndex != -1) { 
+                int echterIndex = LogistikSimulator.postfach.size() - 1 - selectedIndex; 
+                LogistikSimulator.postfach.remove(echterIndex); 
+                ((DefaultListModel) list.getModel()).remove(selectedIndex); 
+                txt.setText("Bitte waehle eine E-Mail aus der Liste links aus."); 
+                btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
+            } 
+        });
 
-        JButton btnClose = new JButton("Schliessen"); btnClose.addActionListener(e -> d.dispose());
-        JButton btnKalenderPostfach = new JButton("Terminkalender (K)"); btnKalenderPostfach.setBackground(new Color(155, 89, 182)); btnKalenderPostfach.setForeground(Color.WHITE); btnKalenderPostfach.setFocusPainted(false); btnKalenderPostfach.addActionListener(e -> { d.dispose(); Terminkalender.oeffneKalender(); });
+        JButton btnClose = LogistikSimulator.createStyledButton("Schliessen", new Color(192, 57, 43)); 
+        btnClose.addActionListener(e -> d.dispose());
         
-        pnlBtns.add(btnGenehmigen); pnlBtns.add(btnTM); pnlBtns.add(btnRS); pnlBtns.add(btnLehrgang); pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); pnlBtns.add(btnKalenderPostfach); pnlBtns.add(btnClose);
-        d.add(pnlBtns, BorderLayout.SOUTH); JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, new JScrollPane(list), new JScrollPane(txt)); splitPane.setDividerLocation(300); d.add(splitPane, BorderLayout.CENTER); d.setVisible(true);
+        JButton btnKalenderPostfach = LogistikSimulator.createStyledButton("Kalender oeffnen", new Color(142, 68, 173)); 
+        btnKalenderPostfach.addActionListener(e -> { d.dispose(); Terminkalender.oeffneKalender(); });
+        
+        pnlBtns.add(btnGenehmigen); pnlBtns.add(btnTM); pnlBtns.add(btnRS); pnlBtns.add(btnLehrgang); pnlBtns.add(btnAnerkennen); pnlBtns.add(btnAusweis); pnlBtns.add(btnAblehnen); pnlBtns.add(btnLoeschen); pnlBtns.add(btnKalenderPostfach); pnlBtns.add(btnClose);
+        
+        d.add(pnlBtns, BorderLayout.SOUTH); 
+        
+        JScrollPane scrollList = new JScrollPane(list);
+        scrollList.setBorder(BorderFactory.createEmptyBorder());
+        JScrollPane scrollTxt = new JScrollPane(txt);
+        scrollTxt.setBorder(BorderFactory.createEmptyBorder());
+        
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, scrollList, scrollTxt); 
+        splitPane.setDividerLocation(350); 
+        splitPane.setBorder(BorderFactory.createEmptyBorder());
+        splitPane.setDividerSize(5);
+        d.add(splitPane, BorderLayout.CENTER); 
+        
+        d.setVisible(true);
     }
     
     public static void bearbeiteVertrag(VertragVorlage v) {
