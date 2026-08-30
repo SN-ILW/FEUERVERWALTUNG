@@ -240,10 +240,10 @@ public class MenuVerwaltung {
         });
         
         JButton btnImport = LogistikSimulator.createStyledButton("Einsaetze importieren (CSV)", new Color(243, 156, 18));
-        btnImport.addActionListener(e -> { 
-            ImportManager.ladeEinsaetze(); 
-            JOptionPane.showMessageDialog(d, "Einsaetze erfolgreich aus CSV importiert!"); 
-        });
+btnImport.addActionListener(e -> { 
+    // Ruft jetzt das Fenster zur Datei-Auswahl auf!
+    ImportManager.importiereEinsaetzeUeberDialog(LogistikSimulator.frame); 
+});
         pnlDaten.add(btnExport); pnlDaten.add(btnImport);
 
         JScrollPane scrollDaten = new JScrollPane(pnlDaten);
