@@ -338,7 +338,7 @@ public class MenuLogistik {
         }
     }
 
-        public static void oeffneFahrzeugVerwaltung () {
+        public static void oeffneFahrzeugVerwaltung() {
         JDialog d = createFramelessDialog("Fahrzeug-Uebersicht & Inspektion", 1000, 500);
         JPanel content = new JPanel(new BorderLayout(10, 10));
         content.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
@@ -360,7 +360,6 @@ public class MenuLogistik {
         for (Wache w : wachen) {
             for (Fahrzeug f : w.fuhrpark) {
                 fzList.add(f);
-                // Tausche "kilometerStand" gegen deine Variable aus, falls sie anders heisst!
                 model.addRow(new Object[]{f.funkrufname, f.typ, f.kilometer, f.stempelFarbe});
             }
         }
@@ -388,9 +387,9 @@ public class MenuLogistik {
         table.getColumnModel().getColumn(0).setCellRenderer(defaultRenderer);
         table.getColumnModel().getColumn(1).setCellRenderer(defaultRenderer);
 
-        // --- FORTSCHRITTSBALKEN FUER KM-STAND ---
+        // --- FORTSCHRITTSBALKEN FUER KM-STAND (JETZT BIS 40.000) ---
         table.getColumnModel().getColumn(2).setCellRenderer(new TableCellRenderer() {
-            private final JProgressBar pb = new JProgressBar(0, 10000); // Inspektion bei 10.000km
+            private final JProgressBar pb = new JProgressBar(0, 40000); // NEU: Max 40.000km
             private final JPanel pnl = new JPanel(new BorderLayout());
             {
                 pnl.setBorder(BorderFactory.createEmptyBorder(6, 10, 6, 10));
@@ -405,12 +404,24 @@ public class MenuLogistik {
                 
                 int km = (value instanceof Integer) ? (Integer) value : 0;
                 pb.setValue(km);
-                pb.setString(km + " / 10.000 km");
                 
-                // Faerbt sich von Gruen zu Rot, je naeher die Inspektion rueckt
-                if(km > 8000) pb.setForeground(new Color(231, 76, 60)); // Rot
-                else if(km > 5000) pb.setForeground(new Color(243, 156, 18)); // Orange
-                else pb.setForeground(new Color(46, 204, 113)); // Gruen
+                // NEU: Faerbt sich und warnt nach deinen Regeln
+                if (km >= 40000) {
+                    pb.setForeground(new Color(192, 57, 43)); // Dunkelrot
+                    pb.setString("DEFEKT (" + km + " km)");
+                } else if (km >= 30000) {
+                    pb.setForeground(new Color(231, 76, 60)); // Rot
+                    pb.setString(km + " km (+75% Schadensrisiko)");
+                } else if (km >= 20000) {
+                    pb.setForeground(new Color(243, 156, 18)); // Orange
+                    pb.setString(km + " km (+50% Schadensrisiko)");
+                } else if (km >= 10000) {
+                    pb.setForeground(new Color(241, 196, 15)); // Gelb
+                    pb.setString(km + " km (+25% Schadensrisiko)");
+                } else {
+                    pb.setForeground(new Color(46, 204, 113)); // Gruen
+                    pb.setString(km + " / 10.000 km (Optimal)");
+                }
                 return pnl;
             }
         });
@@ -434,7 +445,6 @@ public class MenuLogistik {
             }
         });
 
-        // Klick-Erkennung, um die Farbe zu aendern
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -472,10 +482,16 @@ public class MenuLogistik {
             int modelRow = table.convertRowIndexToModel(viewRow);
             Fahrzeug f = fzList.get(modelRow);
             
-            if (f.status == 6) {
-                JOptionPane.showMessageDialog(d, "Das Fahrzeug steht bereits in der Werkstatt!");
+            // NEU: Erlaubt Wartung AUCH, wenn es wegen KM kaputt ist!
+            if (f.status == 6 && !f.ausfallGrund.equals("Inspektion") && !f.ausfallGrund.contains("Motorschaden") && !f.ausfallGrund.contains("Verschleiss")) {
+                JOptionPane.showMessageDialog(d, "Das Fahrzeug steht bereits aus einem anderen Grund (Unfall etc.) in der Werkstatt!");
                 return;
             }
+            if (f.status == 6 && f.ausfallGrund.equals("Inspektion")) {
+                JOptionPane.showMessageDialog(d, "Die Inspektion laeuft bereits!");
+                return;
+            }
+
             if (budget < 1500) {
                 JOptionPane.showMessageDialog(d, "Nicht genug Budget! (1.500 EUR benoetigt)");
                 return;

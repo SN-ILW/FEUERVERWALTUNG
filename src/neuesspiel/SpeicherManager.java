@@ -4,7 +4,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 import java.util.ArrayList;
-import java.awt.Color; // <-- NEU: Wichtig fuer die Farben
+import java.awt.Color; 
 
 public class SpeicherManager {
 
@@ -46,8 +46,15 @@ public class SpeicherManager {
     }
 
     public static void speichern(String dateiPfad) {
-        String echterPfad = getDokumentePfad();
-        System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET ===");
+        // --- WICHTIGER FIX FUER DEN EXPORT ---
+        String echterPfad;
+        if (dateiPfad == null || dateiPfad.equals("savegame.properties")) {
+            echterPfad = getDokumentePfad(); // Standard-Speichern ins Dokumentenverzeichnis
+        } else {
+            echterPfad = dateiPfad; // Nutze den vom Spieler gewaehlten Pfad fuer Backups!
+        }
+        
+        System.out.println("\n=== [DEBUG] SPEICHER-VORGANG GESTARTET IN: " + echterPfad + " ===");
         
         try (FileOutputStream out = new FileOutputStream(echterPfad);
              OutputStreamWriter writer = new OutputStreamWriter(out, StandardCharsets.UTF_8)) {
@@ -313,12 +320,15 @@ public class SpeicherManager {
     }
 
     public static boolean laden(String dateiPfad) {
-        String echterPfad = getDokumentePfad();
-        File file = new File(echterPfad);
-        
-        if (dateiPfad != null && (dateiPfad.contains(":\\") || dateiPfad.contains(":/")) && !dateiPfad.equals(echterPfad)) {
-            file = new File(dateiPfad);
+        // --- WICHTIGER FIX FUER DEN IMPORT ---
+        String echterPfad;
+        if (dateiPfad == null || dateiPfad.equals("savegame.properties")) {
+            echterPfad = getDokumentePfad();
+        } else {
+            echterPfad = dateiPfad; // Lade von exakt dem Pfad, den das Import-Fenster vorgibt!
         }
+        
+        File file = new File(echterPfad);
         
         if (!file.exists()) return false;
 

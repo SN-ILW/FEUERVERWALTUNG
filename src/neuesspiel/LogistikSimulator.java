@@ -459,6 +459,14 @@ public class LogistikSimulator {
                     }
                     for(Fahrzeug f : w.fuhrpark) {
                         f.tick(speed, uhrzeit);
+                        
+                        // --- NEU: KILOMETER ZAEHLEN ---
+                        // Wenn das Fahrzeug auf Anfahrt (3), Krankenhaus-Anfahrt (7) oder Rueckfahrt (8) ist
+                        if (f.status == 3 || f.status == 7 || f.status == 8) {
+                            // Wir berechnen ca. 2 km pro Takt. 'speed' sorgt dafuer, 
+                            // dass beim Vorspulen (>> 5x) auch 5x so viele KM berechnet werden!
+                            fahrzeugVerschleissBerechnen(f, speed * 2);
+                        }
                     }
                 }
 
@@ -1899,6 +1907,75 @@ public class LogistikSimulator {
         if (d == 31 && m == 10) return true; // Reformationstag
         
         return false;
+    }
+    
+    // Wird aufgerufen, wenn ein Fahrzeug faehrt (z.B. im Status 3, 4, 7, 8)
+    public static void fahrzeugBewegtSich(Fahrzeug f, int gefahreneKM) {
+        f.kilometer += gefahreneKM;
+
+        // 1. Totalausfall bei 40.000 km
+        if (f.kilometer >= 40000 && f.status != 6) {
+            f.status = 6;
+            f.ausfallGrund = "Motorschaden (Wartung ueberfaellig!)";
+            f.reparaturDauer = 9999; // Bleibt kaputt, bis der Spieler es repariert!
+            postfach.add(0, new Email("Werkstatt", "TOTALAUSFALL: " + f.funkrufname, 
+                "Chef, der " + f.funkrufname + " ist uns gerade auf der Strasse verreckt!\n\n" +
+                "Das Auto hat ueber 40.000 km auf der Uhr und hat ewig keine Inspektion gesehen. " +
+                "Der Motor ist hinueber. Das Fahrzeug ist abgemeldet (Status 6), bis die Wartung bezahlt wird!", 
+                "Info", null, tag, tag));
+            return;
+        }
+
+        // 2. Erhoehte Ausfall-Wahrscheinlichkeit durch Verschleiss (nur wenn cfgBeschaedigung an ist)
+        if (cfgBeschaedigung && f.status != 6) {
+            double basisChance = 0.001; // Normale Basis-Chance, dass was kaputt geht (z.B. 0.1%)
+            
+            // Straf-Multiplikatoren je nach KM-Stand
+            if (f.kilometer >= 30000) basisChance *= 1.75; // +75%
+            else if (f.kilometer >= 20000) basisChance *= 1.50; // +50%
+            else if (f.kilometer >= 10000) basisChance *= 1.25; // +25%
+
+            if (Math.random() < basisChance) {
+                f.status = 6;
+                f.ausfallGrund = "Verschleiss-Defekt auf Einsatzfahrt";
+                f.reparaturDauer = 30 + (int)(Math.random() * 60); // 30 bis 90 Minuten Reparatur
+            }
+        }
+    }
+    
+    // Diese Methode wird aufgerufen, sobald ein Auto faehrt
+    public static void fahrzeugVerschleissBerechnen(Fahrzeug f, int gefahreneKM) {
+        f.kilometer += gefahreneKM;
+
+        // Regel 1: Totalausfall bei 40.000 km
+        if (f.kilometer >= 40000 && f.status != 6) {
+            f.status = 6;
+            f.ausfallGrund = "Motorschaden (Wartung ueberfaellig!)";
+            f.reparaturDauer = 9999; // Geht nicht von alleine weg!
+            postfach.add(0, new Email("Werkstatt", "TOTALAUSFALL: " + f.funkrufname, 
+                "Chef, der " + f.funkrufname + " ist uns gerade auf der Strasse verreckt!\n\n" +
+                "Das Auto hat ueber 40.000 km auf der Uhr. Der Motor ist komplett hinueber. " +
+                "Bitte SOFORT in die Werkstatt zur Inspektion schicken!", 
+                "Info", null, tag, tag));
+            uiAktualisieren(getUhrzeit());
+            return;
+        }
+
+        // Regel 2: Erhoehte Pannen-Wahrscheinlichkeit je nach KM-Stand
+        if (cfgBeschaedigung && f.status != 6) {
+            double basisChance = 0.0005; // Sehr kleine Grundchance bei jeder Fahrt
+            
+            if (f.kilometer >= 30000) basisChance *= 1.75;      // +75%
+            else if (f.kilometer >= 20000) basisChance *= 1.50; // +50%
+            else if (f.kilometer >= 10000) basisChance *= 1.25; // +25%
+
+            if (Math.random() < basisChance) {
+                f.status = 6;
+                f.ausfallGrund = "Verschleiss-Defekt auf Einsatzfahrt";
+                f.reparaturDauer = 45 + (int)(Math.random() * 45); // 45-90 Sekunden offline
+                uiAktualisieren(getUhrzeit());
+            }
+        }
     }
     
 }
