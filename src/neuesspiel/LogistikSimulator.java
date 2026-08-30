@@ -26,7 +26,6 @@ public class LogistikSimulator {
     public static int offeneGehaelterUndKosten = 0;
     public static boolean cfgZufriedenheit = true;
     
-    
     //hotkeys
     // --- HOTKEYS ---
     public static int hotkeyPause = java.awt.event.KeyEvent.VK_SPACE;
@@ -51,6 +50,7 @@ public class LogistikSimulator {
     public static int hotkeyBank = java.awt.event.KeyEvent.VK_G; // Geld / Bank
     public static int hotkeySystem = java.awt.event.KeyEvent.VK_O; // Optionen / System
     
+    public static MonatsZiel aktuellesMonatsZiel = null;
     public static TagesMission aktuelleMission = null; 
     public static JButton btnPostfach, btnTagBeenden;
     public static int aktuellerKredit = 0;
@@ -1226,7 +1226,7 @@ public class LogistikSimulator {
         // --- TÄGLICHE GEHALTS- UND KOSTENBERECHNUNG ---
         if (cfgWirtschaftsSystem) {
             int tagesKosten = 0;
-            
+
             // --- NEU: GEHALTSZUSCHLÄGE BERECHNEN ---
             double gehaltsMultiplikator = 1.0;
             String zuschlagText = "";
@@ -1237,29 +1237,29 @@ public class LogistikSimulator {
                 gehaltsMultiplikator = 1.1; // +10% an Sonntagen
                 zuschlagText = " (inkl. 10% Sonntags-Zuschlag)";
             }
-            
+
             for (Wache w : wachen) {
                 tagesKosten += 200; 
                 tagesKosten += (w.fuhrpark.size() * 30); 
-                
+
                 for (Personal p : w.personalPool) {
                     if (p.status.equals("Bereit") || !p.zugewiesenesFahrzeug.equals("Keines")) {
                         tagesKosten += (int)((p.stundenLohn * 8) * gehaltsMultiplikator); 
                     }
                 }
             }
-            
+
             offeneGehaelterUndKosten += tagesKosten;
-            
+
             sb.append("Tageskosten (Personal & Wache): ").append(tagesKosten).append(" EUR").append(zuschlagText).append("\n\n");
-            
+
             java.time.LocalDate heute = getCurrentDate();
             if (heute.getDayOfMonth() == heute.lengthOfMonth() - 1) {
                 postfach.add(0, new Email("Finanzamt / Bank", "DRINGEND: Gehaltsfreigabe erforderlich!", 
                     "Sehr geehrte Leitstelle,\n\nbis morgen (Monatsende) muessen die aufgelaufenen Gehälter und Unterhaltskosten in Hoehe von " 
                     + offeneGehaelterUndKosten + " EUR freigegeben werden.\n\nBitte oeffnen Sie das Bank-Menü zur Freigabe.", "Info", null, tag, tag));
             }
-            
+
             if (heute.getDayOfMonth() == heute.lengthOfMonth()) {
                 if (offeneGehaelterUndKosten > 0) {
                     int strafe = (int)(offeneGehaelterUndKosten * 1.05);
@@ -1269,13 +1269,31 @@ public class LogistikSimulator {
                         + strafe + " EUR).", "Info", null, tag, tag));
                     offeneGehaelterUndKosten = 0;
                 }
+                
+                // --- NEU: MONATSZIEL ABRECHNEN (NUR AM LETZTEN TAG!) ---
+                if (aktuellesMonatsZiel != null) {
+                    boolean geschafft = false;
+                    if (aktuellesMonatsZiel.zielTyp.equals("BUDGET") && budget >= aktuellesMonatsZiel.zielWert) geschafft = true;
+                    if (aktuellesMonatsZiel.zielTyp.equals("XP") && xp >= aktuellesMonatsZiel.zielWert) geschafft = true;
+                    if (aktuellesMonatsZiel.zielTyp.equals("WACHE")) {
+                        for(Wache w : wachen) if (w.stufe >= 2) geschafft = true; // Simpler Check fuer den Anfang
+                    }
+
+                    if (geschafft) {
+                        budget += aktuellesMonatsZiel.belohnungGeld;
+                        postfach.add(0, new Email("Buergermeister", "Monatsziel ERFUELLT!", "Gute Arbeit! Du hast das Ziel erreicht. Der Bonus von " + aktuellesMonatsZiel.belohnungGeld + " EUR wurde ueberwiesen.", "Info", null, tag, tag));
+                    } else {
+                        postfach.add(0, new Email("Buergermeister", "Monatsziel VERFEHLT", "Das war wohl nichts. Das Monatsziel wurde leider verfehlt. Der Stadtrat ist enttaeuscht.", "Info", null, tag, tag));
+                    }
+                    aktuellesMonatsZiel = null; // Ziel zuruecksetzen
+                }
             }
-            
+
             if (Math.random() < 0.08) {
                 generiereGehaltsVerhandlung();
             }
-        }
-        
+        } // Ende cfgWirtschaftssystem
+
         if (aktuellesEvent != null) {
             aktuellesEvent.dauerTage--;
             if (aktuellesEvent.dauerTage <= 0) {
@@ -1283,7 +1301,7 @@ public class LogistikSimulator {
                 aktuellesEvent = null;
             }
         }
-        
+
         if (aktuellesEvent == null && Math.random() < 0.10) {
             double r = Math.random();
             if (r < 0.3) {
@@ -1309,14 +1327,19 @@ public class LogistikSimulator {
         int altesLevel = level;
         checkLevelUp();
         if (level > altesLevel) sb.append("\n*** GLUECKWUNSCH! Du bist auf LEVEL ").append(level).append(" aufgestiegen! ***\n");
-        
+
         tag++;
-        
+
         Terminkalender.tagesWechselShift(); 
-        
+
         LocalDate neuerTag = getCurrentDate();
         int dayIndex = neuerTag.getDayOfMonth() - 1; 
-        
+
+        // NEU: Buergermeister schreibt am 2. Tag des Monats
+        if (neuerTag.getDayOfMonth() == 2) {
+            generiereMonatsZiel();
+        }
+
         if (neuerTag.getDayOfMonth() == 1) {
             for (Wache w : wachen) {
                 for (Personal p : w.personalPool) {
@@ -1460,6 +1483,7 @@ public class LogistikSimulator {
         abgelehnteEinsaetzeHeute = 0;
         SpeicherManager.speichern("savegame.properties");
         generiereTagesMission();
+        
         uiAktualisieren(getUhrzeit());
     } 
     
@@ -1909,40 +1933,6 @@ public class LogistikSimulator {
         return false;
     }
     
-    // Wird aufgerufen, wenn ein Fahrzeug faehrt (z.B. im Status 3, 4, 7, 8)
-    public static void fahrzeugBewegtSich(Fahrzeug f, int gefahreneKM) {
-        f.kilometer += gefahreneKM;
-
-        // 1. Totalausfall bei 40.000 km
-        if (f.kilometer >= 40000 && f.status != 6) {
-            f.status = 6;
-            f.ausfallGrund = "Motorschaden (Wartung ueberfaellig!)";
-            f.reparaturDauer = 9999; // Bleibt kaputt, bis der Spieler es repariert!
-            postfach.add(0, new Email("Werkstatt", "TOTALAUSFALL: " + f.funkrufname, 
-                "Chef, der " + f.funkrufname + " ist uns gerade auf der Strasse verreckt!\n\n" +
-                "Das Auto hat ueber 40.000 km auf der Uhr und hat ewig keine Inspektion gesehen. " +
-                "Der Motor ist hinueber. Das Fahrzeug ist abgemeldet (Status 6), bis die Wartung bezahlt wird!", 
-                "Info", null, tag, tag));
-            return;
-        }
-
-        // 2. Erhoehte Ausfall-Wahrscheinlichkeit durch Verschleiss (nur wenn cfgBeschaedigung an ist)
-        if (cfgBeschaedigung && f.status != 6) {
-            double basisChance = 0.001; // Normale Basis-Chance, dass was kaputt geht (z.B. 0.1%)
-            
-            // Straf-Multiplikatoren je nach KM-Stand
-            if (f.kilometer >= 30000) basisChance *= 1.75; // +75%
-            else if (f.kilometer >= 20000) basisChance *= 1.50; // +50%
-            else if (f.kilometer >= 10000) basisChance *= 1.25; // +25%
-
-            if (Math.random() < basisChance) {
-                f.status = 6;
-                f.ausfallGrund = "Verschleiss-Defekt auf Einsatzfahrt";
-                f.reparaturDauer = 30 + (int)(Math.random() * 60); // 30 bis 90 Minuten Reparatur
-            }
-        }
-    }
-    
     // Diese Methode wird aufgerufen, sobald ein Auto faehrt
     public static void fahrzeugVerschleissBerechnen(Fahrzeug f, int gefahreneKM) {
         f.kilometer += gefahreneKM;
@@ -1976,6 +1966,24 @@ public class LogistikSimulator {
                 uiAktualisieren(getUhrzeit());
             }
         }
+    }
+ 
+    public static void generiereMonatsZiel() {
+        int rand = (int)(Math.random() * 3);
+        if (rand == 0) {
+            int zielGeld = budget + 30000;
+            aktuellesMonatsZiel = new MonatsZiel("Eiserne Reserve", "Der Stadtrat fordert einen finanziellen Puffer. Erreiche bis Monatsende einen Kontostand von " + zielGeld + " EUR.", "BUDGET", zielGeld, 10000);
+        } else if (rand == 1) {
+            int zielXp = xp + 5000;
+            aktuellesMonatsZiel = new MonatsZiel("Buerger-Vertrauen", "Leiste exzellente Arbeit! Sammle insgesamt " + zielXp + " XP bis zum Monatsende.", "XP", zielXp, 15000);
+        } else {
+            aktuellesMonatsZiel = new MonatsZiel("Wachen-Ausbau", "Wir brauchen mehr Kapazitaeten. Baue eine deiner Wachen auf die naechste Stufe aus.", "WACHE", level + 1, 20000);
+        }
+        
+        postfach.add(0, new Email("Buergermeister", "Neues Monatsziel: " + aktuellesMonatsZiel.titel, 
+            "Hallo Leitstelle,\n\nhier ist deine Vorgabe fuer diesen Monat:\n" + aktuellesMonatsZiel.beschreibung + 
+            "\n\nWenn du das schaffst, winken " + aktuellesMonatsZiel.belohnungGeld + " EUR Bonus aus der Stadtkasse!\n\nGruss,\nDer Buergermeister", 
+            "Info", null, tag, tag));
     }
     
 }
