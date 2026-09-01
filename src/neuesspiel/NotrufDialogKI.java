@@ -95,7 +95,7 @@ public class NotrufDialogKI {
     public static void ladeAdressenOnline() {
         try {
             System.out.println("Lade Adressen von Overpass API...");
-            String query = "[out:json];node[\"addr:street\"][\"addr:housenumber\"](53.56,11.35,53.68,11.48);out 800;";
+            String query = "[out:json];node[\"addr:street\"][\"addr:housenumber\"](53.56,11.35,53.68,11.48);out 400;";
             String urlStr = "https://overpass-api.de/api/interpreter?data=" + URLEncoder.encode(query, "UTF-8");
             
             URL url = new URL(urlStr);
