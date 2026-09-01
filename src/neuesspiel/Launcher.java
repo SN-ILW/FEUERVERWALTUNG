@@ -8,9 +8,9 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class Launcher {
-//test
+
     // --- HIER DEINE DATEN EINTRAGEN ---
-    public static final String CURRENT_VERSION = "v42"; // Für den Test eine ältere Version eintragen
+    public static final String CURRENT_VERSION = "v43"; 
     public static final String GITHUB_REPO = "SN-ILW/FEUERVERWALTUNG"; 
     public static final String EXE_NAME = "FeuerwehrVerwaltung.exe";
     // ----------------------------------
@@ -27,7 +27,7 @@ public class Launcher {
         JFrame frame = new JFrame("FEUERWEHR-VERWALTUNGS-SPIEL");
         frame.setUndecorated(true);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(400, 360); 
+        frame.setSize(400, 420); 
         frame.setLocationRelativeTo(null); 
         frame.setLayout(new BorderLayout());
         
@@ -37,7 +37,7 @@ public class Launcher {
         
         JLabel lblTitle = new JLabel("FeuerwehrVerwaltung", SwingConstants.CENTER);
         lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 18));
-        
+        //test
         JLabel lblVersion = new JLabel("Aktuelle Version: " + CURRENT_VERSION, SwingConstants.CENTER);
         lblVersion.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblVersion.setForeground(new Color(150, 150, 150));
@@ -46,12 +46,13 @@ public class Launcher {
         topPanel.add(lblVersion);
         frame.add(topPanel, BorderLayout.NORTH);
 
-        JPanel centerPanel = new JPanel(new GridLayout(4, 1, 10, 15));
+        JPanel centerPanel = new JPanel(new GridLayout(5, 1, 10, 15));
         centerPanel.setBorder(BorderFactory.createEmptyBorder(20, 50, 20, 50));
         centerPanel.setBackground(new Color(35, 35, 35));
 
-        JButton btnStart = createStyledButton("Verwaltung oeffnen", new Color(39, 174, 96));
-        JButton btnFuehrung = createStyledButton("!!BETA!! Fuehrungskraft spielen !!BETA!!", new Color(243, 156, 18)); 
+        JButton btnStart = createStyledButton("Verwaltungs-Modus (BETA)", new Color(39, 174, 96));
+        JButton btnCalltaker = createStyledButton("Calltaker-Modus (BETA)", new Color(142, 68, 173)); 
+        JButton btnFuehrung = createStyledButton("Führungskraft-Modus (BETA)", new Color(243, 156, 18)); 
         JButton btnUpdate = createStyledButton("Update suchen", new Color(41, 128, 185));
         JButton btnExit = createStyledButton("Beenden", new Color(192, 57, 43));
 
@@ -60,16 +61,20 @@ public class Launcher {
             LogistikSimulator.main(new String[]{}); 
         });
         
-        // HIER NEU: Oeffnet das Fahrzeug-Auswahl Fenster!
-        btnFuehrung.addActionListener(e -> {
-            oeffneFahrzeugAuswahl(frame);
+        btnCalltaker.addActionListener(e -> {
+            frame.dispose();
+            CalltakerSimulator.starten();
         });
-
+        
+        btnFuehrung.addActionListener(e -> oeffneFahrzeugAuswahl(frame));
+        
+        // HIER: Aufruf der neuen, coolen Update-Methode!
         btnUpdate.addActionListener(e -> checkForUpdates(frame));
 
         btnExit.addActionListener(e -> System.exit(0));
 
         centerPanel.add(btnStart);
+        centerPanel.add(btnCalltaker); 
         centerPanel.add(btnFuehrung); 
         centerPanel.add(btnUpdate);
         centerPanel.add(btnExit);
@@ -88,7 +93,6 @@ public class Launcher {
         return btn;
     }
 
-    // --- NEUES FENSTER FUER DIE FAHRZEUGAUSWAHL ---
     private static void oeffneFahrzeugAuswahl(JFrame parentFrame) {
         JDialog d = new JDialog(parentFrame, "Fahrzeug waehlen", true);
         d.setUndecorated(true);
@@ -124,27 +128,23 @@ public class Launcher {
         content.setBorder(BorderFactory.createEmptyBorder(20, 30, 20, 30));
         content.setBackground(new Color(35, 35, 35));
 
-        JButton btnHLF = createStyledButton("!!BETA!! HLF (Gruppenfuehrer) !!BETA!!", new Color(192, 57, 43)); // Rot fuer Feuerwehr
-        JButton btnELW = createStyledButton("ELW (Einsatzleiter)", new Color(142, 68, 173)); // Lila/Blau fuer Einsatzleitung
+        JButton btnHLF = createStyledButton("!!BETA!! HLF (Gruppenfuehrer) !!BETA!!", new Color(192, 57, 43)); 
+        JButton btnELW = createStyledButton("ELW (Einsatzleiter)", new Color(142, 68, 173)); 
         JButton btnZurueck = createStyledButton("Zurueck", new Color(100, 100, 100));
 
         btnHLF.addActionListener(e -> {
             d.dispose(); 
             parentFrame.dispose(); 
-            
-            // NEU: Lade den Spielstand heimlich im Hintergrund, falls noch nicht passiert!
             if (LogistikSimulator.wachen.isEmpty()) {
                 if (!SpeicherManager.laden(SpeicherManager.getDokumentePfad())) {
-                    LogistikSimulator.initStandardDaten(); // Falls kein Savegame existiert, mach ein neues
+                    LogistikSimulator.initStandardDaten();
                 }
             }
-            
             WachalltagSimulator.starten(); 
         });
 
         btnELW.addActionListener(e -> {
             JOptionPane.showMessageDialog(d, "Der ELW-Modus wird geladen...\n(Dieses Feature ist in Entwicklung!)", "Modus: ELW", JOptionPane.INFORMATION_MESSAGE);
-            // Spaeter kommt hier der Startbefehl fuer das ELW-Fenster rein
         });
 
         btnZurueck.addActionListener(e -> d.dispose());
@@ -157,75 +157,206 @@ public class Launcher {
         d.setVisible(true);
     }
 
-    private static void checkForUpdates(JFrame parentFrame) {
+    // ==========================================
+    // NEU: DER INTERNET-CHECK
+    // ==========================================
+    private static boolean checkInternet() {
         try {
-            URL url = new URL("https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest");
+            URL url = new URL("http://www.google.com");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            conn.setRequestProperty("User-Agent", "Mozilla/5.0");
+            conn.setConnectTimeout(3000);
+            conn.connect();
+            return conn.getResponseCode() == 200;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 
-            if (conn.getResponseCode() == 200) {
-                BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-                StringBuilder jsonBuilder = new StringBuilder();
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    jsonBuilder.append(line);
+    // ==========================================
+    // NEU: VOLLBILD UPDATE-CHECK
+    // ==========================================
+    // ==========================================
+    // VOLLBILD UPDATE-CHECK (ALLES IM NEUEN DESIGN)
+    // ==========================================
+    private static void checkForUpdates(JFrame parentFrame) {
+        
+        JWindow loadingWindow = new JWindow(parentFrame);
+        loadingWindow.setSize(Toolkit.getDefaultToolkit().getScreenSize());
+        loadingWindow.setLocation(0, 0);
+        
+        JPanel pnlLoad = new JPanel(new GridBagLayout());
+        pnlLoad.setBackground(new Color(20, 20, 20));
+        
+        JPanel pnlBox = new JPanel();
+        pnlBox.setLayout(new BoxLayout(pnlBox, BoxLayout.Y_AXIS));
+        pnlBox.setBackground(new Color(30, 35, 40));
+        pnlBox.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(41, 128, 185), 2), // Blaues Thema
+            BorderFactory.createEmptyBorder(40, 50, 40, 50)
+        ));
+
+        JLabel lblTitle = new JLabel("SYSTEM-UPDATE WIRD GEPRÜFT");
+        lblTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitle.setForeground(new Color(41, 128, 185));
+        lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
+        
+        JLabel lblStatus = new JLabel("Schritt 1/2: Prüfe Netzwerkverbindung...");
+        lblStatus.setFont(new Font("Consolas", Font.PLAIN, 16));
+        lblStatus.setForeground(Color.WHITE);
+        lblStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        JProgressBar progress = new JProgressBar();
+        progress.setIndeterminate(true);
+        progress.setPreferredSize(new Dimension(350, 15));
+        progress.setMaximumSize(new Dimension(350, 15));
+        progress.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Der zentrale Aktions-Button (wird erst eingeblendet, wenn das Ergebnis feststeht)
+        JButton btnAction = createStyledButton("ZURÜCK ZUM MENÜ", new Color(100, 100, 100));
+        btnAction.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btnAction.setVisible(false);
+
+        btnAction.addActionListener(e -> loadingWindow.dispose());
+
+        pnlBox.add(lblTitle);
+        pnlBox.add(Box.createVerticalStrut(25));
+        pnlBox.add(lblStatus);
+        pnlBox.add(Box.createVerticalStrut(20));
+        pnlBox.add(progress);
+        pnlBox.add(Box.createVerticalStrut(15));
+        pnlBox.add(btnAction);
+
+        pnlLoad.add(pnlBox);
+        loadingWindow.add(pnlLoad);
+        loadingWindow.setVisible(true);
+
+        // Der Check läuft im Hintergrund ab
+        new Thread(() -> {
+            try {
+                Thread.sleep(800); // Kleine künstliche Pause fürs Feeling
+
+                if (!checkInternet()) {
+                    SwingUtilities.invokeLater(() -> {
+                        progress.setVisible(false);
+                        lblStatus.setForeground(new Color(231, 76, 60)); // Rot
+                        lblStatus.setText("FEHLER: Keine Netzwerkverbindung gefunden!");
+                        btnAction.setText("ZURÜCK ZUM MENÜ");
+                        btnAction.setBackground(new Color(192, 57, 43));
+                        btnAction.setVisible(true);
+                    });
+                    return;
                 }
-                reader.close();
-                String json = jsonBuilder.toString();
 
-                String latestVersion = "";
-                String downloadUrl = "";
+                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/2: Suche nach Versionen auf GitHub..."));
+                Thread.sleep(800);
 
-                int tagKey = json.indexOf("\"tag_name\"");
-                if (tagKey != -1) {
-                    int valStart = json.indexOf("\"", json.indexOf(":", tagKey));
-                    int valEnd = json.indexOf("\"", valStart + 1);
-                    if (valStart != -1 && valEnd != -1) {
-                        latestVersion = json.substring(valStart + 1, valEnd);
-                    }
-                }
-                
-                int dlKey = json.indexOf("\"browser_download_url\"");
-                while (dlKey != -1) {
-                    int valStart = json.indexOf("\"", json.indexOf(":", dlKey));
-                    int valEnd = json.indexOf("\"", valStart + 1);
-                    if (valStart != -1 && valEnd != -1) {
-                        String foundUrl = json.substring(valStart + 1, valEnd);
-                        if (foundUrl.endsWith(".exe")) {
-                            downloadUrl = foundUrl;
-                            break; 
+                URL url = new URL("https://api.github.com/repos/" + GITHUB_REPO + "/releases/latest");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+                conn.setRequestProperty("User-Agent", "LeitstellenSimulator/1.0");
+
+                int statusCode = conn.getResponseCode();
+
+                if (statusCode == 200) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+                    StringBuilder jsonBuilder = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) jsonBuilder.append(line);
+                    reader.close();
+                    String json = jsonBuilder.toString();
+
+                    String latestVersion = "";
+                    String downloadUrl = "";
+
+                    // Versions-Nummer extrahieren
+                    int tagKey = json.indexOf("\"tag_name\"");
+                    if (tagKey != -1) {
+                        int valStart = json.indexOf("\"", json.indexOf(":", tagKey));
+                        int valEnd = json.indexOf("\"", valStart + 1);
+                        if (valStart != -1 && valEnd != -1) {
+                            latestVersion = json.substring(valStart + 1, valEnd);
                         }
                     }
-                    dlKey = json.indexOf("\"browser_download_url\"", valEnd);
-                }
-
-                if (!latestVersion.isEmpty() && !latestVersion.equals(CURRENT_VERSION)) {
-                    if (downloadUrl.isEmpty()) {
-                        JOptionPane.showMessageDialog(parentFrame, "Neue Version gefunden (" + latestVersion + "), aber keine .exe hinterlegt!", "Fehler", JOptionPane.ERROR_MESSAGE);
-                        return;
+                    
+                    // .exe Datei extrahieren
+                    int dlKey = json.indexOf("\"browser_download_url\"");
+                    while (dlKey != -1) {
+                        int valStart = json.indexOf("\"", json.indexOf(":", dlKey));
+                        int valEnd = json.indexOf("\"", valStart + 1);
+                        if (valStart != -1 && valEnd != -1) {
+                            String foundUrl = json.substring(valStart + 1, valEnd);
+                            if (foundUrl.endsWith(".exe")) {
+                                downloadUrl = foundUrl;
+                                break; 
+                            }
+                        }
+                        dlKey = json.indexOf("\"browser_download_url\"", valEnd);
                     }
 
-                    int wahl = JOptionPane.showConfirmDialog(parentFrame, 
-                        "Version " + latestVersion + " ist verfuegbar!\nSoll das Update jetzt heruntergeladen und installiert werden?", 
-                        "Update gefunden", 
-                        JOptionPane.YES_NO_OPTION, 
-                        JOptionPane.QUESTION_MESSAGE);
+                    // --- ERGEBNIS IM NEUEN DESIGN ANZEIGEN ---
+                    final String fLatest = latestVersion;
+                    final String fUrl = downloadUrl;
+                    
+                    SwingUtilities.invokeLater(() -> {
+                        progress.setVisible(false);
                         
-                    if (wahl == JOptionPane.YES_OPTION) {
-                        downloadAndInstallUpdate(parentFrame, downloadUrl);
-                    }
+                        // FALL 1: NEUE VERSION GEFUNDEN
+                        if (!fLatest.isEmpty() && !fLatest.equals(CURRENT_VERSION)) {
+                            if (fUrl.isEmpty()) {
+                                lblStatus.setForeground(new Color(231, 76, 60));
+                                lblStatus.setText("Update (" + fLatest + ") gefunden, aber keine .exe verfügbar!");
+                                btnAction.setText("ZURÜCK ZUM MENÜ");
+                                btnAction.setBackground(new Color(192, 57, 43));
+                            } else {
+                                lblStatus.setForeground(new Color(241, 196, 15)); // Gelb
+                                lblStatus.setText("Neue Version " + fLatest + " ist verfügbar!");
+                                btnAction.setText("JETZT UPDATE INSTALLIEREN");
+                                btnAction.setBackground(new Color(39, 174, 96)); // Grün
+                                
+                                // Bei Klick auf den neuen Button das Update starten
+                                for (ActionListener al : btnAction.getActionListeners()) {
+                                    btnAction.removeActionListener(al);
+                                }
+                                btnAction.addActionListener(e -> {
+                                    loadingWindow.dispose();
+                                    downloadAndInstallUpdate(parentFrame, fUrl);
+                                });
+                            }
+                        } 
+                        // FALL 2: AUF DEM NEUESTEN STAND
+                        else {
+                            lblStatus.setForeground(new Color(46, 204, 113)); // Grün
+                            lblStatus.setText("Du bist auf dem neuesten Stand! (" + CURRENT_VERSION + ")");
+                            btnAction.setText("ZURÜCK ZUM MENÜ");
+                            btnAction.setBackground(new Color(41, 128, 185)); // Blau
+                        }
+                        
+                        btnAction.setVisible(true);
+                    });
+
                 } else {
-                    JOptionPane.showMessageDialog(parentFrame, "Du bist auf dem neuesten Stand!\nAktuelle Version: " + CURRENT_VERSION, "Kein Update", JOptionPane.INFORMATION_MESSAGE);
+                    SwingUtilities.invokeLater(() -> {
+                        progress.setVisible(false);
+                        lblStatus.setForeground(new Color(231, 76, 60));
+                        lblStatus.setText("Server-Fehler: " + statusCode);
+                        btnAction.setText("ZURÜCK ZUM MENÜ");
+                        btnAction.setBackground(new Color(192, 57, 43));
+                        btnAction.setVisible(true);
+                    });
                 }
-            } else {
-                JOptionPane.showMessageDialog(parentFrame, "Netzwerkfehler: " + conn.getResponseCode(), "Fehler", JOptionPane.ERROR_MESSAGE);
+                conn.disconnect();
+            } catch (Exception ex) {
+                SwingUtilities.invokeLater(() -> {
+                    progress.setVisible(false);
+                    lblStatus.setForeground(new Color(231, 76, 60));
+                    lblStatus.setText("Fehler: Konnte nicht prüfen!");
+                    btnAction.setText("ZURÜCK ZUM MENÜ");
+                    btnAction.setBackground(new Color(192, 57, 43));
+                    btnAction.setVisible(true);
+                });
             }
-            conn.disconnect();
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(parentFrame, "Fehler: " + ex.getMessage(), "Netzwerkfehler", JOptionPane.ERROR_MESSAGE);
-        }
+        }).start();
     }
 
     private static void downloadAndInstallUpdate(JFrame parentFrame, String downloadUrl) {
@@ -250,25 +381,20 @@ public class Launcher {
             try {
                 URL url = new URL(downloadUrl);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                
                 conn.setRequestProperty("User-Agent", "Mozilla/5.0");
                 conn.setInstanceFollowRedirects(false);
                 
                 int status = conn.getResponseCode();
-
                 while (status >= 300 && status <= 399) {
                     String redirectUrl = conn.getHeaderField("Location");
                     conn.disconnect();
-                    
                     url = new URL(redirectUrl);
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setInstanceFollowRedirects(false);
                     status = conn.getResponseCode();
                 }
 
-                if (status != 200) {
-                    throw new Exception("HTTP Status: " + status);
-                }
+                if (status != 200) throw new Exception("HTTP Status: " + status);
 
                 int fileSize = conn.getContentLength();
                 if (fileSize == -1) {
@@ -330,7 +456,6 @@ public class Launcher {
     private static void installAndRestart() {
         try {
             String os = System.getProperty("os.name").toLowerCase();
-
             if (os.contains("win")) {
                 File batFile = new File("update.bat");
                 FileWriter fwBat = new FileWriter(batFile);

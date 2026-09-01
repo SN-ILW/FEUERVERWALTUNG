@@ -90,6 +90,7 @@ public class MenuVerwaltung {
         scrollKeys.getVerticalScrollBar().setUnitIncrement(16);
         tabbedPane.addTab("Steuerung & Hotkeys", scrollKeys);
 
+
         // ==========================================
         // TAB 2: SYSTEM & GAMEPLAY
         // ==========================================
@@ -105,6 +106,10 @@ public class MenuVerwaltung {
         JCheckBox cbDefekt = new JCheckBox("Fahrzeug-Beschaedigungen aktivieren", LogistikSimulator.cfgBeschaedigung);
         JCheckBox cbFunk = new JCheckBox("KI Funkverkehr im Hintergrund", LogistikSimulator.cfgKiFunk);
         JCheckBox cbAutoLager = new JCheckBox("Autom. Wachenbelieferung (von Hauptlager)", LogistikSimulator.cfgAutoTransfer);
+        
+        // --- NEU: URLAUBS-EINSTELLUNG ---
+        JCheckBox cbUrlaubDP = new JCheckBox("Genehmigter Urlaub wird autom. im Dienstplan eingetragen", LogistikSimulator.cfgUrlaubAutoDienstplan);
+        cbUrlaubDP.setToolTipText("Deaktivieren, wenn der Dienstplan komplett manuell verwaltet werden soll.");
         
         JCheckBox cbSoundNotruf = new JCheckBox("Sound bei Notruf", LogistikSimulator.cfgSoundNotruf);
         JSlider slNotruf = new JSlider(0, 100, LogistikSimulator.volNotruf);
@@ -122,7 +127,7 @@ public class MenuVerwaltung {
         slStatus7.setMajorTickSpacing(25); slStatus7.setMinorTickSpacing(5); slStatus7.setPaintTicks(true);
         
         pnlSystem.add(new JLabel("Gameplay:")); pnlSystem.add(cbWirtschaft); pnlSystem.add(cbZufriedenheit); 
-        pnlSystem.add(cbLogistik); pnlSystem.add(cbKrank); pnlSystem.add(cbKtp); pnlSystem.add(cbDefekt);
+        pnlSystem.add(cbLogistik); pnlSystem.add(cbKrank); pnlSystem.add(cbKtp); pnlSystem.add(cbDefekt); pnlSystem.add(cbUrlaubDP);
         pnlSystem.add(new JLabel(" ")); pnlSystem.add(new JLabel("Sonstiges:")); 
         pnlSystem.add(cbFunk); pnlSystem.add(cbAutoLager);
         pnlSystem.add(new JLabel(" ")); pnlSystem.add(new JLabel("Sounds & Lautstaerke:")); 
@@ -135,6 +140,7 @@ public class MenuVerwaltung {
         scrollSys.getVerticalScrollBar().setUnitIncrement(16);
         tabbedPane.addTab("Spielregeln & Sounds", scrollSys);
 
+
         // ==========================================
         // TAB 3: DATENVERWALTUNG & EDITOREN
         // ==========================================
@@ -143,7 +149,7 @@ public class MenuVerwaltung {
         pnlDaten.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         JLabel lblSpeicher = new JLabel("Spielstandverwaltung:");
-        lblSpeicher.setForeground(new Color(241, 196, 15)); // Gelb
+        lblSpeicher.setForeground(new Color(241, 196, 15));
         lblSpeicher.setFont(new Font("Segoe UI", Font.BOLD, 14));
         pnlDaten.add(lblSpeicher);
 
@@ -179,7 +185,7 @@ public class MenuVerwaltung {
             if (chooser.showOpenDialog(d) == JFileChooser.APPROVE_OPTION) {
                 java.io.File file = chooser.getSelectedFile();
                 if (SpeicherManager.laden(file.getAbsolutePath())) {
-                    SpeicherManager.speichern("savegame.properties"); // Überschreibt den lokalen Standard-Spielstand
+                    SpeicherManager.speichern("savegame.properties");
                     JOptionPane.showMessageDialog(d, "Spielstand erfolgreich importiert und geladen!");
                     LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit());
                     d.dispose();
@@ -205,9 +211,8 @@ public class MenuVerwaltung {
         pnlDaten.add(btnImportSave); 
         pnlDaten.add(btnReset);
 
-        pnlDaten.add(new JLabel(" ")); // Lücke
+        pnlDaten.add(new JLabel(" ")); 
 
-        // Block: Editoren
         JLabel lblEdit = new JLabel("Editoren & Vorlagen:");
         lblEdit.setForeground(new Color(241, 196, 15));
         lblEdit.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -225,9 +230,8 @@ public class MenuVerwaltung {
         b8.addActionListener(e -> { d.dispose(); FensterManager.oeffneVertragsEditor(); });
         pnlDaten.add(b4); pnlDaten.add(b5); pnlDaten.add(b6); pnlDaten.add(b7); pnlDaten.add(b8);
 
-        pnlDaten.add(new JLabel(" ")); // Lücke
+        pnlDaten.add(new JLabel(" ")); 
 
-        // Block: Im- & Export
         JLabel lblExport = new JLabel("Im- & Export Einsaetze:");
         lblExport.setForeground(new Color(241, 196, 15));
         lblExport.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -240,10 +244,9 @@ public class MenuVerwaltung {
         });
         
         JButton btnImport = LogistikSimulator.createStyledButton("Einsaetze importieren (CSV)", new Color(243, 156, 18));
-btnImport.addActionListener(e -> { 
-    // Ruft jetzt das Fenster zur Datei-Auswahl auf!
-    ImportManager.importiereEinsaetzeUeberDialog(LogistikSimulator.frame); 
-});
+        btnImport.addActionListener(e -> { 
+            ImportManager.importiereEinsaetzeUeberDialog(LogistikSimulator.frame); 
+        });
         pnlDaten.add(btnExport); pnlDaten.add(btnImport);
 
         JScrollPane scrollDaten = new JScrollPane(pnlDaten);
@@ -268,6 +271,7 @@ btnImport.addActionListener(e -> {
             LogistikSimulator.cfgBeschaedigung = cbDefekt.isSelected();
             LogistikSimulator.cfgKiFunk = cbFunk.isSelected();
             LogistikSimulator.cfgAutoTransfer = cbAutoLager.isSelected();
+            LogistikSimulator.cfgUrlaubAutoDienstplan = cbUrlaubDP.isSelected(); // NEU
             
             LogistikSimulator.cfgSoundNotruf = cbSoundNotruf.isSelected();
             LogistikSimulator.cfgSoundStatus6 = cbSoundStatus6.isSelected();
@@ -601,14 +605,13 @@ btnImport.addActionListener(e -> {
         d.getContentPane().setBackground(new Color(35, 35, 35));
 
         DefaultListModel<String> listModel = new DefaultListModel<>();
-        for (int i = postfach.size() - 1; i >= 0; i--) { 
-            Email e = postfach.get(i); 
+        for (int i = LogistikSimulator.postfach.size() - 1; i >= 0; i--) { 
+            Email e = LogistikSimulator.postfach.get(i); 
             String prefix = e.gelesen ? "[Gelesen] " : "[NEU] "; 
             String typ = e.typ.equals("Info") ? "[Info]" : "[" + e.typ + "]"; 
             listModel.addElement(prefix + typ + " " + e.betreff + " - von: " + e.absender); 
         }
 
-        // --- MODERNES DESIGN FÜR DIE LISTEN ---
         JList<String> list = new JList<>(listModel); 
         list.setBackground(new Color(43, 43, 43)); 
         list.setForeground(Color.WHITE);
@@ -619,8 +622,8 @@ btnImport.addActionListener(e -> {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); // Macht die Einträge höher
-                if (value.toString().contains("[NEU]")) label.setForeground(new Color(241, 196, 15)); // Neue Mails in Gelb
+                label.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10)); 
+                if (value.toString().contains("[NEU]")) label.setForeground(new Color(241, 196, 15)); 
                 return label;
             }
         });
@@ -637,25 +640,21 @@ btnImport.addActionListener(e -> {
         JPanel pnlBtns = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 15)); 
         pnlBtns.setBackground(new Color(25, 25, 25));
         
-        // --- BUTTONS IM FLAT-DESIGN ---
         JButton btnGenehmigen = LogistikSimulator.createStyledButton("Antrag Genehmigen", new Color(39, 174, 96)); 
         JButton btnAblehnen = LogistikSimulator.createStyledButton("Antrag Ablehnen", new Color(192, 57, 43)); 
         JButton btnTM = LogistikSimulator.createStyledButton("Als TM ausbilden", new Color(41, 128, 185)); 
         JButton btnRS = LogistikSimulator.createStyledButton("Als RS ausbilden", new Color(41, 128, 185)); 
         JButton btnLehrgang = LogistikSimulator.createStyledButton("Lehrgang Bezahlen", new Color(39, 174, 96)); 
         JButton btnAnerkennen = LogistikSimulator.createStyledButton("Vorwissen Anerkennen", new Color(39, 174, 96)); 
-        
-        // --- NEUER KNOPF FÜR DEN DIENSTAUSWEIS ---
         JButton btnAusweis = LogistikSimulator.createStyledButton("Ausweis erstellen", new Color(142, 68, 173));
-
         JButton btnLoeschen = LogistikSimulator.createStyledButton("Mail Loeschen", new Color(100, 100, 100));
 
         btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
 
         list.addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && list.getSelectedIndex() != -1) {
-                int idx = postfach.size() - 1 - list.getSelectedIndex(); 
-                Email mail = postfach.get(idx); 
+                int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); 
+                Email mail = LogistikSimulator.postfach.get(idx); 
                 mail.gelesen = true;
                 
                 String prefix = "[Gelesen] "; 
@@ -685,33 +684,32 @@ btnImport.addActionListener(e -> {
             }
         });
 
-        // --- AKTION FÜR DEN DIENSTAUSWEIS ---
         btnAusweis.addActionListener(e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex(); 
-            Email mail = postfach.get(idx);
+            int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); 
+            Email mail = LogistikSimulator.postfach.get(idx);
             if (mail.person != null) {
                 DienstausweisGenerator.oeffneAusweisErsteller(mail.person, mail, d);
             }
         });
 
         btnAnerkennen.addActionListener(e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx);
-            if (mail.person != null) { String[] parts = mail.text.split("##"); if(parts.length > 1) { String vorhandenerLehrgang = parts[1].trim(); if(!mail.person.qualifikationen.contains(vorhandenerLehrgang)) mail.person.qualifikationen.add(vorhandenerLehrgang); } mail.typ = "Info"; mail.betreff = "[Anerkannt] " + mail.betreff; JOptionPane.showMessageDialog(d, "Vorwissen anerkannt!"); uiAktualisieren(getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); }
+            int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); Email mail = LogistikSimulator.postfach.get(idx);
+            if (mail.person != null) { String[] parts = mail.text.split("##"); if(parts.length > 1) { String vorhandenerLehrgang = parts[1].trim(); if(!mail.person.qualifikationen.contains(vorhandenerLehrgang)) mail.person.qualifikationen.add(vorhandenerLehrgang); } mail.typ = "Info"; mail.betreff = "[Anerkannt] " + mail.betreff; JOptionPane.showMessageDialog(d, "Vorwissen anerkannt!"); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); }
         });
 
         btnLehrgang.addActionListener(e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx);
-            if (mail.person != null) { String[] parts = mail.text.split("##"); if(parts.length > 2) { String wunschLehrgang = parts[1].trim(); int kosten = Integer.parseInt(parts[2].trim()); if (budget >= kosten) { budget -= kosten; mail.person.status = "Lehrgang"; mail.person.geplanterStatus = "Lehrgang"; mail.person.lehrgangDauerSec = 3 * 60; mail.person.lehrgangThema = wunschLehrgang; mail.typ = "Info"; mail.betreff = "[Bezahlt] " + mail.betreff; JOptionPane.showMessageDialog(d, "Lehrgang bezahlt! Mitarbeiter ist unterwegs."); uiAktualisieren(getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); } else { JOptionPane.showMessageDialog(d, "Nicht genug Budget (" + kosten + "EURO benoetigt)!"); } } }
+            int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); Email mail = LogistikSimulator.postfach.get(idx);
+            if (mail.person != null) { String[] parts = mail.text.split("##"); if(parts.length > 2) { String wunschLehrgang = parts[1].trim(); int kosten = Integer.parseInt(parts[2].trim()); if (LogistikSimulator.budget >= kosten) { LogistikSimulator.budget -= kosten; mail.person.status = "Lehrgang"; mail.person.geplanterStatus = "Lehrgang"; mail.person.lehrgangDauerSec = 3 * 60; mail.person.lehrgangThema = wunschLehrgang; mail.typ = "Info"; mail.betreff = "[Bezahlt] " + mail.betreff; JOptionPane.showMessageDialog(d, "Lehrgang bezahlt! Mitarbeiter ist unterwegs."); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); } else { JOptionPane.showMessageDialog(d, "Nicht genug Budget (" + kosten + "EURO benoetigt)!"); } } }
         });
 
         java.awt.event.ActionListener anwaerterAction = e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx); String role = ((JButton)e.getSource()).getText().contains("TM") ? "TM" : "RS";
-            if (mail.person != null) { mail.person.qualifikationen.remove("Anwaerter"); mail.person.qualifikationen.add(role); mail.typ = "Info"; mail.betreff = "[Uebernommen: " + role + "] " + mail.betreff; JOptionPane.showMessageDialog(d, mail.person.name + " ist nun voll ausgebildeter " + role + "!"); uiAktualisieren(getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); }
+            int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); Email mail = LogistikSimulator.postfach.get(idx); String role = ((JButton)e.getSource()).getText().contains("TM") ? "TM" : "RS";
+            if (mail.person != null) { mail.person.qualifikationen.remove("Anwaerter"); mail.person.qualifikationen.add(role); mail.typ = "Info"; mail.betreff = "[Uebernommen: " + role + "] " + mail.betreff; JOptionPane.showMessageDialog(d, mail.person.name + " ist nun voll ausgebildeter " + role + "!"); LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); d.dispose(); FensterManager.oeffnePostfach(); }
         };
         btnTM.addActionListener(anwaerterAction); btnRS.addActionListener(anwaerterAction);
 
         btnGenehmigen.addActionListener(e -> {
-            int idx = postfach.size() - 1 - list.getSelectedIndex(); Email mail = postfach.get(idx);
+            int idx = LogistikSimulator.postfach.size() - 1 - list.getSelectedIndex(); Email mail = LogistikSimulator.postfach.get(idx);
             if (mail.person != null) { 
                 mail.person.urlaubStart = mail.startTag; 
                 mail.person.urlaubEnd = mail.endTag; 
@@ -719,29 +717,26 @@ btnImport.addActionListener(e -> {
                 
                 String eintragsTyp = mail.typ.equals("Wunschfrei") ? "Frei" : "Urlaub";
                 
-                for (int t = mail.startTag; t <= mail.endTag; t++) { 
-                    java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); 
-                    java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); 
-                    int dIndex = date.getDayOfMonth() - 1; 
-                    
-                    if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { 
-                        mail.person.planAktuellerMonat[dIndex] = eintragsTyp; 
-                    } else { 
-                        mail.person.planNaechsterMonat[dIndex] = eintragsTyp; 
-                    } 
-                    
-                    int kalenderCol = t - LogistikSimulator.tag;
-                    if (kalenderCol >= 0 && kalenderCol < 62) {
-                        for(int slot = 0; slot < 25; slot++) {
-                            Terminkalender.kalenderDaten[kalenderCol][slot] = eintragsTyp + " (" + mail.person.name + ")";
-                        }
+                if (LogistikSimulator.cfgUrlaubAutoDienstplan) {
+                    for (int t = mail.startTag; t <= mail.endTag; t++) { 
+                        java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); 
+                        java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); 
+                        int dIndex = date.getDayOfMonth() - 1; 
+                        
+                        if (date.getMonthValue() == heute.getMonthValue() && date.getYear() == heute.getYear()) { 
+                            mail.person.planAktuellerMonat[dIndex] = eintragsTyp; 
+                        } else { 
+                            mail.person.planNaechsterMonat[dIndex] = eintragsTyp; 
+                        } 
                     }
+                    JOptionPane.showMessageDialog(d, eintragsTyp + " genehmigt und im Dienstplan eingetragen!");
+                } else {
+                    JOptionPane.showMessageDialog(d, eintragsTyp + " genehmigt! (Nicht automatisch im Dienstplan vermerkt)");
                 }
                 
                 mail.typ = "Info"; 
                 mail.betreff = "[Genehmigt] " + mail.betreff; 
-                JOptionPane.showMessageDialog(d, eintragsTyp + " eingetragen und im Dienstplan & Kalender geblockt!"); 
-                uiAktualisieren(getUhrzeit()); 
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
                 d.dispose(); 
                 FensterManager.oeffnePostfach(); 
             }
@@ -750,16 +745,16 @@ btnImport.addActionListener(e -> {
         btnAblehnen.addActionListener(e -> {
             int idx = list.getSelectedIndex();
             if(idx != -1) { 
-                Email mail = postfach.get(postfach.size() - 1 - idx); 
+                Email mail = LogistikSimulator.postfach.get(LogistikSimulator.postfach.size() - 1 - idx); 
                 
-                if (mail.typ.equals("Urlaub") && cfgKrankheit) { 
+                if (mail.typ.equals("Urlaub") && LogistikSimulator.cfgKrankheit) { 
                     if (Math.random() < 0.05) { 
                         int dauer = 2 + (int)(Math.random() * 4); 
-                        mail.person.krankBis = tag + dauer; 
-                        if (tag == mail.person.krankBis - dauer) { 
+                        mail.person.krankBis = LogistikSimulator.tag + dauer; 
+                        if (LogistikSimulator.tag == mail.person.krankBis - dauer) { 
                             mail.person.status = "Krank"; mail.person.zugewiesenesFahrzeug = "Keines"; 
                         } 
-                        for (int t = tag + 1; t <= tag + dauer; t++) { 
+                        for (int t = LogistikSimulator.tag + 1; t <= LogistikSimulator.tag + dauer; t++) { 
                             java.time.LocalDate date = java.time.LocalDate.of(2026, 6, 1).plusDays(t - 1); 
                             java.time.LocalDate heute = LogistikSimulator.getCurrentDate(); 
                             int dIndex = date.getDayOfMonth() - 1; 
@@ -769,7 +764,7 @@ btnImport.addActionListener(e -> {
                                 mail.person.planNaechsterMonat[dIndex] = "Krank"; 
                             } 
                         } 
-                        postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, tag + 1, tag + dauer)); 
+                        LogistikSimulator.postfach.add(0, MailGenerator.generiereKrankmeldung(mail.person, LogistikSimulator.tag + 1, LogistikSimulator.tag + dauer)); 
                         JOptionPane.showMessageDialog(d, "Urlaub abgelehnt. Die Laune ist im Keller...", "Info", JOptionPane.INFORMATION_MESSAGE); 
                     } else {
                         JOptionPane.showMessageDialog(d, "Antrag abgelehnt.");
@@ -781,7 +776,7 @@ btnImport.addActionListener(e -> {
                 mail.typ = "Info"; 
                 listModel.set(idx, "[Gelesen] [Abgelehnt] " + mail.betreff + " - von: " + mail.absender); 
                 btnGenehmigen.setVisible(false); btnAblehnen.setVisible(false); btnTM.setVisible(false); btnRS.setVisible(false); btnLehrgang.setVisible(false); btnAnerkennen.setVisible(false); btnAusweis.setVisible(false);
-                uiAktualisieren(getUhrzeit()); 
+                LogistikSimulator.uiAktualisieren(LogistikSimulator.getUhrzeit()); 
             }
         });
 

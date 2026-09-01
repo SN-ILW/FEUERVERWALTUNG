@@ -67,6 +67,8 @@ public class LogistikSimulator {
     public static boolean cfgBeschaedigung = true;
     public static boolean cfgKrankheit = true;
     public static boolean cfgAutoTransfer = false;
+    public static boolean cfgUrlaubAutoDienstplan = true;
+    
     
     public static ArrayList<VertragVorlage> vertragsVorlagen = new ArrayList<>();
     public static ArrayList<Vertrag> aktiveVertraege = new ArrayList<>();
@@ -1439,7 +1441,7 @@ public class LogistikSimulator {
                         p.qualifikationen.add(neueQual); 
                     }
                     
-                    postfach.add(new Email("Ausbildungsleitung", "[Uebernahme] " + p.name, "Info", "Gute Neuigkeiten! " + p.name + " hat die Probe-Schichten bestanden und wurde soeben automatisch als " + neueQual + " in den festen Dienst uebernommen.", p, tag, tag));
+                    postfach.add(new Email("Ausbildungsleitung", "[Uebernahme] " + p.name, "Gute Neuigkeiten! " + p.name + " hat die Probe-Schichten bestanden und wurde soeben automatisch als " + neueQual + " in den festen Dienst uebernommen.", "Übernahme Info", p, tag, tag));
                 }
                 
                 if (p.schichtenMonat >= 5 && Math.random() < 0.05 && p.urlaubStart == -1 && p.krankBis == -1 && !p.status.equals("Lehrgang") && !p.qualifikationen.contains("Anwaerter")) {
