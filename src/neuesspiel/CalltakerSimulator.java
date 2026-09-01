@@ -104,9 +104,9 @@ public class CalltakerSimulator {
                     });
                     return; 
                 }
-                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/2: Lade Schweriner Realdaten aus OpenStreetMap..."));
+                //SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/2: Lade Schweriner Realdaten aus OpenStreetMap..."));
                 NotrufDialogKI.ladeAdressenOnline();
-                Thread.sleep(500); 
+                //Thread.sleep(500); 
                 SwingUtilities.invokeLater(() -> {
                     loadingWindow.dispose();
                     baueHauptGUI(); 
