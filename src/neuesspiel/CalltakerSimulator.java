@@ -66,7 +66,8 @@ public class CalltakerSimulator {
         lblTitle.setForeground(ACCENT_YELLOW);
         lblTitle.setAlignmentX(Component.CENTER_ALIGNMENT);
         
-        JLabel lblStatus = new JLabel("Schritt 1/2: Prüfe Netzwerkverbindung...");
+        // HIER GEÄNDERT: Schritt 1 von 3
+        JLabel lblStatus = new JLabel("Schritt 1/3: Prüfe Netzwerkverbindung...");
         lblStatus.setFont(new Font("Consolas", Font.PLAIN, 16));
         lblStatus.setForeground(Color.WHITE);
         lblStatus.setAlignmentX(Component.CENTER_ALIGNMENT);
@@ -94,6 +95,9 @@ public class CalltakerSimulator {
 
         new Thread(() -> {
             try {
+                // NEU: Zwingt die EXE, das stabile IPv4-Netzwerk zu nutzen!
+                System.setProperty("java.net.preferIPv4Stack", "true");
+                
                 Thread.sleep(800); 
                 if (!checkInternet()) {
                     SwingUtilities.invokeLater(() -> {
@@ -104,9 +108,15 @@ public class CalltakerSimulator {
                     });
                     return; 
                 }
-                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/2: Lade Schweriner Realdaten aus OpenStreetMap..."));
+                
+                // HIER GEÄNDERT: Schritt 2 - Adressen laden
+                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/3: Lade Schweriner Realdaten..."));
                 NotrufDialogKI.ladeAdressenOnline();
+                
+                // HIER GEÄNDERT: Schritt 3 - Karte laden (um zu sehen, wo es hängt)
+                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 3/3: Initialisiere Live-Karte..."));
                 Thread.sleep(500); 
+                
                 SwingUtilities.invokeLater(() -> {
                     loadingWindow.dispose();
                     baueHauptGUI(); 
