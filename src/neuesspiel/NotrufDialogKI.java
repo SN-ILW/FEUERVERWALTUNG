@@ -94,31 +94,30 @@ public class NotrufDialogKI {
     // ==========================================
     public static void ladeAdressenOnline() {
         try {
-            System.out.println("Lade Adressen von Overpass API...");
-            String query = "[out:json];node[\"addr:street\"][\"addr:housenumber\"](53.56,11.35,53.68,11.48);out 50;";
-            String urlStr = "https://overpass-api.de/api/interpreter?data=" + URLEncoder.encode(query, "UTF-8");
+            // Extrem schnelle Abfrage für die Innenstadt
+            String query = "[out:json][timeout:3];node[\"addr:street\"][\"addr:housenumber\"](53.61,11.38,53.65,11.45);out 40;";
+            String urlStr = "https://overpass-api.de/api/interpreter?data=" + java.net.URLEncoder.encode(query, "UTF-8");
             
-            URL url = new URL(urlStr);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            java.net.URL url = new java.net.URL(urlStr);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
-            conn.setConnectTimeout(8000); // 8 Sekunden (Server ist manchmal langsam)
-            conn.setReadTimeout(8000);
+            
+            // Knallharter Timeout: Nach 4 Sekunden wird gnadenlos abgebrochen!
+            conn.setConnectTimeout(10000); 
+            conn.setReadTimeout(10000);
             conn.setRequestProperty("User-Agent", "LeitstellenSimulatorSchwerin/1.0");
             
             if (conn.getResponseCode() != 200) {
-                System.out.println("Server antwortet mit Fehler-Code: " + conn.getResponseCode());
-                return;
+                throw new Exception("Server meldet Fehlercode: " + conn.getResponseCode());
             }
             
-            BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream(), "UTF-8"));
+            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) sb.append(line);
             reader.close();
             
             String json = sb.toString();
-            
-            // Zerschneidet den Text anhand von Regex (ignoriert Leerzeichen)
             String[] nodes = json.split("\"type\"\\s*:\\s*\"node\"");
             
             for(int i = 1; i < nodes.length; i++) {
@@ -132,17 +131,36 @@ public class NotrufDialogKI {
                     if(latStr != null && lonStr != null && street != null && hnr != null) {
                         double lat = Double.parseDouble(latStr);
                         double lon = Double.parseDouble(lonStr);
-                        adressPool.add(new EchteAdresse(street + " " + hnr, new Coordinate(lat, lon)));
+                        adressPool.add(new EchteAdresse(street + " " + hnr, new org.openstreetmap.gui.jmapviewer.Coordinate(lat, lon)));
                     }
                 } catch(Exception e) { /* Einzelnen Fehler ignorieren */ }
             }
             
-            Collections.shuffle(adressPool);
-            System.out.println("Erfolgreich " + adressPool.size() + " reale Schweriner Adressen geladen!");
+            java.util.Collections.shuffle(adressPool);
             
         } catch (Exception e) {
-            System.out.println("Fehler beim Adressen laden: " + e.getMessage());
+            // WENN DAS INTERNET ODER DIE FIREWALL STREIKT: 
+            // 1. Fehlermeldung als Popup anzeigen (damit wir sehen, was los ist!)
+            javax.swing.JOptionPane.showMessageDialog(null, 
+                "Online-Adressen konnten nicht geladen werden.\nGrund: " + e.getMessage() + "\n\nLade stattdessen Offline-Pool...", 
+                "Netzwerk-Blockade", 
+                javax.swing.JOptionPane.WARNING_MESSAGE);
+                
+            // 2. Notausgang: Lade unsere Offline-Adressen, damit das Spiel weitergeht!
+            ladeLokaleAdressen();
         }
+    }
+
+    // Unser Notfall-Pool (falls die EXE vom Windows Defender blockiert wird)
+    public static void ladeLokaleAdressen() {
+        if (adressPool == null) adressPool = new java.util.ArrayList<>();
+        adressPool.clear();
+        
+        adressPool.add(new EchteAdresse("Marienplatz 1", new org.openstreetmap.gui.jmapviewer.Coordinate(53.6276, 11.4116)));
+        adressPool.add(new EchteAdresse("Mecklenburgstraße 20", new org.openstreetmap.gui.jmapviewer.Coordinate(53.6288, 11.4124)));
+        adressPool.add(new EchteAdresse("Lübecker Straße 35", new org.openstreetmap.gui.jmapviewer.Coordinate(53.6333, 11.4085)));
+        adressPool.add(new EchteAdresse("Werderstraße 12", new org.openstreetmap.gui.jmapviewer.Coordinate(53.6315, 11.4215)));
+        adressPool.add(new EchteAdresse("Karl-Marx-Allee 5", new org.openstreetmap.gui.jmapviewer.Coordinate(53.5935, 11.4395)));
     }
 
     // NEUE HILFSMETHODE: Kugelsicherer Parser, dem Leerzeichen im JSON egal sind!
