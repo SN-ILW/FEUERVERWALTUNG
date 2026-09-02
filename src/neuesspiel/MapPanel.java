@@ -16,7 +16,7 @@ public class MapPanel extends JPanel {
     public JMapViewer map;
     public HashMap<String, Coordinate> wachenKoords = new HashMap<>();
     public HashMap<Integer, EinsatzMarker> aktiveEinsaetze = new HashMap<>();
-    private int einsatzCounter = 0;
+    private int einsatzCounter = 1;
 
     public MapPanel() {
         setLayout(new BorderLayout());
@@ -53,7 +53,46 @@ public class MapPanel extends JPanel {
             if (brauchtRepaint) map.repaint();
         });
         animTimer.start();
-    }
+
+        // ==========================================
+        // NEU: MAUS-KLICK AUF DEN PING ERKENNEN
+        // ==========================================
+        map.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                // Reagiere nur auf einen Linksklick
+                if (e.getButton() == java.awt.event.MouseEvent.BUTTON1) {
+                    Point klickPunkt = e.getPoint();
+                    
+                    // Gehe alle Marker auf der Karte durch
+                    for (org.openstreetmap.gui.jmapviewer.interfaces.MapMarker m : map.getMapMarkerList()) {
+                        
+                        // Uns interessieren nur die roten Einsatz-Pings
+                        if (m instanceof EinsatzMarker) {
+                            Point markerPunkt = map.getMapPosition(m.getLat(), m.getLon());
+                            
+                            // Trefferzone: 12 Pixel Radius um den Mittelpunkt des Pings
+                            if (markerPunkt != null && markerPunkt.distance(klickPunkt) <= 12) {
+                                
+                                // Wir holen uns die ID des angeklickten Einsatzes
+                                int einsatzId = ((EinsatzMarker) m).indexOffset;
+                                
+                                System.out.println(">>> EINSATZ ANGEKLICKT! ID: " + einsatzId);
+                                
+                                // ALTE ZEILE LÖSCHEN:
+                                // System.out.println(">>> EINSATZ ANGEKLICKT! ID: " + einsatzId);r
+                                // NEUE ZEILE EINFÜGEN:
+                                CtEinsatz.oeffneDetails(einsatzId);
+                                CalltakerSimulator.ausgabeFunk("System: Einsatzakte #" + einsatzId + " geöffnet.");
+                                
+                                break; // Sobald wir getroffen haben, Suche abbrechen
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    } // <-- Hier endet dein MapPanel() Konstruktor
 
     public int erstelleEinsatz(Coordinate ziel) {
         int id = einsatzCounter++;

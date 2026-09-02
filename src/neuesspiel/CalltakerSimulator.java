@@ -20,7 +20,7 @@ public class CalltakerSimulator {
     public static Timer klingelTimer;
     public static JDialog abfrageFenster;
     public static MapPanel pnlMapContainer; 
-
+    public static java.util.HashMap<Integer, NotrufDialogKI.CtNotruf> laufendeEinsaetze = new java.util.HashMap<>();
     public static HashMap<String, Integer> fahrzeugStatus = new HashMap<>();
     private static String letzterStatusHTML = "";
 
@@ -110,16 +110,18 @@ public class CalltakerSimulator {
                 }
                 
                 // HIER GEÄNDERT: Schritt 2 - Adressen laden
-                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/3: Lade Schweriner Realdaten..."));
-                NotrufDialogKI.ladeAdressenOnline();
+                // HIER GEÄNDERT: Schritt 2 - Blitzschnell Offline laden
+                SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 2/3: Lade lokale Realdaten..."));
+                NotrufDialogKI.ladeLokaleAdressen(); // <--- SOFORT FERTIG!
                 
-                // HIER GEÄNDERT: Schritt 3 - Karte laden (um zu sehen, wo es hängt)
                 SwingUtilities.invokeLater(() -> lblStatus.setText("Schritt 3/3: Initialisiere Live-Karte..."));
                 Thread.sleep(500); 
                 
                 SwingUtilities.invokeLater(() -> {
                     loadingWindow.dispose();
                     baueHauptGUI(); 
+                    // HIER STARTEN WIR DEN UNSICHTBAREN DOWNLOAD!
+                    NotrufDialogKI.ladeAdressenOnlineImHintergrund(); 
                 });
             } catch (Exception ex) {
                 ex.printStackTrace();
@@ -499,6 +501,10 @@ public class CalltakerSimulator {
             
             int eId = pnlMapContainer.erstelleEinsatz(anruf.koordinate);
 
+            // NEU: Wir übernehmen das vom Spieler gewählte Stichwort und heften die Akte ab!
+            anruf.stichwort = stichwort; 
+            laufendeEinsaetze.put(eId, anruf);
+            
             for (String fz : alarmierteFahrzeuge) {
                 String wachenName = fz.substring(0, fz.indexOf(" (")); 
                 int currentStatus = fahrzeugStatus.getOrDefault(fz, 2);

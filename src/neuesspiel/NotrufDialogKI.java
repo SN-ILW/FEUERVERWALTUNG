@@ -92,63 +92,64 @@ public class NotrufDialogKI {
     // ==========================================
     // NEU: LÄDT ECHTE ADRESSEN AUS DEM INTERNET
     // ==========================================
-    public static void ladeAdressenOnline() {
-        try {
-            // Extrem schnelle Abfrage für die Innenstadt
-            String query = "[out:json][timeout:3];node[\"addr:street\"][\"addr:housenumber\"](53.61,11.38,53.65,11.45);out 40;";
-            String urlStr = "https://overpass-api.de/api/interpreter?data=" + java.net.URLEncoder.encode(query, "UTF-8");
-            
-            java.net.URL url = new java.net.URL(urlStr);
-            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            
-            // Knallharter Timeout: Nach 4 Sekunden wird gnadenlos abgebrochen!
-            conn.setConnectTimeout(10000); 
-            conn.setReadTimeout(10000);
-            conn.setRequestProperty("User-Agent", "LeitstellenSimulatorSchwerin/1.0");
-            
-            if (conn.getResponseCode() != 200) {
-                throw new Exception("Server meldet Fehlercode: " + conn.getResponseCode());
-            }
-            
-            java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) sb.append(line);
-            reader.close();
-            
-            String json = sb.toString();
-            String[] nodes = json.split("\"type\"\\s*:\\s*\"node\"");
-            
-            for(int i = 1; i < nodes.length; i++) {
-                String node = nodes[i];
-                try {
-                    String latStr = safeExtract(node, "lat", false);
-                    String lonStr = safeExtract(node, "lon", false);
-                    String street = safeExtract(node, "addr:street", true);
-                    String hnr = safeExtract(node, "addr:housenumber", true);
-                    
-                    if(latStr != null && lonStr != null && street != null && hnr != null) {
-                        double lat = Double.parseDouble(latStr);
-                        double lon = Double.parseDouble(lonStr);
-                        adressPool.add(new EchteAdresse(street + " " + hnr, new org.openstreetmap.gui.jmapviewer.Coordinate(lat, lon)));
-                    }
-                } catch(Exception e) { /* Einzelnen Fehler ignorieren */ }
-            }
-            
-            java.util.Collections.shuffle(adressPool);
-            
-        } catch (Exception e) {
-            // WENN DAS INTERNET ODER DIE FIREWALL STREIKT: 
-            // 1. Fehlermeldung als Popup anzeigen (damit wir sehen, was los ist!)
-            javax.swing.JOptionPane.showMessageDialog(null, 
-                "Online-Adressen konnten nicht geladen werden.\nGrund: " + e.getMessage() + "\n\nLade stattdessen Offline-Pool...", 
-                "Netzwerk-Blockade", 
-                javax.swing.JOptionPane.WARNING_MESSAGE);
+    public static void ladeAdressenOnlineImHintergrund() {
+        // Startet einen eigenen Thread, der das Spiel NICHT blockiert!
+        new Thread(() -> {
+            try {
+                // Wir suchen in ganz Schwerin und holen uns satte 2000r Adressen!
+                String query = "[out:json][timeout:15];node[\"addr:street\"][\"addr:housenumber\"](53.56,11.35,53.68,11.48);out 2000;";
+                String urlStr = "https://overpass-api.de/api/interpreter?data=" + java.net.URLEncoder.encode(query, "UTF-8");
                 
-            // 2. Notausgang: Lade unsere Offline-Adressen, damit das Spiel weitergeht!
-            ladeLokaleAdressen();
-        }
+                java.net.URL url = new java.net.URL(urlStr);
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                
+                // Wir geben ihm entspannte 10 Sekunden Zeit, weil es den Spieler ja nicht stoert
+                conn.setConnectTimeout(10000); 
+                conn.setReadTimeout(10000);
+                
+                if (conn.getResponseCode() == 200) {
+                    java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(conn.getInputStream(), "UTF-8"));
+                    StringBuilder sb = new StringBuilder();
+                    String line;
+                    while ((line = reader.readLine()) != null) sb.append(line);
+                    reader.close();
+                    
+                    String json = sb.toString();
+                    String[] nodes = json.split("\"type\"\\s*:\\s*\"node\"");
+                    
+                    java.util.List<EchteAdresse> neuerPool = new java.util.ArrayList<>();
+                    for(int i = 1; i < nodes.length; i++) {
+                        String node = nodes[i];
+                        try {
+                            String latStr = safeExtract(node, "lat", false);
+                            String lonStr = safeExtract(node, "lon", false);
+                            String street = safeExtract(node, "addr:street", true);
+                            String hnr = safeExtract(node, "addr:housenumber", true);
+                            
+                            if(latStr != null && lonStr != null && street != null && hnr != null) {
+                                neuerPool.add(new EchteAdresse(street + " " + hnr, new org.openstreetmap.gui.jmapviewer.Coordinate(Double.parseDouble(latStr), Double.parseDouble(lonStr))));
+                            }
+                        } catch(Exception e) { /* Ignorieren */ }
+                    }
+                    
+                    if (!neuerPool.isEmpty()) {
+                        java.util.Collections.shuffle(neuerPool);
+                        // ZACK! Wir tauschen den Offline-Pool gegen den fetten Online-Pool aus
+                        adressPool = neuerPool; 
+                        
+                        // Kleine Info für dich in den Funk, dass das Internet fertig geladen hat
+                        javax.swing.SwingUtilities.invokeLater(() -> {
+                            CalltakerSimulator.ausgabeFunk("SYSTEM: " + adressPool.size() + " Live-Strassendaten erfolgreich synchronisiert!");
+                        });
+                    }
+                }
+            } catch (Exception e) {
+                // Wenn das Internet komplett streikt, passiert einfach nichts. 
+                // Der Spieler spielt dann glücklich mit den Offline-Adressen weiter.
+                System.out.println("Hintergrund-Download fehlgeschlagen: " + e.getMessage());
+            }
+        }).start();
     }
 
     // Unser Notfall-Pool (falls die EXE vom Windows Defender blockiert wird)
